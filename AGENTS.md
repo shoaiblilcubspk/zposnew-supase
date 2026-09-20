@@ -183,6 +183,21 @@ To ensure the system stays permanently within free-tier limits with zero unexpec
 - **Universal Root-Cause Utilities:** When an issue is identified, do not patch just the single reporting file. Create or update centralized, battle-tested utilities (e.g. `safeTimestamp.ts`, `iceConfig.ts`) and sweep the ENTIRE codebase to ensure 100% consistent immunity.
 - **Rigorous Verification Protocol:** Run static type checks (`npx tsc --noEmit`), trace all call sites, test edge-case data shapes, and verify offline-to-online reconnection cycles before declaring any task complete.
 
+### 2.21 Mandatory Next Version Bump & Universal Build Naming Rule (Zero Stale Versions)
+- **Mandatory Version Bump Across All Files:** Har update, feature change, bug fix, ya rebuild se pehle version number ko semver standard ke mutabiq bump karna (`1.0.0` → `1.0.1` / `1.1.0`) strictly compulsory hai across **ALL** files simultaneously:
+  1. `package.json` (`"version": "x.y.z"`) & `package-lock.json`.
+  2. `src-tauri/tauri.conf.json` (`"version": "x.y.z"`).
+  3. `android/app/build.gradle` (`versionCode` incremented, `versionName "x.y.z"`).
+  4. `ios/App/App.xcodeproj/project.pbxproj` (`MARKETING_VERSION = x.y.z`, `CURRENT_PROJECT_VERSION` incremented).
+- **Mandatory Version in ALL Binary & Package Filenames:**
+  - Kisi bhi binary, package, ya artifact ko generic name (jaise `app-debug.apk` ya generic `App.ipa`) dena strictly prohibited hai.
+  - Har installer aur output binary ke name me version number lazmi shamil hoga taake cashiers, clients aur testing devices par update ka turant pata chale:
+    - **Android:** `Zaynahs-POS-v<version>.apk`
+    - **iOS:** `Zaynahs-POS-v<version>.ipa`
+    - **macOS:** `Zaynahs-POS-v<version>.dmg`
+    - **Windows:** `Zaynahs-POS-v<version>-Setup.exe` aur `Zaynahs-POS-v<version>.msi`
+- **GitHub Actions & Releases Par Parity:** GitHub Actions artifacts aur Release tags hamesha `v<version>` ke sath generate aur publish honge. Kabhi bhi previous/old version number reuse nahi hoga.
+
 ---
 
 

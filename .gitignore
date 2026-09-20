@@ -23,5 +23,6 @@ android/app/build/
 android/build/
 ios/App/build/
 ios/App/DerivedData/
-ios/App/Pods/
 *.tsbuildinfo
+release-installers/
+release-output/
