@@ -4,7 +4,8 @@ import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface ModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
+  open?: boolean;
   onClose: () => void;
   title?: string;
   subtitle?: string;
@@ -29,6 +30,7 @@ const maxWidthClasses = {
 
 export function Modal({ 
   isOpen, 
+  open,
   onClose, 
   title, 
   subtitle, 
@@ -41,11 +43,12 @@ export function Modal({
   headerClassName,
   bodyClassName
 }: ModalProps) {
-  const [render, setRender] = useState(isOpen);
+  const activeOpen = Boolean(isOpen ?? open);
+  const [render, setRender] = useState(activeOpen);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
+    if (activeOpen) {
       setRender(true);
       document.body.style.overflow = 'hidden';
     } else {
@@ -67,55 +70,56 @@ export function Modal({
         document.body.style.overflow = '';
       }
     };
-  }, [isOpen]);
+  }, [activeOpen]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) onClose();
+      if (e.key === 'Escape' && activeOpen) onClose();
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+  }, [activeOpen, onClose]);
 
   if (!render) return null;
 
   const modalContent = (
     <div ref={containerRef} data-modal="true" className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-6 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-      {/* Backdrop — no onClick: only X button closes */}
+      {/* Backdrop */}
       <div 
-        className={`absolute inset-0 bg-[rgba(15,23,42,0.6)] dark:bg-[rgba(0,0,0,0.75)] transition-opacity duration-250 ${isOpen ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-150 ${activeOpen ? 'opacity-100' : 'opacity-0'}`}
       />
       
       {/* Dialog */}
       <div 
         className={cn(
-          "relative flex flex-col w-full sm:w-[90vw] bg-surface border-default border",
-          "rounded-3xl shadow-2xl overflow-hidden",
+          "relative flex flex-col w-full sm:w-[90vw] bg-white dark:bg-[#121215] border border-neutral-200 dark:border-white/10",
+          "rounded-lg shadow-2xl overflow-hidden",
           maxWidthClasses[maxWidth],
             "max-h-[calc(100dvh-2.5rem-env(safe-area-inset-top))] sm:max-h-[calc(90dvh-env(safe-area-inset-top))]",
-          "transition-all duration-250 ease-out",
-          isOpen ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-95 opacity-0',
+          "transition-all duration-150 ease-out",
+          activeOpen ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-2 scale-98 opacity-0',
           className
         )}
       >
         {/* Header */}
         {(title || showClose) && (
           <div className={cn(
-            "flex-shrink-0 flex items-center justify-between px-5 sm:px-6 py-4 border-b border-default bg-surface",
+            "flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-[#121215]",
             headerClassName
           )}>
             <div className="flex flex-col min-w-0">
-              {title && <h2 className="text-base sm:text-lg font-bold text-default truncate">{title}</h2>}
-              {subtitle && <p className="text-xs text-muted mt-0.5 truncate">{subtitle}</p>}
+              {title && <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-neutral-900 dark:text-white truncate">{title}</h2>}
+              {subtitle && <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5 truncate">{subtitle}</p>}
             </div>
-            <div className="flex items-center gap-3 shrink-0 ml-4">
+            <div className="flex items-center gap-2 shrink-0 ml-4">
               {headerActions}
               {showClose && (
                 <button 
                   onClick={onClose}
-                  className="p-2 text-muted hover:text-default hover:bg-app rounded-xl transition-colors active:scale-95"
+                  title="Close (Esc)"
+                  className="w-7 h-7 rounded-md flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/[0.08] transition-colors border border-transparent hover:border-neutral-200 dark:hover:border-white/[0.1]"
                 >
-                  <X size={18} />
+                  <X className="w-4 h-4 stroke-[2.2]" />
                 </button>
               )}
             </div>
@@ -132,7 +136,7 @@ export function Modal({
 
         {/* Footer */}
         {footer && (
-          <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-t border-default bg-surface pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">
+          <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-t border-neutral-200 dark:border-white/[0.08] bg-neutral-50 dark:bg-[#151518] pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">
             {footer}
           </div>
         )}

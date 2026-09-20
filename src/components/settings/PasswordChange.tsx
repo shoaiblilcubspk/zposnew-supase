@@ -58,68 +58,69 @@ export function PasswordChange() {
   };
 
   return (
-    <div className="max-w-md mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="text-center space-y-2">
-        <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/20 text-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-          <Shield className="w-8 h-8" />
+    <div className="max-w-md mx-auto space-y-4 p-4 sm:p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md shadow-none">
+      <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-200 dark:border-white/[0.08]">
+        <Shield className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+        <div>
+          <h3 className="text-[14px] font-semibold text-neutral-900 dark:text-white tracking-[-0.01em]">Change Password</h3>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Keep your account secure with a strong password</p>
         </div>
-        <h3 className="text-xl font-black text-gray-900 dark:text-white">Change Password</h3>
-        <p className="text-sm text-gray-600 font-medium">Keep your account secure with a strong password</p>
       </div>
 
-      <div className="space-y-4">
-        <div className="space-y-1.5">
-          <label className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">Current Password</label>
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Current Password</label>
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
               value={oldPassword}
               onChange={(e) => setOldPassword(e.target.value)}
-              className="w-full bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 rounded-2xl py-4 px-5 pr-12 focus:ring-4 focus:ring-emerald-500/10 focus:border-primary transition-all font-bold text-gray-900 dark:text-white"
+              className="w-full h-8 px-2.5 pr-8 text-[12px] bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded text-neutral-900 dark:text-white outline-none focus:border-primary transition-colors font-mono"
               placeholder="••••••••"
             />
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">New Password</label>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">New Password</label>
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 rounded-2xl py-4 px-5 pr-12 focus:ring-4 focus:ring-emerald-500/10 focus:border-primary transition-all font-bold text-gray-900 dark:text-white"
+              className="w-full h-8 px-2.5 pr-8 text-[12px] bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded text-neutral-900 dark:text-white outline-none focus:border-primary transition-colors font-mono"
               placeholder="••••••••"
             />
-            <Button
+            <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              icon={showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              className="absolute right-4 top-1/2 -translate-y-1/2 !min-h-0 !p-0 !rounded-lg !bg-transparent !text-gray-600 hover:!text-primary !hover:bg-transparent"
-            />
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+            >
+              {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            </button>
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">Confirm Password</label>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Confirm Password</label>
           <input
             type={showPassword ? 'text' : 'password'}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 rounded-2xl py-4 px-5 focus:ring-4 focus:ring-emerald-500/10 focus:border-primary transition-all font-bold text-gray-900 dark:text-white"
+            className="w-full h-8 px-2.5 text-[12px] bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded text-neutral-900 dark:text-white outline-none focus:border-primary transition-colors font-mono"
             placeholder="••••••••"
           />
         </div>
 
-        <div className="bg-gray-50 dark:bg-white/[0.02] rounded-2xl p-4 border border-gray-200 dark:border-white/5 space-y-3">
+        <div className="bg-neutral-50 dark:bg-white/[0.02] rounded border border-neutral-200 dark:border-white/[0.06] p-2.5 space-y-1.5">
           {passwordRequirements.map((req, idx) => (
-            <div key={idx} className="flex items-center gap-3">
+            <div key={idx} className="flex items-center gap-2">
               {req.met ? (
-                <CheckCircle2 className="w-4 h-4 text-primary" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
               ) : (
-                <AlertCircle className="w-4 h-4 text-gray-600 dark:text-gray-500" />
+                <AlertCircle className="w-3.5 h-3.5 text-neutral-400" />
               )}
-              <span className={`text-xs font-bold ${req.met ? 'text-primary dark:text-emerald-400' : 'text-gray-600'}`}>
+              <span className={`text-[11px] font-medium ${req.met ? 'text-primary dark:text-emerald-400' : 'text-neutral-500'}`}>
                 {req.label}
               </span>
             </div>
@@ -128,21 +129,14 @@ export function PasswordChange() {
 
         <Button
           type="button"
+          variant="primary"
           disabled={isUpdating || !oldPassword || !newPassword || newPassword !== confirmPassword || newPassword.length < 6}
           onClick={handleUpdate}
-          className="w-full hover:bg-emerald-700 disabled:bg-gray-200 dark:disabled:bg-white/5 disabled:text-gray-600 disabled:!opacity-100 mt-4"
+          loading={isUpdating}
+          icon={<Lock className="w-3.5 h-3.5" />}
+          className="w-full mt-2"
         >
-          {isUpdating ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Updating...</span>
-            </>
-          ) : (
-            <>
-              <Lock className="w-5 h-5" />
-              <span>Update Password</span>
-            </>
-          )}
+          <span>Update Password</span>
         </Button>
       </div>
     </div>

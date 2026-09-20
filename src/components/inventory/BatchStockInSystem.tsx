@@ -146,8 +146,6 @@ export function BatchStockInSystem({ onClose, initialProduct }: BatchStockInSyst
             };
             
             const { localDb } = await import('../../lib/localDb');
-            const { cloudWrite } = await import('../../lib/cloudWrite');
-            await cloudWrite('stock_history', 'create', histId, remoteEntry);
             await localDb.stockHistory.add(localEntry);
 
             // stock:0 is already achieved by the stock_history insert above (DB trigger).
@@ -201,24 +199,23 @@ export function BatchStockInSystem({ onClose, initialProduct }: BatchStockInSyst
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-2 sm:gap-3 flex-1">
-        <Button
+      <div className="flex items-center justify-end gap-2 flex-1 font-mono text-[12px]">
+        <button
+          type="button"
           onClick={onClose}
-          variant="danger"
-          className="flex-1 sm:flex-none !min-h-0 !px-4 sm:!px-6 !py-2.5 sm:!py-3.5 !rounded-2xl !bg-transparent !text-[#ff4b6e] hover:!bg-rose-50 dark:hover:!bg-rose-500/10 !text-[9px] sm:!text-[11px] !font-black !shadow-none hover:!opacity-100 shrink-0 !border !border-rose-200 dark:!border-rose-900/30"
+          className="h-8 px-3 rounded border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/[0.08] font-medium transition-colors"
         >
-          {"Abort Inflow"}
-        </Button>
-        <Button
+          {"Cancel"}
+        </button>
+        <button
+          type="button"
           onClick={handleCommit}
           disabled={selectedItems.length === 0 || isCommitting}
-          variant="primary"
-          size="md"
-          className="flex-1 sm:flex-none sm:min-w-[280px] !py-2.5 sm:!py-3.5 !text-[9px] sm:!text-[11px]"
+          className="h-8 px-4 rounded bg-primary text-white hover:bg-primary/90 disabled:opacity-50 font-medium flex items-center gap-1.5 transition-colors shadow-none"
         >
-          {isCommitting ? <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <Save className="h-4 w-4 sm:h-5 sm:w-5" />}
-          <span>{"Commit Inventory"}</span>
-        </Button>
+          {isCommitting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+          <span>{"Commit Stock"}</span>
+        </button>
       </div>
     </div>
   );
@@ -254,7 +251,7 @@ export function BatchStockInSystem({ onClose, initialProduct }: BatchStockInSyst
                       if (p) addToBatch(p);
                     }}
                     maxHeight={300}
-                    className="rounded-2xl shadow-2xl"
+                    className="rounded-md shadow-2xl"
                   />
                 </div>
               )}

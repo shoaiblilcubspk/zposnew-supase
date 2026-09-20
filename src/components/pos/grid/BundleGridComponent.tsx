@@ -29,12 +29,10 @@ export function BundleGrid({ onAddToCart: _onAddToCart, currency, isTouchMode, i
 
   if (groupedBundles.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <div className="bg-violet-500/10 p-6 rounded-3xl mb-4">
-          <Gift className="h-16 w-16 text-violet-400" />
-        </div>
-        <p className="text-gray-500 dark:text-gray-400 text-sm font-bold">{"No Bundles & Deals Yet"}</p>
-        <p className="text-[11px] text-gray-400 mt-1 mb-4">{"Go to Inventory → Bundles to create combo deals"}</p>
+      <div className="flex flex-col items-center justify-center h-64 text-center">
+        <Gift className="h-10 w-10 text-neutral-400 mb-3 opacity-60" />
+        <p className="text-neutral-900 dark:text-white text-[13px] font-semibold">{"No Bundles & Deals Yet"}</p>
+        <p className="text-[12px] text-neutral-500 mt-0.5 mb-3 font-mono">{"Go to Inventory → Bundles to create combo deals"}</p>
         <button
           type="button"
           onClick={(e) => {
@@ -42,9 +40,9 @@ export function BundleGrid({ onAddToCart: _onAddToCart, currency, isTouchMode, i
             e.stopPropagation();
             window.location.href = '/inventory/bundles';
           }}
-          className="bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all active:scale-95 shadow-lg shadow-violet-500/20"
+          className="h-8 px-3.5 rounded bg-primary text-white text-[12px] font-medium hover:bg-primary/90 transition-colors shadow-none"
         >
-          {"Create Deal Now"}
+          Create Bundle
         </button>
       </div>
     );
@@ -52,10 +50,10 @@ export function BundleGrid({ onAddToCart: _onAddToCart, currency, isTouchMode, i
 
   return (
     <div className="space-y-3.5">
-      <div className="flex items-center justify-between bg-violet-500/5 hover:bg-violet-500/10 border border-violet-500/10 p-2.5 rounded-xl transition-all duration-300">
+      <div className="flex items-center justify-between bg-neutral-50 dark:bg-surface border border-neutral-200 dark:border-white/[0.08] p-2 rounded-md shadow-none">
         <div className="flex items-center gap-2 min-w-0">
-          <Gift className="h-4 w-4 text-violet-500 shrink-0" />
-          <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-bold uppercase tracking-wide truncate">
+          <Gift className="h-3.5 w-3.5 text-neutral-500 shrink-0" />
+          <p className="text-[12px] text-neutral-600 dark:text-neutral-400 font-medium truncate">
             {"Create & Manage your combo deals in Inventory"}
           </p>
         </div>
@@ -66,7 +64,7 @@ export function BundleGrid({ onAddToCart: _onAddToCart, currency, isTouchMode, i
             e.stopPropagation();
             window.location.href = '/inventory/bundles';
           }}
-          className="bg-violet-600 hover:bg-violet-700 text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm shrink-0"
+          className="h-7 px-2.5 rounded bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-[12px] font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-colors shadow-none shrink-0"
         >
           {"Manage Deals"}
         </button>

@@ -1,12 +1,13 @@
 import { useCartStore, useAppStore, useSettingsStore } from '../../../stores';
 import { useAuth } from '../../../context/AuthContext';
 import { getDiscountIneligibilityReason } from '../../../lib/discountUtils';
-import { Gift, AlertCircle, X } from 'lucide-react';
+import { GiftIcon, AlertIcon, CloseIcon } from '../../../shared/icons';
+import { TYPOGRAPHY } from '../../../shared/ui/typography';
 import { sonner } from '../../../lib/sonner';
 import { formatCurrency, getCurrencySymbol } from '../../../lib/currencies';
 import { Modal } from '../../../shared/ui/Modal';
-import { HelpTooltip } from '../../../shared/ui/HelpTooltip';
 import { CartActions } from './CartActions';
+import { cn } from '../../../lib/utils';
 
 interface CartFooterProps {
   subtotal: number;
@@ -54,44 +55,38 @@ export function CartFooter({
 
   return (
     <div className="shrink-0 border-t border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-black/75">
-
       {/* Subtotal / Tax / Discounts */}
       <div className="pl-4 pr-5 pt-2 pb-1 space-y-1">
-
-        {/* Sub + Tax */}
         {showDiscount && (
-          <div className="flex justify-between text-[9px] font-bold text-gray-600">
-            <span>{"Subtotal"}</span>
-            <span className="text-gray-700 dark:text-gray-300">{formatCurrency(subtotal, appSettings.currency)}</span>
+          <div className="flex justify-between">
+            <span className={TYPOGRAPHY.sublabel}>{"Subtotal"}</span>
+            <span className={TYPOGRAPHY.money}>{formatCurrency(subtotal, appSettings.currency)}</span>
           </div>
         )}
         {Math.abs(taxAmount) > 0 && (
-          <div className="flex justify-between text-[9px] font-bold text-gray-600">
-            <span>{"Tax"} ({appSettings.taxRate}%)</span>
-            <span className="text-gray-700 dark:text-gray-300">{formatCurrency(Math.abs(taxAmount), appSettings.currency)}</span>
+          <div className="flex justify-between">
+            <span className={TYPOGRAPHY.sublabel}>{"Tax"} ({appSettings.taxRate}%)</span>
+            <span className={TYPOGRAPHY.money}>{formatCurrency(Math.abs(taxAmount), appSettings.currency)}</span>
           </div>
         )}
 
-        {/* Item discounts */}
         {showDiscount && Math.abs(manualItemDiscountTotal) > 0 && (
-          <div className="flex justify-between text-[9px] font-black text-primary dark:text-emerald-400">
+          <div className="flex justify-between text-[12px] font-bold text-emerald-600 dark:text-emerald-400">
             <span>{"Discount"}</span>
-            <span>-{formatCurrency(Math.abs(manualItemDiscountTotal), appSettings.currency)}</span>
+            <span className={TYPOGRAPHY.moneyGreen}>-{formatCurrency(Math.abs(manualItemDiscountTotal), appSettings.currency)}</span>
           </div>
         )}
 
-        {/* Promotions */}
         {showDiscount && activePromotions.map((promo, i) => (
-          <div key={i} className="flex items-center justify-between bg-primary/5 border border-primary/10 rounded-lg px-2 py-0.5">
-            <span className="text-[8px] font-black text-emerald-700 dark:text-emerald-400 uppercase truncate pr-2">{promo.discountName}</span>
-            <span className="text-[8px] font-black text-primary shrink-0">-{formatCurrency(promo.discountAmount, appSettings.currency)}</span>
+          <div key={i} className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 rounded-md px-2.5 py-1">
+            <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase truncate pr-2">{promo.discountName}</span>
+            <span className={cn(TYPOGRAPHY.moneyGreen, "text-[11.5px] shrink-0")}>-{formatCurrency(promo.discountAmount, appSettings.currency)}</span>
           </div>
         ))}
-        {/* Free gifts */}
         {freeGifts.map((gift, i) => (
-          <div key={i} className="flex items-center justify-between bg-purple-500/5 border border-purple-500/10 rounded-lg px-2 py-0.5">
-            <span className="text-[8px] font-black text-purple-600 dark:text-purple-400 uppercase truncate pr-2">FREE: {gift.product.name}</span>
-            <Gift className="h-3 w-3 text-purple-500 shrink-0" />
+          <div key={i} className="flex items-center justify-between bg-purple-500/10 border border-purple-500/20 rounded-md px-2.5 py-1">
+            <span className="text-[11px] font-bold text-purple-700 dark:text-purple-300 uppercase truncate pr-2">FREE: {gift.product.name}</span>
+            <GiftIcon size="xs" className="text-purple-500 shrink-0" />
           </div>
         ))}
       </div>
@@ -99,25 +94,24 @@ export function CartFooter({
       {/* Bill Discount Row */}
       <div className="pl-4 pr-5 pb-2">
         <div className="flex items-center gap-1.5 w-full">
-          {/* % / $ toggle */}
-          <div className="flex items-center bg-gray-150 dark:bg-white/5 p-0.5 rounded-full shrink-0 self-center">
+          <div className="flex items-center bg-neutral-100 dark:bg-white/[0.04] p-0.5 rounded-md border border-neutral-200 dark:border-white/[0.08] shrink-0 self-center">
             {(['percentage', 'fixed'] as const).map((type) => (
               <button
                 key={type}
                 onClick={() =>
-                  useCartStore.getState().updateSalesTab({ id: appActiveSalesTab, updates: { billDiscountType: type } },)
+                  useCartStore.getState().updateSalesTab({ id: appActiveSalesTab, updates: { billDiscountType: type } })
                 }
                 disabled={!profile?.canGiveDiscount}
-                className={`flex items-center justify-center min-w-[32px] h-[26px] px-2 text-[10px] font-black rounded-full transition-all ${appBillDiscountType === type
-                  ? 'bg-white dark:bg-zinc-800 text-primary dark:text-white shadow-sm'
-                  : 'text-gray-500'
+                className={`flex items-center justify-center min-w-[28px] h-[26px] px-1.5 text-[11px] font-mono rounded transition-colors ${appBillDiscountType === type
+                  ? 'bg-white dark:bg-surface text-neutral-900 dark:text-white border border-neutral-200 dark:border-white/[0.08]'
+                  : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
                   } disabled:opacity-40`}
               >
                 {type === 'percentage' ? '%' : getCurrencySymbol(appSettings.currency)}
               </button>
             ))}
           </div>
-          {/* Discount input */}
+
           <div className="relative flex-1 flex items-center">
             <input
               type="text"
@@ -130,7 +124,7 @@ export function CartFooter({
                 if (!/^\d*\.?\d*$/.test(raw)) return;
                 setBillDiscountInput(raw);
                 const val = parseFloat(raw);
-                useCartStore.getState().updateSalesTab({ id: appActiveSalesTab, updates: { billDiscountValue: Number.isFinite(val) ? val : 0 } },);
+                useCartStore.getState().updateSalesTab({ id: appActiveSalesTab, updates: { billDiscountValue: Number.isFinite(val) ? val : 0 } });
               }}
               onBlur={() => {
                 const val = parseFloat(billDiscountInput);
@@ -139,41 +133,39 @@ export function CartFooter({
               }}
               onKeyDown={(e) => e.stopPropagation()}
               placeholder={"Bill discount"}
-              className={`w-full text-left text-[11px] font-bold bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-full h-[32px] py-1 pl-3 focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50 ${billDiscountAmount > 0 ? 'pr-16' : 'pr-3'}`}
+              className={`w-full text-left text-[12px] font-medium bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md h-8 py-1 pl-2.5 focus:outline-none focus:border-neutral-400 disabled:opacity-50 ${billDiscountAmount > 0 ? 'pr-16' : 'pr-3'}`}
             />
-            <HelpTooltip content="Apply a discount to the entire bill (either percentage or fixed currency amount). Requires authorized discount privileges." />
             {showDiscount && Math.abs(billDiscountAmount) > 0 && (
-              <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[8px] font-black text-primary pointer-events-none">
+              <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[11px] font-mono text-rose-500 pointer-events-none">
                 -{formatCurrency(Math.abs(billDiscountAmount), appSettings.currency)}
               </span>
             )}
           </div>
 
-          {(profile?.canGiveDiscount) && appBillDiscountValue > 0 && (
+          {profile?.canGiveDiscount && appBillDiscountValue > 0 && (
             <button
               onClick={() => {
                 setBillDiscountInput('');
-                useCartStore.getState().updateSalesTab({ id: appActiveSalesTab, updates: { billDiscountValue: 0 } },);
+                useCartStore.getState().updateSalesTab({ id: appActiveSalesTab, updates: { billDiscountValue: 0 } });
               }}
-              className="shrink-0 w-[32px] h-[32px] flex items-center justify-center bg-gray-100 dark:bg-white/5 border border-transparent rounded-full text-gray-500 hover:text-red-500 hover:bg-rose-500/10 transition-colors active:scale-95"
+              className="shrink-0 w-8 h-8 flex items-center justify-center bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md text-neutral-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
               title="Clear Discount"
             >
-              <X className="h-3.5 w-3.5" />
+              <CloseIcon size="xs" />
             </button>
           )}
 
-          {/* Promo picker */}
-          {(profile?.canGiveDiscount) && (
+          {profile?.canGiveDiscount && (
             <button
               onClick={() => {
                 const promos = appDiscounts.filter((d: any) => d.active);
                 if (!promos.length) { sonner.info('No active promotions.'); return; }
                 setShowPromoModal(true);
               }}
-              className="shrink-0 w-[32px] h-[32px] flex items-center justify-center bg-gray-100 dark:bg-white/5 border border-transparent rounded-full text-gray-500 hover:text-primary hover:bg-emerald-500/10 transition-colors active:scale-95"
+              className="shrink-0 w-8 h-8 flex items-center justify-center bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md text-neutral-500 hover:text-emerald-600 hover:bg-emerald-500/10 transition-colors"
               title="Browse Promotions"
             >
-              <Gift className="h-3.5 w-3.5" />
+              <GiftIcon size="xs" />
             </button>
           )}
         </div>
@@ -182,21 +174,20 @@ export function CartFooter({
       {/* Grand Total + Buttons */}
       <div className="flex items-center justify-between pl-4 pr-5 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-2.5 border-t border-gray-200 dark:border-white/10">
         <div>
-          <p className="text-[8px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest leading-none">{"Grand Total"}</p>
-          <div className="flex items-center gap-1 mt-0.5">
-            <span className={`text-lg font-black tracking-tight leading-none ${isBelowCost ? 'text-red-500 animate-pulse' : 'text-amber-500 dark:text-amber-400'}`}>
+          <p className={TYPOGRAPHY.cartTotalLabel}>{"Grand Total"}</p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className={cn(TYPOGRAPHY.cartTotalValue, isBelowCost && 'text-red-500 animate-pulse')}>
               {formatCurrency(total, appSettings.currency)}
             </span>
-            {isBelowCost && <AlertCircle className="h-3 w-3 text-red-500" />}
+            {isBelowCost && <AlertIcon size="sm" className="text-red-500" />}
           </div>
-          {/* §4.2 MASTER: warn when items will go negative (allowNegativeStock=true means allowed but flagged) */}
           {appSettings.allowNegativeStock !== false && appCart.some(item =>
             !item.product.isService && item.product.trackInventory !== false &&
             (item.product.stock - item.quantity) < 0
           ) && (
-            <div className="flex items-center gap-1 mt-0.5">
-              <AlertCircle className="h-2.5 w-2.5 text-amber-500" />
-              <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest">⚠ Stock will go negative</span>
+            <div className="flex items-center gap-1.5 mt-1">
+              <AlertIcon size="xs" className="text-amber-500 shrink-0" />
+              <span className="text-[10.5px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">⚠ Stock will go negative</span>
             </div>
           )}
         </div>
@@ -226,34 +217,32 @@ export function CartFooter({
                   if (disabled) return;
                   setBillDiscountInput(String(d.value));
                   useCartStore.getState().updateSalesTab({
-                      id: appActiveSalesTab,
-                      updates: {
-                        billDiscountValue: d.value,
-                        billDiscountType: d.type === 'percentage' ? 'percentage' : 'fixed'
-                      }
-                    });
+                    id: appActiveSalesTab,
+                    updates: {
+                      billDiscountValue: d.value,
+                      billDiscountType: d.type === 'percentage' ? 'percentage' : 'fixed'
+                    }
+                  });
                   setShowPromoModal(false);
                   sonner.success(`"${d.name}" applied!`);
                 }}
-                className={`w-full text-left p-5 bg-gray-50 dark:bg-white/5 border rounded-2xl transition-all relative overflow-hidden ${disabled
-                  ? 'opacity-50 cursor-not-allowed border-gray-200 dark:border-white/5'
-                  : 'border-gray-200 dark:border-white/5 hover:bg-emerald-50 dark:hover:bg-primary/10 active:scale-[0.98] group'
+                className={`w-full text-left p-3 bg-white dark:bg-surface border rounded-md transition-colors relative overflow-hidden ${disabled
+                  ? 'opacity-50 cursor-not-allowed border-neutral-200 dark:border-white/[0.08]'
+                  : 'border-neutral-200 dark:border-white/[0.08] hover:border-neutral-400 group'
                   }`}
               >
-                <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-8 -mt-8 transition-colors" />
-
-                <div className="flex justify-between items-start mb-2 relative z-10">
+                <div className="flex justify-between items-start mb-1.5 relative z-10">
                   <div className="space-y-0.5">
-                    <p className={`font-black text-[12px] uppercase tracking-tight transition-colors ${disabled ? 'text-gray-900 dark:text-white' : 'text-gray-900 dark:text-white group-hover:text-primary'}`}>{d.name}</p>
-                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-[0.2em]">Promotion ID: {d.id.slice(-6).toUpperCase()}</p>
+                    <p className={`font-semibold text-[13px] transition-colors ${disabled ? 'text-neutral-500' : 'text-neutral-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400'}`}>{d.name}</p>
+                    <p className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider">Promotion ID: {d.id.slice(-6).toUpperCase()}</p>
                   </div>
                   <span className="flex items-center gap-1.5">
                     {isAuto && isEligible && (
-                      <span className="text-[8px] font-black text-white bg-blue-500 px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm">
+                      <span className="text-[10px] font-mono text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08] px-1.5 py-0.5 rounded uppercase">
                         Auto
                       </span>
                     )}
-                    <span className="text-[10px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20 shadow-sm">
+                    <span className="text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                       {d.type === 'percentage' ? d.value + '%' : formatCurrency(d.value, appSettings.currency)} OFF
                     </span>
                   </span>
@@ -261,20 +250,20 @@ export function CartFooter({
 
                 {!isEligible ? (
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-white/5 relative z-10">
-                    <AlertCircle className="h-3 w-3 text-rose-500 shrink-0" />
-                    <p className="text-[9px] text-rose-500 font-black uppercase tracking-widest">{reason}</p>
+                    <AlertIcon size="xs" className="text-rose-500 shrink-0" />
+                    <p className="text-[11px] text-rose-600 dark:text-rose-400 font-bold uppercase tracking-wide">{reason}</p>
                   </div>
                 ) : d.minAmount ? (
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-white/5 relative z-10">
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                    <p className="text-[11px] text-neutral-700 dark:text-neutral-300 font-bold uppercase tracking-wide">
                       Unlock at {formatCurrency(d.minAmount, appSettings.currency)}+
                     </p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-white/5 relative z-10">
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full" />
-                    <p className="text-[9px] text-primary/60 font-black uppercase tracking-widest">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full" />
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wide">
                       {isAuto ? 'Auto-applied to bill' : 'Available for all orders'}
                     </p>
                   </div>
@@ -285,7 +274,7 @@ export function CartFooter({
 
           {appDiscounts.filter((d: any) => d.active).length === 0 && (
             <div className="py-12 text-center">
-              <Gift className="w-12 h-12 text-gray-200 dark:text-gray-500 mx-auto mb-4" />
+              <GiftIcon size="xl" className="w-12 h-12 text-gray-200 dark:text-gray-500 mx-auto mb-4" />
               <p className="text-[11px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">No Active Promotions</p>
             </div>
           )}

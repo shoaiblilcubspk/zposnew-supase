@@ -8,10 +8,10 @@ import { getTimezone } from '../../lib/dateUtils';
 import { getCurrencySymbol } from '../../lib/currencies';
 import { Sale } from '../../types';
 import { ReceiptPrint } from '../pos/ReceiptPrint';
-import { normalizePaymentMethod } from '../../lib/services';
+import { normalizePaymentMethod, salesService } from '../../lib/services';
 import { TransactionDetailModal } from './TransactionDetailModal';
 import { ExportButton } from '../../shared/export';
-import { Button } from '../../shared/ui';
+import { Button, RealIcon } from '../../shared/ui';
 import { TransactionTable, computeWalletTotals, buildExportColumns, buildExportRows } from './TransactionTable';
 import { TransactionFilters } from './TransactionFilters';
 import { TransactionHeaderCards } from './TransactionHeaderCards';
@@ -51,10 +51,38 @@ export function TransactionsManager() {
   const [refreshKey, _setRefreshKey] = useState(0);
 
   useEffect(() => {
-    // Refresh triggered from other actions (e.g. cloud search) handles loading
-  }, [loadMoreSales]);
+    let mounted = true;
+    const fetchSales = async () => {
+      try {
+        const sales = await salesService.getAll();
+        if (mounted && sales) {
+          useSalesStore.getState().setSales(sales);
+        }
+      } catch (err) {
+        console.error('[TransactionsManager] Failed to load sales:', err);
+      }
+    };
 
-  const { isSearchingRemote, cloudResults, isCloudSearch } = useCloudSearch({
+    fetchSales();
+
+    const handleFocus = () => fetchSales();
+    window.addEventListener('focus', handleFocus);
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'pos_last_sale_event') {
+        fetchSales();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [refreshKey]);
+
+  const { isSearchingRemote } = useCloudSearch({
     searchTerm,
     paymentFilter,
     saleTypeFilter,
@@ -100,24 +128,18 @@ export function TransactionsManager() {
 
   const { startTs, endTs } = useMemo(() => computeDateRange(dateFilter, startDateInput, endDateInput, timezone), [dateFilter, startDateInput, endDateInput, timezone]);
 
-  const dateFiltered = useMemo(() => {
-    return appSales.filter(sale => {
-      if (isDraftSale(sale)) return false;
-      const saleTs = new Date(sale.timestamp).getTime();
-      return saleTs >= startTs && saleTs <= endTs;
-    });
-  }, [appSales, startTs, endTs]);
-
   const filteredTransactions = useMemo(() => {
-    const list = isCloudSearch ? (cloudResults.length > 0 ? cloudResults : dateFiltered) : dateFiltered;
-    return list.filter(sale => {
+    return (appSales || []).filter(sale => {
       if (isDraftSale(sale)) return false;
-      if (sale.status === 'pending') return false;
-      if (sale.status === 'deleted') return false;
+      if (sale.status === 'pending' || sale.status === 'deleted' || sale.status === 'void') return false;
       const inv = sale.invoiceNumber ? String(sale.invoiceNumber).trim() : '';
       const rec = sale.receiptNumber ? String(sale.receiptNumber).trim() : '';
       if ((!inv || inv === 'undefined') && (!rec || rec === 'undefined')) return false;
-      const matchesSearch = isCloudSearch || (
+
+      const saleTs = new Date(sale.timestamp).getTime();
+      if (saleTs < startTs || saleTs > endTs) return false;
+
+      const matchesSearch = !searchTerm.trim() || (
         (sale.receiptNumber ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (sale.invoiceNumber ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (sale.customerName ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -136,7 +158,7 @@ export function TransactionsManager() {
           : (sale.status === 'refunded' || sale.status === 'partially_refunded'));
       return matchesSearch && matchesPayment && matchesSaleType && matchesCashier && matchesSalesman && matchesStatus;
     }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [isCloudSearch, cloudResults, dateFiltered, searchTerm, paymentFilter, saleTypeFilter, selectedCashier, selectedSalesman, statusFilter]);
+  }, [appSales, startTs, endTs, searchTerm, paymentFilter, saleTypeFilter, selectedCashier, selectedSalesman, statusFilter]);
 
   const totalRevenue = filteredTransactions.reduce((s, x) => s + (x.total - (x.refundedAmount || 0)), 0);
   const totalItemsSold = filteredTransactions.reduce((s, x) => s + (x.items || []).reduce((i, item) => i + item.quantity, 0), 0);
@@ -165,37 +187,47 @@ export function TransactionsManager() {
   const exportRows = useMemo(() => buildExportRows(filteredTransactions, appCustomers, appUsers, isAdmin, appSettings.country, appSettings.timezone), [filteredTransactions, appCustomers, appUsers, isAdmin, appSettings.country, appSettings.timezone]);
 
   return (
-    <div className="main-content-scroll p-4 md:p-6 space-y-3">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
-        <div className="flex items-center gap-4 shrink-0">
+    <div className="main-content-scroll p-1 sm:p-4 lg:p-6 space-y-3 lg:space-y-4 max-w-[1400px] mx-auto">
+      <div className="flex items-center justify-between gap-2 sm:gap-3 pb-1 border-b border-neutral-200 dark:border-white/[0.08]">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Button
             variant="ghost"
+            type="button"
             onClick={() => navigate('/pos')}
-            className="!min-h-0 !p-2 !rounded-xl !text-gray-600 dark:!text-gray-400 hover:!bg-gray-100 dark:hover:!bg-white/5 !gap-1 mr-1"
+            icon={<ChevronLeft className="h-4 w-4" />}
+            className="h-8 px-2.5 rounded text-neutral-500 hover:text-neutral-900 dark:hover:text-white border border-transparent hover:border-neutral-200 dark:hover:border-white/[0.08] shrink-0"
           >
-            <ChevronLeft className="h-5 w-5" />
-            <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">{"Back"}</span>
+            <span className="hidden sm:inline text-[12px] font-medium">POS</span>
           </Button>
-          <div className="h-10 w-px bg-gray-200 dark:bg-white/10 mx-1 hidden sm:block" />
-          <div className="h-14 w-14 bg-primary/10 rounded-2xl flex items-center justify-center shadow-inner border border-primary/10">
-            <History className="h-7 w-7 text-primary" />
-          </div>
-          <div className="shrink-0 flex flex-col">
-            <h1 className="text-2xl xl:text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">{"Sales"}</h1>
-            <p className="text-gray-600 dark:text-gray-400 text-[9px] font-black uppercase tracking-[0.2em] mt-2 opacity-60">
-              {isSearchingRemote ? "Searching all records..." : isCloudSearch ? `Showing ${cloudResults.length} results` : `Management Hub • ${filteredTransactions.length} Records`}
-            </p>
+
+          <div className="h-4 w-px bg-neutral-200 dark:bg-white/[0.08] hidden sm:block shrink-0" />
+
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <RealIcon name="sales" size="sm" />
+            <div className="min-w-0">
+              <h1 className="text-[14px] sm:text-base font-semibold text-neutral-900 dark:text-white tracking-[-0.01em] leading-tight truncate">
+                Sales & Transactions
+              </h1>
+              <p className="text-[11px] sm:text-[12px] text-neutral-500 font-normal tracking-tight mt-0.5">
+                {isSearchingRemote ? "Searching all records..." : (
+                  <>
+                    <span className="font-mono font-medium text-neutral-700 dark:text-neutral-300">{filteredTransactions.length}</span> records
+                  </>
+                )}
+              </p>
+            </div>
           </div>
         </div>
+
         {isAdmin && (
-        <ExportButton
-          data={exportRows}
-          columns={exportColumns}
-          title="Sales Detailed Report"
-          filtersSummary={`${appSettings.currency} • ${filteredTransactions.length} records`}
-          currencySymbol={getCurrencySymbol(appSettings.currency)}
-          className="!px-8 !shadow-emerald-500/20"
-        />
+          <ExportButton
+            data={exportRows}
+            columns={exportColumns}
+            title="Sales Detailed Report"
+            filtersSummary={`${appSettings.currency} • ${filteredTransactions.length} records`}
+            currencySymbol={getCurrencySymbol(appSettings.currency)}
+            className="h-8 !px-2.5 sm:!px-3 !text-[11px] sm:!text-[12px] !font-medium !rounded !shadow-none shrink-0"
+          />
         )}
       </div>
 

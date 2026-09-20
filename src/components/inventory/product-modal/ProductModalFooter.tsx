@@ -11,29 +11,25 @@ interface ProductModalFooterProps {
 
 export function ProductModalFooter({ product, onClose, onSubmit, isSubmitting }: ProductModalFooterProps) {
   return (
-    <div className="flex items-center justify-end gap-2 sm:gap-3 w-full">
-      <Button
+    <div className="flex items-center justify-end gap-2 w-full font-mono text-[12px]">
+      <button
         type="button"
-        variant="danger"
         onClick={onClose}
-        className="!bg-transparent !border-rose-200 dark:!border-rose-900/30 !text-[#ff4b6e] hover:!bg-rose-50 dark:hover:!bg-rose-500/10 hover:!opacity-100 !shadow-none !px-4 sm:!px-6 !py-2.5 sm:!py-3.5 !text-[9px] sm:!text-[10px] !rounded-2xl !shrink-0 !min-h-0"
+        className="h-8 px-3 rounded border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/[0.08] font-medium transition-colors"
       >
-        {"Discard Upper"}
-      </Button>
-      <Button
+        {"Discard"}
+      </button>
+      <button
         type="button"
-        variant="primary"
-        size="md"
-        loading={isSubmitting}
         disabled={isSubmitting}
         onClick={onSubmit}
-        className="flex-1 sm:flex-none sm:!min-w-[240px] hover:!shadow-emerald-500/30 !py-2.5 sm:!py-3.5 !text-[9px] sm:!text-[11px]"
-        icon={!isSubmitting ? <Package className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" /> : undefined}
+        className="h-8 px-4 rounded bg-primary text-white hover:bg-primary/90 disabled:opacity-50 font-medium flex items-center gap-1.5 transition-colors shadow-none"
       >
-        <span className="leading-none mt-[1px]">
-          {product ? "commit_changes" : "register_product"}
+        <Package className="w-3.5 h-3.5 shrink-0" />
+        <span>
+          {product ? "Update Product" : "Save Product"}
         </span>
-      </Button>
+      </button>
     </div>
   );
 }

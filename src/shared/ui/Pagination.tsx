@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Select } from './Select';
@@ -75,7 +75,7 @@ function pageNumbers(page: number, totalPages: number, siblingCount: number): (n
 }
 
 const navBtn =
-  'btn btn-secondary btn-sm !min-h-0 !px-2.5 !py-1.5 disabled:opacity-30';
+  'w-7 h-7 flex items-center justify-center rounded border border-neutral-200 dark:border-white/[0.08] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors duration-100';
 
 export function Pagination({
   page,
@@ -90,9 +90,9 @@ export function Pagination({
   className,
 }: PaginationProps) {
   return (
-    <div className={cn('flex items-center justify-center gap-4 flex-wrap', className)}>
+    <div className={cn('flex items-center justify-between gap-2 sm:gap-4 flex-wrap w-full py-0.5 sm:py-0', className)}>
       <nav
-        className="flex items-center gap-1.5 select-none"
+        className="flex items-center gap-1 select-none"
         aria-label="Pagination"
       >
         <button
@@ -110,7 +110,7 @@ export function Pagination({
           <div className="hidden sm:flex items-center gap-1">
             {pageNumbers(page, totalPages, siblingCount).map((num, i) =>
               num === '…' ? (
-                <span key={`e${i}`} className="px-1 text-xs font-black text-gray-400">
+                <span key={`e${i}`} className="px-1 text-xs text-neutral-400">
                   …
                 </span>
               ) : (
@@ -120,10 +120,10 @@ export function Pagination({
                   onClick={() => onPageChange(num)}
                   aria-current={num === page ? 'page' : undefined}
                   className={cn(
-                    'min-w-[32px] h-9 px-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95',
+                    'min-w-[28px] h-7 px-2 rounded text-[12.5px] tabular-nums font-medium transition-colors duration-100',
                     num === page
-                      ? 'bg-primary text-white shadow-lg shadow-emerald-500/20'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-none border border-emerald-600'
+                      : 'border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/[0.06]'
                   )}
                 >
                   {num}
@@ -134,7 +134,7 @@ export function Pagination({
         )}
 
         {/* Mobile page indicator */}
-        <span className="sm:hidden text-[10px] font-black uppercase tracking-widest text-gray-500 px-2">
+        <span className="sm:hidden text-[12px] font-medium text-neutral-700 dark:text-neutral-300 px-2 tabular-nums">
           Page {page} of {Math.max(1, totalPages)}
         </span>
 
@@ -149,7 +149,7 @@ export function Pagination({
         </button>
 
         {totalItems != null && (
-          <span className="hidden lg:inline text-[9px] font-bold uppercase tracking-widest text-gray-400 ml-2">
+          <span className="hidden lg:inline text-[12px] font-medium text-neutral-600 dark:text-neutral-300 ml-2 tabular-nums">
             {totalItems} total
           </span>
         )}
@@ -157,14 +157,14 @@ export function Pagination({
 
       {pageSize && onPageSizeChange && (
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Per Page:</span>
+          <span className="text-[11px] text-neutral-500 dark:text-neutral-400 uppercase tracking-wider font-medium">Per Page:</span>
           <Select
             value={pageSize.toString()}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="w-20 !h-8 !min-h-0 !text-[11px] !py-0"
+            className="w-20 !h-7 !min-h-0 !text-[12px] !py-0 !pl-2.5 !pr-7 font-mono border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface text-neutral-900 dark:text-white"
           >
             {pageSizeOptions.map(sz => (
-              <option key={sz} value={sz.toString()}>{sz}</option>
+              <option key={sz} value={sz.toString()} className="bg-white dark:bg-[#18181b] text-neutral-900 dark:text-white">{sz}</option>
             ))}
           </Select>
         </div>

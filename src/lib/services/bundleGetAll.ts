@@ -1,97 +1,77 @@
-import { supabase } from '../supabase';
-import {
-  localDb,
-} from '../localDb';
-import { mapBundle } from './bundleMappers';
-import {
-  Bundle,
-  BundleItem,
-} from '../../types';
+import { getDatabase, TABLES } from '../db';
+import { localDb } from '../localDb';
+import { Bundle, BundleItem } from '../../types';
 
-/** Fetch all active bundles with their items */
-export async function getAllBundles(forceRemote: boolean = false): Promise<Bundle[]> {
-  // Try local first if not forcing remote
-  if (!forceRemote) {
-    try {
-      const local = await localDb.bundles.toArray();
-      if (local.length > 0) {
-        const localItems = await localDb.bundleItems.toArray();
+function mapBundleRow(row: any, items: any[]): Bundle {
+  return {
+    id: row.id,
+    name: row.name || '',
+    description: row.description || '',
+    discountValue: Number(row.discount_value) || 0,
+    discountType: (row.discount_type as 'percentage' | 'fixed') || 'percentage',
+    active: Boolean(row.active),
+    hideItemPrices: Boolean(row.hide_item_prices),
+    overridePrice: row.override_price != null ? Number(row.override_price) : undefined,
+    image: row.image ?? undefined,
+    items: items
+      .filter(bi => bi.bundle_id === row.id)
+      .map((bi: any): BundleItem => ({
+        id: bi.id,
+        bundleId: bi.bundle_id,
+        productId: bi.product_id,
+        quantity: Number(bi.quantity) || 1,
+      })),
+    createdAt: new Date(Number(row.created_at) || Date.now()),
+    updatedAt: new Date(Number(row.updated_at) || Date.now()),
+  };
+}
 
-        return local.map((b: any): Bundle => {
-          return {
-            id: b.id,
-            name: b.name || '',
-            description: b.description || '',
-            discountValue: Number(b.discountValue) || 0,
-            discountType: b.discountType || 'percentage',
-            active: b.active !== false,
-            hideItemPrices: b.hideItemPrices === true,
-            overridePrice: b.overridePrice ?? undefined,
-            image: b.image,
-            items: localItems.filter((bi: any) => bi.bundleId === b.id).map((bi: any): BundleItem => ({
-              id: bi.id,
-              bundleId: bi.bundleId,
-              productId: bi.productId,
-              quantity: Number(bi.quantity) || 1,
-            })),
-            createdAt: b.createdAt ? new Date(b.createdAt) : new Date(),
-            updatedAt: b.updatedAt ? new Date(b.updatedAt) : new Date(),
-          };
-        });
-      }
-    } catch (e) {
-      console.warn('[bundlesService.getAll] Local fetch failed, trying cloud', e);
-    }
-  }
-
-  // Cloud fetch
-  const { data, error } = await supabase
-    .from('bundles')
-    .select('*, bundle_items(*)')
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-
-  const bundles = (data || []).map(mapBundle);
-
-  // Hydrate local db - clear first to handle deletions from other devices
+/** Fetch all active bundles from SQLite. One-time migrates existing Dexie bundles on first call. */
+export async function getAllBundles(_forceRemote: boolean = false): Promise<Bundle[]> {
   try {
-    await localDb.transaction('rw', localDb.bundles, localDb.bundleItems, async () => {
-      await localDb.bundles.clear();
-      await localDb.bundleItems.clear();
+    const db = await getDatabase();
 
-      if (bundles.length > 0) {
-        await localDb.bundles.bulkPut(bundles.map((b: Bundle) => ({
-          id: b.id,
-          name: b.name,
-          description: b.description,
-          discountValue: b.discountValue,
-          discountType: b.discountType,
-          active: b.active,
-          hideItemPrices: b.hideItemPrices || false,
-          overridePrice: b.overridePrice ?? undefined,
-          image: b.image,
-          createdAt: b.createdAt,
-          updatedAt: b.updatedAt,
-        })));
-
-        const allItems = bundles.reduce((acc: any[], b: Bundle) => {
-          if (b.items && b.items.length > 0) {
-            acc.push(...b.items.map((bi: BundleItem) => ({
-              id: bi.id,
-              bundleId: bi.bundleId,
-              productId: bi.productId,
-              quantity: bi.quantity,
-            })));
+    // One-time migration: if SQLite has 0 bundles but Dexie has some, migrate them
+    const countRow = await db.queryOne<{ cnt: number }>(`SELECT COUNT(*) as cnt FROM ${TABLES.BUNDLES};`);
+    if (!countRow || Number(countRow.cnt) === 0) {
+      try {
+        const dexieBundles = await localDb.bundles.toArray();
+        const dexieItems = await localDb.bundleItems.toArray();
+        if (dexieBundles.length > 0) {
+          for (const b of dexieBundles) {
+            const now = Date.now();
+            await db.execute(
+              `INSERT OR IGNORE INTO ${TABLES.BUNDLES}
+                (id, name, description, discount_value, discount_type, override_price, hide_item_prices, active, image, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+              [
+                b.id, b.name || '', b.description || '',
+                Number(b.discountValue) || 0, b.discountType || 'percentage',
+                b.overridePrice ?? null, b.hideItemPrices ? 1 : 0,
+                b.active !== false ? 1 : 0, b.image || null,
+                b.createdAt ? new Date(b.createdAt).getTime() : now,
+                b.updatedAt ? new Date(b.updatedAt).getTime() : now,
+              ]
+            );
           }
-          return acc;
-        }, []);
-
-        if (allItems.length > 0) await localDb.bundleItems.bulkPut(allItems);
+          for (const bi of dexieItems) {
+            await db.execute(
+              `INSERT OR IGNORE INTO ${TABLES.BUNDLE_ITEMS} (id, bundle_id, product_id, quantity) VALUES (?, ?, ?, ?);`,
+              [bi.id, bi.bundleId, bi.productId, Number(bi.quantity) || 1]
+            );
+          }
+        }
+      } catch {
+        // Dexie migration is best-effort; don't crash if Dexie tables don't exist
       }
-    });
-  } catch (e) {
-    console.warn('[bundlesService.getAll] Failed to update local cache:', e);
-  }
+    }
 
-  return bundles;
+    const rows = await db.query<any>(`SELECT * FROM ${TABLES.BUNDLES} WHERE active = 1 ORDER BY created_at ASC;`);
+    const itemRows = await db.query<any>(`SELECT * FROM ${TABLES.BUNDLE_ITEMS};`);
+
+    return rows.map(row => mapBundleRow(row, itemRows));
+  } catch (e) {
+    console.error('[bundlesService.getAll] SQLite fetch error:', e);
+    return [];
+  }
 }

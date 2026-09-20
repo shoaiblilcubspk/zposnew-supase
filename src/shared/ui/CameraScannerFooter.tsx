@@ -17,41 +17,41 @@ export function CameraScannerFooter({ handleRetry, switchCamera, availableCamera
   return (
     <div className="flex flex-col gap-4 w-full">
       <div className="flex items-center justify-between">
-        <div className="flex gap-2.5">
+        <div className="flex gap-2">
           <button
             onClick={handleRetry}
-            className="p-3.5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all active:scale-90 border border-white/5"
+            className="h-8 w-8 bg-white/5 hover:bg-white/10 rounded-md transition-colors border border-white/10 flex items-center justify-center"
             title="Refresh Engine"
           >
-            <RefreshCw className={`w-5 h-5 text-gray-600 ${isInitializing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 text-neutral-400 ${isInitializing ? 'animate-spin' : ''}`} />
           </button>
 
           {availableCameras.length > 1 && (
             <button
               onClick={switchCamera}
-              className="p-3.5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all active:scale-90 border border-white/5 flex items-center gap-2"
+              className="h-8 px-2.5 bg-white/5 hover:bg-white/10 rounded-md transition-colors border border-white/10 flex items-center gap-1.5"
             >
-              <Smartphone className="w-5 h-5 text-gray-600" />
-              <span className="text-[9px] font-black text-gray-600 uppercase tracking-tighter">{currentCameraIndex + 1}/{availableCameras.length}</span>
+              <Smartphone className="w-4 h-4 text-neutral-400" />
+              <span className="text-[11px] font-mono text-neutral-400">{currentCameraIndex + 1}/{availableCameras.length}</span>
             </button>
           )}
 
           {hasTorch && (
             <button
               onClick={toggleTorch}
-              className={`p-3.5 rounded-2xl transition-all active:scale-90 border ${isTorchOn ? 'bg-amber-500 border-amber-600 text-white shadow-lg shadow-amber-500/20' : 'bg-white/5 border-white/5 text-gray-600'}`}
+              className={`h-8 w-8 rounded-md transition-colors border flex items-center justify-center ${isTorchOn ? 'bg-amber-500 border-amber-600 text-white' : 'bg-white/5 border-white/10 text-neutral-400'}`}
             >
-              {isTorchOn ? <ZapOff className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
+              {isTorchOn ? <ZapOff className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
             </button>
           )}
         </div>
 
         <button
           onClick={() => setContinuousMode(!continuousMode)}
-          className={`px-5 py-3.5 rounded-2xl flex items-center gap-3 transition-all active:scale-95 border ${continuousMode ? 'bg-primary/10 border-primary/30 ring-1 ring-emerald-500/20' : 'bg-white/5 border-white/5'}`}
+          className={`h-8 px-3 rounded-md flex items-center gap-2 transition-colors border ${continuousMode ? 'bg-primary/10 border-primary/30 text-emerald-400' : 'bg-white/5 border-white/10 text-neutral-400'}`}
         >
-          <div className={`w-2.5 h-2.5 rounded-full ${continuousMode ? 'bg-primary animate-pulse shadow-[0_0_10px_rgba(16,185,129,1)]' : 'bg-gray-600'}`} />
-          <span className={`text-[10px] font-black uppercase tracking-widest ${continuousMode ? 'text-emerald-400' : 'text-gray-600'}`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${continuousMode ? 'bg-primary animate-pulse' : 'bg-neutral-600'}`} />
+          <span className="text-[12px] font-medium">
             {continuousMode ? 'Continuous' : 'Single Scan'}
           </span>
         </button>

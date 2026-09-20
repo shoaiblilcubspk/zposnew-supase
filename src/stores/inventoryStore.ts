@@ -16,7 +16,11 @@ interface InventoryState {
   updatePurchaseRecord: (r: PurchaseRecord) => void;
   deletePurchaseRecord: (id: string) => void;
   setCategories: (c: Category[]) => void;
+  addCategory: (c: Category) => void;
+  updateCategory: (c: Category) => void;
+  deleteCategory: (id: string) => void;
   setSuppliers: (s: Supplier[]) => void;
+  addSupplier: (s: Supplier) => void;
   updateSupplier: (s: Supplier) => void;
   deleteSupplier: (id: string) => void;
   setPurchaseOrders: (p: PurchaseOrder[]) => void;
@@ -39,12 +43,12 @@ export const useInventoryStore = create<InventoryState>((set) => ({
   addPurchaseRecord: (record) => set((st) => {
     if (st.purchaseRecords.some((r) => r.id === record.id)) return st;
     const products = useProductsStore.getState().products;
-    const idx = products.findIndex((p) => p.id === record.productId);
+    const idx = products.findIndex((p: any) => p.id === record.productId);
     let updatedProducts = products;
     if (idx >= 0 && products[idx].trackInventory !== false) {
       const np = { ...products[idx] };
       np.stock = (np.stock || 0) + (record.quantity || 0);
-      updatedProducts = products.map((p, i) => (i === idx ? np : p));
+      updatedProducts = products.map((p: any, i: number) => (i === idx ? np : p));
       useProductsStore.setState({ products: updatedProducts });
     }
     return { purchaseRecords: [record, ...st.purchaseRecords] };
@@ -57,7 +61,24 @@ export const useInventoryStore = create<InventoryState>((set) => ({
   deletePurchaseRecord: (id) => set((st) => ({ purchaseRecords: st.purchaseRecords.filter((r) => r.id !== id) })),
 
   setCategories: (categories) => set({ categories }),
+  addCategory: (category) => set((st) => {
+    if (st.categories.some((c) => c.id === category.id || c.name.toLowerCase() === category.name.toLowerCase())) {
+      return st;
+    }
+    return { categories: [...st.categories, category] };
+  }),
+  updateCategory: (category) => set((st) =>
+    ({ categories: st.categories.map((c) => (c.id === category.id ? category : c)) })
+  ),
+  deleteCategory: (id) => set((st) => ({ categories: st.categories.filter((c) => c.id !== id) })),
+
   setSuppliers: (suppliers) => set({ suppliers }),
+  addSupplier: (supplier) => set((st) => {
+    if (st.suppliers.some((s) => s.id === supplier.id || s.name.toLowerCase() === supplier.name.toLowerCase())) {
+      return st;
+    }
+    return { suppliers: [...st.suppliers, supplier] };
+  }),
   updateSupplier: (supplier) => set((st) =>
     ({ suppliers: st.suppliers.map((s) => (s.id === supplier.id ? supplier : s)) })
   ),

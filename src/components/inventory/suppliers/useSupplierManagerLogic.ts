@@ -98,12 +98,6 @@ export function useSupplierManagerLogic() {
       return;
     }
 
-    const inUse = appProducts.some(p => p.supplierId === id || p.supplier === name);
-    if (inUse) {
-      sonner.error('Cannot delete this supplier because there are products associated with them. Reassign the products first.');
-      return;
-    }
-
     const { isConfirmed } = await sonner.deleteConfirm('supplier record');
     if (isConfirmed) {
       try {

@@ -21,12 +21,14 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const variantClass: Record<CardVariant, string> = {
   default:
-    'bg-white dark:bg-surface border border-gray-200/50 dark:border-white/5 rounded-2xl shadow-xl transition-all duration-300',
+    'bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md shadow-none transition-colors duration-100',
   stat: 'stat-card',
-  premium: 'premium-card',
-  glass: 'glass-card',
+  premium:
+    'bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md shadow-none transition-colors duration-100',
+  glass:
+    'bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md shadow-none',
   listRow:
-    'bg-white dark:bg-surface border border-gray-200/50 dark:border-white/5 rounded-xl shadow-sm transition-all duration-200',
+    'bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md shadow-none transition-colors duration-100 hover:bg-neutral-50 dark:hover:bg-surface-hover',
 };
 
 const paddingClass: Record<CardPadding, string> = {

@@ -22,6 +22,7 @@ export async function loadProfileLogic(userId: string, setProfile: any, setUser:
         canDeleteSale: can(pData.role, 'delete_sale'), canViewProfit: can(pData.role, 'view_profit'),
         canManageStock: can(pData.role, 'manage_stock'), canManagePO: can(pData.role, 'manage_po'),
         canViewRecords: can(pData.role, 'view_records'), canEditSale: can(pData.role, 'edit_sale'),
+        canEditProduct: can(pData.role, 'manage_stock'),
         active: pData.active ?? true, lastLogin: pData.last_login ? new Date(pData.last_login) : undefined,
         avatar: pData.avatar || undefined,
       };
@@ -40,7 +41,7 @@ export async function loadProfileLogic(userId: string, setProfile: any, setUser:
       setLoading(false);
     } else {
       await signOutLogic(setLoading, () => {}, setUser, setProfile);
-      sonner.error('Session Invalid', 'Your account no longer exists. Please sign in again.');
+      sonner.error('Your account no longer exists. Please sign in again.');
     }
   } catch (error: any) {
     const isNetworkError = !navigator.onLine || error?.toString().includes('Failed to fetch') || error?.toString().includes('ERR_NAME_NOT_RESOLVED');

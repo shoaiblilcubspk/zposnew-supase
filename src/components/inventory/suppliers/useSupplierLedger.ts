@@ -97,8 +97,10 @@ export function useSupplierLedger({ supplier, startDate, endDate, dateFilter }: 
       // and SupplierTransaction using this idempotencyKey.
 
       await suppliersService.recordPayment({
+        supplierId: supplier.id,
         supplier_id: supplier.id,
         amount: amount,
+        paymentMode: paymentMethod,
         payment_type: paymentMethod,
         note: paymentNote,
         isManualOverride: isPaymentManualOverride,

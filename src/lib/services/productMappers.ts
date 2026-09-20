@@ -1,8 +1,6 @@
 import {
   Product,
   ProductAddon,
-  Category,
-  Topping,
   ProductTopping,
 } from '../../types';
 

@@ -48,43 +48,43 @@ export function DiscountModal({ isOpen, onClose, discount }: DiscountModalProps)
         </div>
       }
     >
-      <div className="space-y-10">
-        <div className="space-y-6">
-          <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-            <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
-            {"Identity Hub"}
+      <div className="space-y-8">
+        <div className="space-y-3">
+          <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-3.5 h-0.5 bg-emerald-500 rounded-full"></span>
+            {"Promotion Details"}
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"Promotion Name *"}</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            <div className="space-y-1">
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block">{"Promotion Name *"}</label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium placeholder:text-gray-600"
+                className="w-full h-8 px-2.5 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-neutral-400"
                 placeholder={'e.g. Eid Mega Sale'}
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"Privilege Type *"}</label>
+            <div className="space-y-1">
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block">{"Privilege Type *"}</label>
               <Select
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
-                className="!bg-[#f8f9fa] dark:!bg-black/75 !border-none !text-sm !rounded-xl !px-4 !text-gray-900 dark:!text-white !font-medium"
+                className="!h-8 !text-[13px] !rounded !bg-white dark:!bg-surface !border-neutral-300 dark:!border-white/[0.12] text-neutral-900 dark:text-white"
               >
                 <option value="percentage" className="dark:bg-surface">{"Percentage Off"}</option>
                 <option value="fixed" className="dark:bg-surface">{"Fixed Amount Off"}</option>
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                {formData.type === 'percentage' ? "Factor (%)" : "Amount ({currency})".replace('{currency}', appSettings.currency)} *
+            <div className="space-y-1">
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block">
+                {formData.type === 'percentage' ? "Factor (%)" : `Amount (${appSettings.currency})`} *
               </label>
               <div className="relative">
                 <input
@@ -95,84 +95,84 @@ export function DiscountModal({ isOpen, onClose, discount }: DiscountModalProps)
                   value={formData.value}
                   onChange={handleChange}
                   required
-                  className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium placeholder:text-gray-600"
+                  className="w-full h-8 pl-2.5 pr-8 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] font-mono tabular-nums text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-neutral-400"
                   placeholder="0"
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 font-bold text-[10px] uppercase tracking-widest">{formData.type === 'percentage' ? '%' : appSettings.currency}</span>
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-500 dark:text-neutral-400 font-mono text-[11px] font-semibold">{formData.type === 'percentage' ? '%' : appSettings.currency}</span>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"Min Basket"}</label>
+            <div className="space-y-1">
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block">{"Min Basket Amount"}</label>
               <input
                 type="number"
                 step="0.01"
                 name="minAmount"
                 value={formData.minAmount}
                 onChange={handleChange}
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium placeholder:text-gray-600"
+                className="w-full h-8 px-2.5 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] font-mono tabular-nums text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-neutral-400"
                 placeholder="0.00"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"Max Ceiling"}</label>
+            <div className="space-y-1">
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block">{"Max Cap Ceiling"}</label>
               <input
                 type="number"
                 step="0.01"
                 name="maxDiscount"
                 value={formData.maxDiscount}
                 onChange={handleChange}
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium placeholder:text-gray-600"
+                className="w-full h-8 px-2.5 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] font-mono tabular-nums text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-neutral-400"
                 placeholder={"No cap"}
               />
             </div>
           </div>
         </div>
 
-        <div className="space-y-6 pt-2">
-          <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-            <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
+        <div className="space-y-3 pt-1">
+          <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-3.5 h-0.5 bg-emerald-500 rounded-full"></span>
             {"Operational Window"}
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"Activation"}</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div className="space-y-1">
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block">{"Activation Date"}</label>
               <input
                 type="date"
                 name="validFrom"
                 value={formData.validFrom}
                 onChange={handleChange}
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
+                className="w-full h-8 px-2.5 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] font-mono text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"Expiry"}</label>
+            <div className="space-y-1">
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block">{"Expiry Date"}</label>
               <input
                 type="date"
                 name="validTo"
                 value={formData.validTo}
                 onChange={handleChange}
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
+                className="w-full h-8 px-2.5 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] font-mono text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors"
               />
             </div>
           </div>
 
-          <div className="space-y-3 pt-2">
-            <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"Weekly Cyclic Schedule"}</label>
-            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+          <div className="space-y-2 pt-1">
+            <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block">{"Weekly Cyclic Schedule"}</label>
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
               {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((day, index) => (
                 <button
                   key={index}
                   type="button"
                   onClick={() => toggleDay(index)}
-                  className={`py-2 rounded-xl text-[10px] font-black transition-all border-2 ${validDays.includes(index)
-                    ? 'bg-primary border-primary text-white shadow-lg shadow-emerald-500/20'
-                    : 'bg-[#f8f9fa] dark:bg-black/75 border-transparent text-gray-600 hover:bg-gray-100'
+                  className={`h-8 rounded text-[12px] font-semibold border transition-colors ${validDays.includes(index)
+                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                    : 'border-neutral-300 dark:border-white/[0.12] bg-white dark:bg-surface text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white'
                     }`}
                 >
-                  {day.toLowerCase()}
+                  {day}
                 </button>
               ))}
             </div>
@@ -191,19 +191,19 @@ export function DiscountModal({ isOpen, onClose, discount }: DiscountModalProps)
           cardConditionWarning={cardConditionWarning}
         />
 
-        <div className="space-y-6 pt-2">
-          <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-            <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
+        <div className="space-y-3 pt-1">
+          <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-3.5 h-0.5 bg-emerald-500 rounded-full"></span>
             {"Status & Behavior"}
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex items-center justify-between p-5 bg-[#f8f9fa] dark:bg-black/75 border border-gray-200 dark:border-white/5 rounded-[20px] cursor-pointer hover:bg-emerald-50 dark:hover:bg-primary/10 transition-all">
-              <span className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-wider">{"Active Status"}</span>
-              <ToggleSwitch checked={formData.active} onChange={(checked) => setFormData(prev => ({ ...prev, active: checked }))} color="bg-primary" className="scale-110" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex items-center justify-between p-3 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded-md transition-colors">
+              <span className="text-[13px] font-semibold text-neutral-900 dark:text-white">{"Active Status"}</span>
+              <ToggleSwitch checked={formData.active} onChange={(checked) => setFormData(prev => ({ ...prev, active: checked }))} size="sm" color="bg-emerald-600" />
             </div>
-            <div className="flex items-center justify-between p-5 bg-[#f8f9fa] dark:bg-black/75 border border-gray-200 dark:border-white/5 rounded-[20px] cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all">
-              <span className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-wider">{"Auto-Apply"}</span>
-              <ToggleSwitch checked={formData.isAutoApply} onChange={(checked) => setFormData(prev => ({ ...prev, isAutoApply: checked }))} color="bg-blue-500" className="scale-110" />
+            <div className="flex items-center justify-between p-3 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded-md transition-colors">
+              <span className="text-[13px] font-semibold text-neutral-900 dark:text-white">{"Auto-Apply"}</span>
+              <ToggleSwitch checked={formData.isAutoApply} onChange={(checked) => setFormData(prev => ({ ...prev, isAutoApply: checked }))} size="sm" color="bg-emerald-600" />
             </div>
           </div>
         </div>

@@ -34,11 +34,11 @@ export function CartItemListBody({
   if (cartItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full py-8 opacity-70">
-        <div className="bg-gray-100 dark:bg-white/5 p-5 rounded-2xl mb-3">
-          <ShoppingCart className="h-8 w-8 text-gray-600 dark:text-gray-500" />
+        <div className="w-10 h-10 rounded-md bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/[0.08] flex items-center justify-center mb-3">
+          <ShoppingCart className="h-5 w-5 text-neutral-400" />
         </div>
-        <p className="text-[11px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Cart is empty"}</p>
-        <p className="text-[9px] text-gray-600 mt-1">{"Add products to get started"}</p>
+        <p className="text-[12px] font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">{"Cart is empty"}</p>
+        <p className="text-[11px] text-neutral-400 mt-0.5">{"Add products to get started"}</p>
       </div>
     );
   }
@@ -119,15 +119,15 @@ export function CartItemListBody({
         const { bundles, standaloneItems } = groupCartItems(cartItems);
 
         const renderedBundlesHeader = bundles.length > 0 ? (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 text-[8px] font-black text-violet-600 dark:text-violet-400 uppercase tracking-widest bg-violet-500/[0.03] border-b border-violet-500/10 mb-1">
-            <Gift className="h-3 w-3 text-violet-500 shrink-0" />
+          <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-violet-700 dark:text-violet-300 uppercase tracking-wider bg-violet-500/[0.05] border-b border-violet-500/15 mb-1">
+            <Gift className="h-3.5 w-3.5 text-violet-500 shrink-0" />
             <span>{"Bundle / Deal Items"} ({bundles.length})</span>
           </div>
         ) : null;
 
         const renderedStandalonesHeader = bundles.length > 0 && standaloneItems.length > 0 ? (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 text-[8px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest bg-gray-50 dark:bg-white/[0.02] border-y border-gray-100 dark:border-white/5 my-1">
-            <ShoppingCart className="h-3 w-3 text-gray-400 shrink-0" />
+          <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider bg-neutral-100 dark:bg-white/[0.03] border-y border-neutral-200 dark:border-white/10 my-1">
+            <ShoppingCart className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400 shrink-0" />
             <span>{"Other / Standalone Items"} ({standaloneItems.length})</span>
           </div>
         ) : null;
@@ -137,37 +137,37 @@ export function CartItemListBody({
         };
 
         const renderedBundleSummaries = bundles.map((b) => (
-          <div key={`cart-bundle-${b.bundleId}`} className="px-2 py-1.5 mx-2 mb-1 rounded-xl border border-dashed border-violet-500/25 bg-violet-500/[0.01] animate-in fade-in duration-200">
-            <div className="flex items-center gap-1.5">
+          <div key={`cart-bundle-${b.bundleId}`} className="px-2.5 py-2 mx-2 mb-1.5 rounded-md border border-neutral-200 dark:border-white/[0.08] bg-neutral-50 dark:bg-surface/50">
+            <div className="flex items-center gap-2">
               {/* Thumbnail */}
-              <div className="w-9 h-9 rounded-lg overflow-hidden bg-violet-100 dark:bg-violet-900/20 shrink-0 flex items-center justify-center aspect-square">
+              <div className="w-9 h-9 rounded overflow-hidden bg-neutral-100 dark:bg-neutral-900 shrink-0 flex items-center justify-center aspect-square border border-neutral-200 dark:border-white/[0.08]">
                 {bundleImage(b) ? (
                   <img src={bundleImage(b)!} alt={b.bundleName} className="w-full h-full object-cover" />
                 ) : (
-                  <Package className="h-3.5 w-3.5 text-violet-400" />
+                  <Package className="h-4 w-4 text-neutral-400" />
                 )}
               </div>
               {/* Name + Price */}
               <div className="flex-1 min-w-0">
-                <p className="text-[9px] font-black text-violet-700 dark:text-violet-300 truncate leading-tight">{bundles.findIndex(x => x.bundleId === b.bundleId) + 1}. {b.bundleQty > 1 ? `${b.bundleQty}x ${b.bundleName}` : b.bundleName}</p>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className={`text-[8px] font-bold ${b.items.some(({ item }) => item.bundleHideItemPrices === true) ? 'text-violet-700 dark:text-violet-300' : 'text-gray-500'}`}>
+                <p className="text-[12.5px] font-bold text-neutral-900 dark:text-white truncate leading-tight">{bundles.findIndex(x => x.bundleId === b.bundleId) + 1}. {b.bundleQty > 1 ? `${b.bundleQty}x ${b.bundleName}` : b.bundleName}</p>
+                <div className="flex items-center gap-1.5 mt-0.5 font-mono text-[12px] font-bold tabular-nums">
+                  <span className={b.items.some(({ item }) => item.bundleHideItemPrices === true) ? 'text-emerald-600 dark:text-emerald-400' : 'text-neutral-700 dark:text-neutral-300'}>
                     {formatCurrency(b.totalSubtotal, currency)}
                   </span>
                   {showDiscount && b.totalDiscount > 0 && (
-                    <span className="text-[7px] font-black text-rose-500 bg-rose-500/10 px-1 py-[1px] rounded leading-none">
+                    <span className="text-[10.5px] font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded leading-none border border-rose-500/20">
                       -{formatCurrency(b.totalDiscount, currency)}
                     </span>
                   )}
                 </div>
               </div>
               {/* Qty stepper */}
-              <div className="flex items-center bg-violet-500/5 dark:bg-violet-500/10 rounded-full border border-violet-500/20 shrink-0 overflow-hidden">
+              <div className="flex items-center bg-white dark:bg-surface rounded border border-neutral-200 dark:border-white/[0.08] shrink-0 overflow-hidden">
                 <button
                   onClick={() => onUpdateBundleQuantity(b.bundleId, b.bundleQty - 1)}
-                  className="w-5 h-5 flex items-center justify-center text-violet-500 hover:text-red-500 hover:bg-violet-500/10 transition-colors"
+                  className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-rose-500 hover:bg-neutral-100 dark:hover:bg-surface-hover transition-colors"
                 >
-                  <Minus className="h-2 w-2" />
+                  <Minus className="h-2.5 w-2.5" />
                 </button>
                 <input
                   type="text"
@@ -178,14 +178,14 @@ export function CartItemListBody({
                     onUpdateBundleQuantity(b.bundleId, isNaN(val) ? 0 : val);
                   }}
                   onKeyDown={(e) => e.stopPropagation()}
-                  className={`w-6 bg-transparent text-center text-[8px] font-black focus:outline-none border-0 p-0 no-spinners select-all ${b.bundleQty < 0 ? 'text-red-500' : 'text-violet-600 dark:text-violet-400'
+                  className={`w-6 bg-transparent text-center text-[11px] font-mono font-medium focus:outline-none border-0 p-0 no-spinners select-all ${b.bundleQty < 0 ? 'text-rose-500' : 'text-neutral-900 dark:text-white'
                     }`}
                 />
                 <button
                   onClick={() => onUpdateBundleQuantity(b.bundleId, b.bundleQty + 1)}
-                  className="w-5 h-5 flex items-center justify-center text-violet-500 hover:text-primary hover:bg-violet-500/10 transition-colors"
+                  className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-emerald-600 hover:bg-neutral-100 dark:hover:bg-surface-hover transition-colors"
                 >
-                  <Plus className="h-2 w-2" />
+                  <Plus className="h-2.5 w-2.5" />
                 </button>
               </div>
               {/* Delete */}
@@ -240,9 +240,9 @@ export function CartItemListBody({
           <>
             {/* No Active Promotions Banner */}
             {cartItems.length > 0 && activePromotions.length === 0 && (
-              <div className="px-3 py-1.5 flex items-center gap-1.5 bg-amber-500/[0.03] border-b border-amber-500/10">
-                <Info className="h-2.5 w-2.5 text-amber-500 shrink-0" />
-                <span className="text-[7px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">
+              <div className="px-3 py-1.5 flex items-center gap-2 bg-amber-500/10 border-b border-amber-500/20">
+                <Info className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
                   No Active Promotions
                 </span>
               </div>

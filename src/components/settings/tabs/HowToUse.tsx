@@ -48,41 +48,45 @@ export function HowToUse() {
   ];
 
   return (
-    <div className="space-y-6 w-full pb-32">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 sm:p-8 text-white shadow-lg">
-        <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight flex items-center gap-3">
-          <BookOpen className="h-8 w-8 text-white/80" />
-          Zaynahs POS Guide
-        </h2>
-        <p className="mt-2 text-blue-100 font-medium">Complete system breakdown, flows, and examples to help you understand how Zaynahs POS works.</p>
+    <div className="space-y-4 w-full pb-16 text-[13px] tracking-[-0.01em]">
+      <div className="bg-white dark:bg-surface rounded-md p-4 sm:p-5 border border-neutral-200 dark:border-white/[0.08] shadow-none flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <BookOpen className="h-5 w-5 text-primary" />
+          <div>
+            <h2 className="text-[14px] font-semibold text-neutral-900 dark:text-white tracking-tight">
+              Zaynahs POS Guide & Documentation
+            </h2>
+            <p className="text-[12px] text-neutral-500 font-mono mt-0.5">
+              Operating principles, workflow rules, and real-world examples.
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-3">
         {sections.map((section, idx) => (
-          <div key={idx} className="bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 shrink-0">
-                {section.icon}
-              </div>
-              <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tighter">{section.title}</h3>
+          <div key={idx} className="bg-white dark:bg-surface rounded-md p-4 sm:p-5 border border-neutral-200 dark:border-white/[0.08] shadow-none space-y-3">
+            <div className="flex items-center gap-2.5 pb-2.5 border-b border-neutral-200 dark:border-white/[0.08]">
+              {section.icon}
+              <h3 className="text-[14px] font-semibold text-neutral-900 dark:text-white">{section.title}</h3>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <div className="space-y-2 bg-gray-50/50 dark:bg-white/[0.02] p-4 rounded-2xl">
-                <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Roman Urdu</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-medium">{section.roman}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1 bg-neutral-50 dark:bg-app p-3 rounded border border-neutral-200 dark:border-white/[0.08]">
+                <p className="text-[10px] font-mono uppercase text-neutral-500 tracking-wider">Roman Urdu</p>
+                <p className="text-[12px] text-neutral-700 dark:text-neutral-300 leading-relaxed">{section.roman}</p>
               </div>
-              <div className="space-y-2 bg-gray-50/50 dark:bg-white/[0.02] p-4 rounded-2xl" dir="rtl">
-                <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest text-left" dir="ltr">Urdu Script</p>
-                <p className="text-[15px] text-gray-800 dark:text-gray-200 leading-loose font-noto">{section.urdu}</p>
+              <div className="space-y-1 bg-neutral-50 dark:bg-app p-3 rounded border border-neutral-200 dark:border-white/[0.08]" dir="rtl">
+                <p className="text-[10px] font-mono uppercase text-neutral-500 tracking-wider text-left" dir="ltr">Urdu Script</p>
+                <p className="text-[13px] text-neutral-800 dark:text-neutral-200 leading-loose font-noto">{section.urdu}</p>
               </div>
             </div>
 
-            <div className="mt-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-500/20 p-4 rounded-2xl flex gap-3 items-start">
-              <span className="text-lg">💡</span>
+            <div className="bg-primary/5 border border-primary/20 p-3 rounded flex gap-2.5 items-start">
+              <span className="text-[13px]">💡</span>
               <div>
-                <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Example / Misaal</p>
-                <p className="text-sm text-emerald-800 dark:text-emerald-200/80 font-medium">{section.example}</p>
+                <p className="text-[10px] font-mono text-primary uppercase tracking-wider mb-0.5">Example Workflow</p>
+                <p className="text-[12px] text-neutral-700 dark:text-neutral-300">{section.example}</p>
               </div>
             </div>
           </div>

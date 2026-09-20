@@ -61,7 +61,7 @@ export function SharedProductList({
         onDragEnter={() => dnd.handleDragEnter(index)}
         onDragOver={dnd.handleDragOver}
         onDragEnd={dnd.handleDragEnd}
-        className={cn(dnd.rowCls(index), 'rounded-xl')}
+        className={cn(dnd.rowCls(index), 'rounded-md')}
       >
         {row}
       </div>
@@ -71,23 +71,21 @@ export function SharedProductList({
   return (
     <div
       className={cn(
-        'bg-white dark:bg-[#1f1f1f] rounded-[2rem] shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300',
+        'bg-white dark:bg-surface rounded-md shadow-none border border-neutral-200 dark:border-white/[0.08] overflow-hidden',
         className
       )}
     >
       {onClearSearch && (
-        <div className="p-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/5 flex items-center justify-between">
-          <span className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em] px-2">
+        <div className="h-8 px-3 bg-neutral-50 dark:bg-white/[0.02] border-b border-neutral-200 dark:border-white/[0.08] flex items-center justify-between">
+          <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider">
             {headerTitle} ({items.length})
           </span>
           <button
             onClick={onClearSearch}
-            className="p-1 px-3 bg-rose-500/10 text-rose-500 text-[8px] font-black uppercase rounded-lg hover:bg-rose-500/20 transition-colors"
+            className="h-6 px-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-white text-[11px] font-medium rounded hover:bg-neutral-100 dark:hover:bg-white/5 transition-colors flex items-center gap-1"
           >
-            <span className="flex items-center gap-1">
-              <X className="h-2.5 w-2.5" />
-              CLOSE
-            </span>
+            <X className="h-3 w-3" />
+            <span>Close</span>
           </button>
         </div>
       )}

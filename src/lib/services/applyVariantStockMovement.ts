@@ -3,8 +3,7 @@ import {
   VariantStockHistory,
 } from '../../types';
 import { localDb, generateId } from '../localDb';
-import { cloudWrite } from '../cloudWrite';
-import { toRemoteVariantStockHistory } from './mappers';
+
 
 export async function applyVariantStockMovement(params: {
   product: Product;
@@ -40,12 +39,7 @@ export async function applyVariantStockMovement(params: {
     createdAt: now,
   };
 
-  // Cloud-direct FIRST: the variant_stock_history insert drives the cloud variant
-  // stock via DB trigger. Throw on failure so we never mutate the local cache when
-  // the authoritative cloud write did not persist.
-  await cloudWrite('variant_stock_history', 'create', vHistId, toRemoteVariantStockHistory(vHistEntry));
-
-  // Local cache update (cloud stock already handled by the trigger above).
+  // Local cache update and record history
   const updatedVariantData = (product.variantData || []).map(v =>
     v.id === variantId ? { ...v, stock: newVariantStock } : v
   );

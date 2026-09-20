@@ -10,7 +10,6 @@ import { sonner } from '../../../lib/sonner';
 import { Customer } from '../../../types';
 import { getDealCountBreakdown } from '../../../lib/utils';
 import { useCartCalculations } from '../../../hooks/useCartCalculations';
-import { HelpTooltip } from '../../../shared/ui/HelpTooltip';
 import { CartItemList } from './CartItemList';
 import { CartFooter } from './CartFooter';
 import { CustomerSearchDropdown } from './CustomerSearchDropdown';
@@ -95,44 +94,40 @@ export function Cart({ onCheckout, onSaveDraft, isMobileDrawer, onClose }: CartP
   return (
     <div
       className={`
-        bg-white dark:bg-surface flex flex-col transition-all duration-300
-        border border-gray-200 dark:border-white/10 overflow-hidden
+        bg-white dark:bg-surface flex flex-col transition-all duration-150
+        border border-neutral-200 dark:border-white/[0.08] overflow-hidden shadow-none
         ${isMobileDrawer
-          ? 'w-full h-full rounded-2xl shadow-2xl'
-          : `rounded-[1.5rem] shadow-2xl
+          ? 'w-full h-full rounded-md'
+          : `rounded-md
              ${isTouchMode ? 'w-full lg:w-[410px]' : 'w-full lg:w-[340px]'}
              h-full`
         }
       `}
     >
       {/* ══ HEADER ══ */}
-      <div className="shrink-0 pl-4 pr-5 pt-3 pb-2 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-surface z-30 shadow-sm shadow-gray-200/50 dark:shadow-none">
+      <div className="shrink-0 pl-3 pr-4 pt-2.5 pb-2 border-b border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface z-30">
         {/* Title row */}
-        <div className="flex items-start sm:items-center justify-between mb-2">
+        <div className="flex items-start sm:items-center justify-between mb-1.5">
           <div className="flex items-start sm:items-center gap-2 flex-wrap">
-            <h2 className={`font-black text-gray-900 dark:text-white flex items-center ${isTouchMode ? 'text-base' : 'text-sm'}`}>
+            <h2 className={`font-semibold text-neutral-900 dark:text-white flex items-center ${isTouchMode ? 'text-base' : 'text-[13px]'}`}>
               {"Cart"}
-              <HelpTooltip position="bottom" content="Current active cart session. Items scanned or tapped from the catalog are accumulated here." />
             </h2>
-            <span className="text-[9px] font-black bg-primary/10 text-primary dark:text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-widest whitespace-normal">
+            <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wider whitespace-normal">
               {dealLabel}
             </span>
           </div>
 
           <div className="flex items-center gap-1">
             {appCart.length > 0 && (
-              <>
-                <button
-                  onClick={() =>
-                    sonner.confirm('Clear Cart?', 'Remove all items?').then((r) => r.isConfirmed && useCartStore.getState().clearCart())
-                  }
-                  className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-full transition-all active:scale-95 flex items-center gap-1"
-                  title="Clear Cart"
-                >
-                  <Eraser className="h-3.5 w-3.5" />
-                </button>
-                <HelpTooltip position="bottom" content="Instantly wipes all items from the current active cart." />
-              </>
+              <button
+                onClick={() =>
+                  sonner.confirm('Clear Cart?', 'Remove all items?').then((r) => r.isConfirmed && useCartStore.getState().clearCart())
+                }
+                className="p-1 text-neutral-400 hover:text-rose-500 hover:bg-rose-500/10 rounded transition-colors flex items-center gap-1"
+                title="Clear Cart"
+              >
+                <Eraser className="h-3.5 w-3.5" />
+              </button>
             )}
             {isMobileDrawer && onClose ? (
               <button
@@ -149,18 +144,17 @@ export function Cart({ onCheckout, onSaveDraft, isMobileDrawer, onClose }: CartP
 
         {/* Editing Sale Banner */}
         {appEditingSaleId && (
-          <div className="mb-2 bg-amber-500/10 border border-amber-500/20 rounded-2xl px-3 py-2 flex items-center justify-between">
+          <div className="mb-2 bg-amber-500/10 border border-amber-500/20 rounded-md px-3 py-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="h-6 w-6 bg-amber-500 rounded-lg flex items-center justify-center">
+              <div className="h-5 w-5 bg-amber-500 rounded flex items-center justify-center">
                 <Edit2 className="h-3 w-3 text-white" />
               </div>
               <div>
-                <p className="text-[9px] font-black text-amber-700 dark:text-amber-400 uppercase leading-none">
+                <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400 leading-none">
                   {"Editing Sale"}
                 </p>
-                <p className="text-[8px] font-bold text-amber-600/60 uppercase tracking-widest mt-0.5">ID: {appEditingSaleId.substring(0, 12)}...</p>
+                <p className="text-[10px] font-mono text-amber-600/70 mt-0.5">ID: {appEditingSaleId.substring(0, 12)}...</p>
               </div>
-              <HelpTooltip position="bottom" content="You are modifying an existing finalized sale. Canceling restores original. Saving replaces it with an atomic ledger update." />
             </div>
             <button
               onClick={() => {
@@ -168,9 +162,9 @@ export function Cart({ onCheckout, onSaveDraft, isMobileDrawer, onClose }: CartP
                   if (r.isConfirmed) useCartStore.getState().clearCart();
                 });
               }}
-              className="flex items-center gap-1.5 px-3 h-7 bg-amber-500 text-white rounded-full text-[8px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm shadow-amber-500/20"
+              className="flex items-center gap-1.5 px-3 h-7 bg-amber-500 text-white rounded-full text-[11px] font-bold uppercase tracking-wider active:scale-95 transition-all shadow-sm shadow-amber-500/20"
             >
-              <X className="h-2.5 w-2.5" /> <span>{"Cancel"}</span>
+              <X className="h-3.5 w-3.5" /> <span>{"Cancel"}</span>
             </button>
           </div>
         )}
@@ -180,10 +174,10 @@ export function Cart({ onCheckout, onSaveDraft, isMobileDrawer, onClose }: CartP
           {appSelectedCustomer ? (
             <div className="flex items-center justify-between bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 rounded-full px-3.5 py-1.5">
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-black text-emerald-800 dark:text-emerald-400 truncate leading-none">
+                <p className="text-[12.5px] font-bold text-emerald-900 dark:text-emerald-300 truncate leading-none">
                   {appSelectedCustomer.name}
                 </p>
-                <p className="text-[9px] text-primary dark:text-primary truncate mt-0.5">
+                <p className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 truncate mt-0.5">
                   {appSelectedCustomer.phone || appSelectedCustomer.email}
                 </p>
               </div>
@@ -216,16 +210,13 @@ export function Cart({ onCheckout, onSaveDraft, isMobileDrawer, onClose }: CartP
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setShowCustomerSearch(true)}
-                className="w-full flex items-center justify-center gap-2 h-9 rounded-full border border-dashed border-gray-300 dark:border-white/10 text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:border-emerald-400 hover:text-primary hover:bg-emerald-500/5 active:scale-95 transition-all"
-              >
-                <User className="h-3.5 w-3.5" />
-                {"Select Customer"}
-              </button>
-              <HelpTooltip content="Link a customer to track loyalty history and send instant WhatsApp receipts upon settlement." />
-            </div>
+            <button
+              onClick={() => setShowCustomerSearch(true)}
+              className="w-full flex items-center justify-center gap-2 h-9 rounded-full border border-dashed border-gray-300 dark:border-white/10 text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:border-emerald-400 hover:text-primary hover:bg-emerald-500/5 active:scale-95 transition-all"
+            >
+              <User className="h-3.5 w-3.5" />
+              {"Select Customer"}
+            </button>
           )}
 
           {/* ── Customer Search Dropdown ── */}

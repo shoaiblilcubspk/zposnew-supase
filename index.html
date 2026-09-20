@@ -10,28 +10,38 @@
   <meta name="theme-color" content="#10b981" />
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>POS</title>
-  <meta name="description" content="POS - A modern point of sale system" />
+  <title>Zaynahs POS</title>
+  <meta name="description" content="Zaynahs POS — Autonomous Local-First, Offline-First P2P Replicated POS System" />
   <meta name="robots" content="index, follow" />
 
-  <meta property="og:title" content="POS" />
-  <meta property="og:description" content="A modern point of sale system for retail and e-commerce." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <meta property="og:title" content="Zaynahs POS" />
+  <meta property="og:description" content="Autonomous Local-First, Offline-First P2P Replicated POS System." />
   <meta property="og:image" content="/zaynahs-logo.svg" />
-  <meta property="og:url" content="https://pos.app" />
+  <meta property="og:url" content="https://zaynahspos.com" />
   <meta property="og:type" content="website" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="POS" />
-  <meta name="twitter:description" content="A modern point of sale system for retail and e-commerce." />
+  <meta name="twitter:title" content="Zaynahs POS" />
+  <meta name="twitter:description" content="Autonomous Local-First, Offline-First P2P Replicated POS System." />
   <meta name="twitter:image" content="/zaynahs-logo.svg" />
-  
-  <meta name="twitter:creator" content="@iamchandira" />
   <script>
     // Apply theme immediately to prevent flashing
-    var _settingsStr = localStorage.getItem('pos_settings');
-    var _settings = {};
-    try { if (_settingsStr) _settings = JSON.parse(_settingsStr); } catch (e) {}
-    var _theme = _settings.theme || localStorage.getItem('theme') || 'dark';
+    var _theme = localStorage.getItem('theme');
+    if (!_theme) {
+      try {
+        var _localPrefs = JSON.parse(localStorage.getItem('pos_local_prefs') || '{}');
+        if (_localPrefs.theme) _theme = _localPrefs.theme;
+      } catch (e) {}
+    }
+    if (!_theme) {
+      var _settingsStr = localStorage.getItem('pos_settings');
+      try { if (_settingsStr) _theme = JSON.parse(_settingsStr).theme; } catch (e) {}
+    }
+    if (!_theme) _theme = 'dark';
     var _isDark = _theme === 'dark' || (_theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
     // ─── Apply background color IMMEDIATELY (before CSS loads) ───

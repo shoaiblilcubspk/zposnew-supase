@@ -46,7 +46,7 @@ export function KeyboardKey({
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        className={`flex items-center justify-center rounded-xl shadow-sm backdrop-blur-sm transition-all select-none touch-none ${extraClasses}`}
+        className={`flex items-center justify-center rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none transition-colors select-none touch-none ${extraClasses}`}
       >
         {content}
       </button>
@@ -59,7 +59,7 @@ export function KeyboardKey({
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      className={`flex items-center justify-center rounded-xl shadow-sm backdrop-blur-sm transition-all select-none touch-none active:bg-gray-200 dark:active:bg-white/20 ${extraClasses}`}
+      className={`flex items-center justify-center rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none transition-colors select-none touch-none active:bg-neutral-200 dark:active:bg-white/20 ${extraClasses}`}
     >
       {isCaps && k.length === 1 ? k.toUpperCase() : k}
     </button>
@@ -76,22 +76,22 @@ export function CalculatorKey({
   onPointerUp: (e: React.PointerEvent) => void;
 }) {
   let content: React.ReactNode = k;
-  let extraClasses = "text-lg font-semibold flex-1 h-12";
+  let extraClasses = "text-base font-semibold flex-1 h-11";
 
   if (k === 'BKSP') {
-    content = <Delete className="w-5 h-5" />;
-    extraClasses += " bg-red-500/10 text-red-500 hover:bg-red-500/20";
+    content = <Delete className="w-4 h-4" />;
+    extraClasses += " bg-rose-500/10 text-rose-500 hover:bg-rose-500/20";
   } else if (k === 'C') {
-    extraClasses += " bg-red-500/10 text-red-500 hover:bg-red-500/20 font-bold";
+    extraClasses += " bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 font-bold";
   } else if (['/', '*', '-', '+'].includes(k)) {
-    extraClasses += " bg-primary/10 text-primary hover:bg-primary/20 text-xl font-black";
+    extraClasses += " bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 text-lg font-bold";
   } else if (k === '=') {
-    extraClasses += " bg-emerald-500 text-white hover:bg-emerald-600 shadow-md font-bold";
+    extraClasses += " bg-emerald-600 text-white hover:bg-emerald-500 shadow-none font-bold";
   } else if (k === 'INSERT') {
     content = "Insert";
-    extraClasses += " bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 font-bold text-sm col-span-2";
+    extraClasses += " bg-neutral-200 dark:bg-white/10 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-300 dark:hover:bg-white/15 font-semibold text-xs col-span-2";
   } else {
-    extraClasses += " bg-white/50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 active:scale-95";
+    extraClasses += " bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white";
   }
 
   return (
@@ -100,7 +100,7 @@ export function CalculatorKey({
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      className={`flex items-center justify-center rounded-xl shadow-sm backdrop-blur-sm transition-all select-none touch-none ${extraClasses} ${k === 'INSERT' ? 'col-span-2' : ''}`}
+      className={`flex items-center justify-center rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none transition-colors select-none touch-none ${extraClasses} ${k === 'INSERT' ? 'col-span-2' : ''}`}
     >
       {content}
     </button>

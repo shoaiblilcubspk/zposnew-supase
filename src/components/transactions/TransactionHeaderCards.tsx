@@ -1,6 +1,7 @@
 import React from 'react';
-import { TrendingUp, Store, Package, Wallet, Banknote, CreditCard, Building2 } from 'lucide-react';
 import { formatCurrency } from '../../lib/currencies';
+import { RealIcon } from '../../shared/ui';
+import { TrendingUp, Store, Package, Wallet } from 'lucide-react';
 
 interface Props {
   totalRevenue: number;
@@ -19,113 +20,130 @@ export function TransactionHeaderCards({
   walletTotals, appSettings, showRetail, showWholesale, activeCardsCount
 }: Props) {
   return (
-    <>
-      <div className={`grid grid-cols-2 gap-4 ${activeCardsCount === 5
-          ? "sm:grid-cols-3 lg:grid-cols-5"
-          : activeCardsCount === 4
-            ? "sm:grid-cols-2 lg:grid-cols-4"
-            : "sm:grid-cols-3"
+    <div className="space-y-3">
+      {/* Top Metric Strip */}
+      <div className={`grid grid-cols-2 gap-3 ${activeCardsCount === 5
+        ? "sm:grid-cols-3 lg:grid-cols-5"
+        : activeCardsCount === 4
+          ? "sm:grid-cols-2 lg:grid-cols-4"
+          : "sm:grid-cols-3"
         }`}>
-        <div className="stat-card bg-gradient-to-br from-[#0EA5E9] to-[#0284C7]">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Total Revenue"}</span>
-            <span className="stat-card-value">{formatCurrency(totalRevenue, appSettings.currency)}</span>
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] font-semibold tracking-tight text-neutral-700 dark:text-neutral-300">
+              Total Revenue
+            </span>
+            <TrendingUp className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
-          <TrendingUp className="stat-card-icon h-12 w-12 text-white" />
+          <div className="mt-1.5 text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white font-mono tabular-nums">
+            {formatCurrency(totalRevenue, appSettings.currency)}
+          </div>
         </div>
+
         {showRetail && (
-          <div className="stat-card bg-gradient-to-br from-[#10B981] to-[#059669]">
-            <div className="stat-card-inner">
-              <span className="stat-card-label">{"Retail Sales"}</span>
-              <span className="stat-card-value">{formatCurrency(retailSalesTotal, appSettings.currency)}</span>
+          <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-semibold tracking-tight text-neutral-700 dark:text-neutral-300">
+                Retail Sales
+              </span>
+              <Store className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
             </div>
-            <Store className="stat-card-icon h-12 w-12 text-white" />
+            <div className="mt-1.5 text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white font-mono tabular-nums">
+              {formatCurrency(retailSalesTotal, appSettings.currency)}
+            </div>
           </div>
         )}
+
         {showWholesale && (
-          <div className="stat-card bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8]">
-            <div className="stat-card-inner">
-              <span className="stat-card-label">{"Wholesale Sales"}</span>
-              <span className="stat-card-value">{formatCurrency(wholesaleSalesTotal, appSettings.currency)}</span>
+          <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-semibold tracking-tight text-neutral-700 dark:text-neutral-300">
+                Wholesale Sales
+              </span>
+              <Package className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
             </div>
-            <Package className="stat-card-icon h-12 w-12 text-white" />
+            <div className="mt-1.5 text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white font-mono tabular-nums">
+              {formatCurrency(wholesaleSalesTotal, appSettings.currency)}
+            </div>
           </div>
         )}
-        <div className="stat-card bg-gradient-to-br from-[#F97316] to-[#C2410C]">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Items Sold"}</span>
-            <span className="stat-card-value">{totalItemsSold}</span>
+
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] font-semibold tracking-tight text-neutral-700 dark:text-neutral-300">
+              Items Sold
+            </span>
+            <Package className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           </div>
-          <Package className="stat-card-icon h-12 w-12 text-white" />
+          <div className="mt-1.5 text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white font-mono tabular-nums">
+            {totalItemsSold}
+          </div>
         </div>
       </div>
-      <div className="bg-white/50 dark:bg-black/20 p-4 rounded-[1.75rem] border border-gray-200/50 dark:border-white/5 shadow-xl space-y-3">
-        <div className="flex items-center gap-1.5 px-1 py-1 mb-2 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-gray-700 dark:text-gray-300">
-          <Wallet className="h-3.5 w-3.5 text-[#10B981]" />
-          <span>{"WALLETS & CASH FLOW BREAKDOWN"}</span>
+
+      {/* Wallets & Cash Flow Breakdown */}
+      <div className="bg-white dark:bg-surface p-3.5 sm:p-4 rounded-xl border border-neutral-200 dark:border-white/[0.08] shadow-none space-y-3 overflow-visible">
+        <div className="flex items-center gap-1.5 text-[12px] font-semibold tracking-tight text-neutral-700 dark:text-neutral-300">
+          <Wallet className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
+          <span>Wallet Balances</span>
         </div>
-        <div className={`grid grid-cols-1 sm:grid-cols-3 ${(appSettings.enableCreditSales || appSettings.enable_credit_sales) ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-3`}>
-          <div className="relative overflow-hidden bg-white dark:bg-[#1C1C1C] border border-gray-200 dark:border-white/5 rounded-2xl p-4 flex items-center justify-between transition-all hover:scale-[1.02] hover:border-primary/30 dark:hover:border-primary/30 shadow-sm">
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest leading-none">{"Cash Wallet"}</span>
-              <span className="text-base font-black text-primary dark:text-primary tabular-nums mt-1.5 leading-none">
-                {formatCurrency(walletTotals.cash, appSettings.currency)}
-              </span>
+
+        <div className={`grid grid-cols-3 ${(appSettings.enableCreditSales || appSettings.enable_credit_sales) ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2 sm:gap-4 pt-4 sm:pt-8 overflow-visible`}>
+          <div className="group relative bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-2xl pt-4 pb-2 sm:pt-7 sm:pb-3.5 px-2 sm:px-3 flex flex-col items-center justify-center text-center shadow-none hover:border-neutral-300 dark:hover:border-white/20 hover:shadow-md transition-all overflow-visible">
+            <div className="-mt-7 sm:-mt-12 mb-1 sm:mb-2 shrink-0 flex items-center justify-center drop-shadow-[0_8px_16px_rgba(0,0,0,0.18)] dark:drop-shadow-[0_12px_24px_rgba(0,0,0,0.5)] transition-transform duration-200 group-hover:scale-115 group-hover:-translate-y-1.5">
+              <RealIcon name="cashWallet" size="lg" className="sm:hidden" />
+              <RealIcon name="cashWallet" size={70} className="hidden sm:inline-block" />
             </div>
-            <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/10">
-              <Banknote className="h-4 w-4 text-primary" />
-            </div>
+            <span className="text-[12.5px] sm:text-[15px] font-mono font-bold tabular-nums text-neutral-900 dark:text-white leading-tight">
+              {formatCurrency(walletTotals.cash, appSettings.currency)}
+            </span>
+            <span className="text-[9px] sm:text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-tight mt-0.5 sm:mt-1 leading-tight truncate max-w-full">
+              Cash Wallet
+            </span>
           </div>
-          <div className="relative overflow-hidden bg-white dark:bg-[#1C1C1C] border border-gray-200 dark:border-white/5 rounded-2xl p-4 flex items-center justify-between transition-all hover:scale-[1.02] hover:border-blue-500/30 dark:hover:border-blue-500/30 shadow-sm">
-            <div className="flex flex flex-col">
-              <span className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest leading-none">{"Card Wallet"}</span>
-              <span className="text-base font-black text-blue-600 dark:text-blue-500 tabular-nums mt-1.5 leading-none">
-                {formatCurrency(walletTotals.card, appSettings.currency)}
-              </span>
+
+          <div className="group relative bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-2xl pt-4 pb-2 sm:pt-7 sm:pb-3.5 px-2 sm:px-3 flex flex-col items-center justify-center text-center shadow-none hover:border-neutral-300 dark:hover:border-white/20 hover:shadow-md transition-all overflow-visible">
+            <div className="-mt-7 sm:-mt-12 mb-1 sm:mb-2 shrink-0 flex items-center justify-center drop-shadow-[0_8px_16px_rgba(0,0,0,0.18)] dark:drop-shadow-[0_12px_24px_rgba(0,0,0,0.5)] transition-transform duration-200 group-hover:scale-115 group-hover:-translate-y-1.5">
+              <RealIcon name="cardWallet" size="lg" className="sm:hidden" />
+              <RealIcon name="cardWallet" size={70} className="hidden sm:inline-block" />
             </div>
-            <div className="w-8 h-8 bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/10">
-              <CreditCard className="h-4 w-4 text-blue-500" />
-            </div>
+            <span className="text-[12.5px] sm:text-[15px] font-mono font-bold tabular-nums text-neutral-900 dark:text-white leading-tight">
+              {formatCurrency(walletTotals.card, appSettings.currency)}
+            </span>
+            <span className="text-[9px] sm:text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-tight mt-0.5 sm:mt-1 leading-tight truncate max-w-full">
+              Card Wallet
+            </span>
           </div>
-          <div className="relative overflow-hidden bg-white dark:bg-[#1C1C1C] border border-gray-200 dark:border-white/5 rounded-2xl p-4 flex items-center justify-between transition-all hover:scale-[1.02] hover:border-cyan-500/30 dark:hover:border-cyan-500/30 shadow-sm">
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest leading-none">{"Online Wallet"}</span>
-              <span className="text-base font-black text-cyan-600 dark:text-cyan-500 tabular-nums mt-1.5 leading-none">
-                {formatCurrency(walletTotals.online, appSettings.currency)}
-              </span>
+
+          <div className="group relative bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-2xl pt-4 pb-2 sm:pt-7 sm:pb-3.5 px-2 sm:px-3 flex flex-col items-center justify-center text-center shadow-none hover:border-neutral-300 dark:hover:border-white/20 hover:shadow-md transition-all overflow-visible">
+            <div className="-mt-7 sm:-mt-12 mb-1 sm:mb-2 shrink-0 flex items-center justify-center drop-shadow-[0_8px_16px_rgba(0,0,0,0.18)] dark:drop-shadow-[0_12px_24px_rgba(0,0,0,0.5)] transition-transform duration-200 group-hover:scale-115 group-hover:-translate-y-1.5">
+              <RealIcon name="bankWallet" size="lg" className="sm:hidden" />
+              <RealIcon name="bankWallet" size={70} className="hidden sm:inline-block" />
             </div>
-            <div className="w-8 h-8 bg-cyan-500/10 rounded-xl flex items-center justify-center border border-cyan-500/10">
-              <Building2 className="h-4 w-4 text-cyan-500" />
-            </div>
+            <span className="text-[12.5px] sm:text-[15px] font-mono font-bold tabular-nums text-neutral-900 dark:text-white leading-tight">
+              {formatCurrency(walletTotals.online, appSettings.currency)}
+            </span>
+            <span className="text-[9px] sm:text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-tight mt-0.5 sm:mt-1 leading-tight truncate max-w-full">
+              Online
+            </span>
           </div>
+
           {(appSettings.enableCreditSales || appSettings.enable_credit_sales) && (
-            <div className="relative overflow-hidden bg-white dark:bg-[#1C1C1C] border border-gray-200 dark:border-white/5 rounded-2xl p-4 flex flex-col justify-between transition-all hover:scale-[1.02] hover:border-amber-500/30 dark:hover:border-amber-500/30 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest leading-none">{"Credit Wallet"}</span>
-                <div className="w-8 h-8 bg-amber-500/10 rounded-xl flex items-center justify-center border border-amber-500/10">
-                  <Wallet className="h-4 w-4 text-amber-500" />
-                </div>
+            <div className="group relative bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-2xl pt-4 pb-2 sm:pt-7 sm:pb-3.5 px-2 sm:px-3 flex flex-col items-center justify-center text-center shadow-none hover:border-neutral-300 dark:hover:border-white/20 hover:shadow-md transition-all overflow-visible">
+              <div className="-mt-7 sm:-mt-12 mb-1 sm:mb-2 shrink-0 flex items-center justify-center drop-shadow-[0_8px_16px_rgba(0,0,0,0.18)] dark:drop-shadow-[0_12px_24px_rgba(0,0,0,0.5)] transition-transform duration-200 group-hover:scale-115 group-hover:-translate-y-1.5">
+                <RealIcon name="expenses" size="lg" className="sm:hidden" />
+                <RealIcon name="expenses" size={70} className="hidden sm:inline-block" />
               </div>
-              <div className="space-y-1">
-                <div className="flex justify-between items-center text-[9px] font-bold text-gray-500 uppercase">
-                  <span>Given</span>
-                  <span className="text-amber-500">+{formatCurrency(walletTotals.creditGiven || 0, appSettings.currency)}</span>
-                </div>
-                <div className="flex justify-between items-center text-[9px] font-bold text-gray-500 uppercase">
-                  <span>Recovered</span>
-                  <span className="text-blue-500">-{formatCurrency(walletTotals.creditRecovered || 0, appSettings.currency)}</span>
-                </div>
-              </div>
-              <div className="pt-2 mt-2 border-t border-gray-100 dark:border-white/5 flex justify-between items-center">
-                <span className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Net Pending"}</span>
-                <span className="text-base font-black text-amber-600 dark:text-amber-500 tabular-nums leading-none">
-                  {formatCurrency((walletTotals.creditGiven || 0) - (walletTotals.creditRecovered || 0), appSettings.currency)}
-                </span>
-              </div>
+              <span className="text-[12.5px] sm:text-[15px] font-mono font-bold tabular-nums text-neutral-900 dark:text-white leading-tight">
+                {formatCurrency((walletTotals.creditGiven || 0) - (walletTotals.creditRecovered || 0), appSettings.currency)}
+              </span>
+              <span className="text-[9px] sm:text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-tight mt-0.5 sm:mt-1 leading-tight truncate max-w-full">
+                Credit Wallet
+              </span>
             </div>
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }

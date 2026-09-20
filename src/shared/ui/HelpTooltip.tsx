@@ -122,7 +122,7 @@ export function HelpTooltip({ content, icon, className, tooltipClassName, positi
         <div 
           ref={tooltipRef}
           className={cn(
-            "fixed z-[9999] w-64 p-3 bg-gray-950 dark:bg-zinc-900 text-white text-[11px] leading-relaxed font-bold rounded-2xl shadow-2xl border border-white/15 animate-in fade-in zoom-in-95 duration-200 pointer-events-none text-left tracking-normal normal-case",
+            "fixed z-[9999] w-64 p-2.5 bg-neutral-900 text-white text-[12px] leading-relaxed font-medium rounded-md shadow-lg border border-white/10 animate-in fade-in duration-100 pointer-events-none text-left tracking-tight normal-case",
             tooltipClassName
           )}
           style={tooltipStyle}

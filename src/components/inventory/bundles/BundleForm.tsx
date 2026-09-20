@@ -95,88 +95,92 @@ export function BundleForm({ editingBundle, products, appSettings, onClose }: Bu
     saveBundle({ form, editingBundle, products, setSaving, onClose });
 
   return (
-    <div className="animate-in fade-in duration-300 space-y-4 max-w-5xl mx-auto">
+    <div className="animate-in fade-in duration-300 space-y-4 w-full">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" onClick={onClose} className="!min-h-0 !p-2 !rounded-xl !bg-transparent hover:!bg-gray-100 dark:hover:!bg-white/5" icon={<X className="h-4 w-4 text-gray-500" />} />
-        <div>
-          <h2 className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">
-            {editingBundle ? "Edit Bundle / Deal" : "New Bundle / Deal"}
-          </h2>
-          <p className="text-[10px] text-gray-500 uppercase tracking-widest">
-            {editingBundle ? "Update your existing combo deal" : "Create a deal with multiple products"}
-          </p>
-        </div>
-      </div>
-
-      {/* Form Card */}
-      <div className="bg-white dark:bg-surface rounded-3xl border border-gray-200 dark:border-white/5 p-5 space-y-5 shadow-xl">
-
-        <FormBasics
-          form={form}
-          setForm={setForm}
-          currencySymbol={currencySymbol}
-          bundleTotal={bundleTotal}
-          onOpenMediaLibrary={() => setShowMediaLibrary(true)}
-        />
-
-        {/* Items Builder */}
-        <FormItems
-          form={form}
-          setForm={setForm}
-          products={products}
-          appSettings={appSettings}
-          productSearch={productSearch}
-          setProductSearch={setProductSearch}
-          showProductPicker={showProductPicker}
-          setShowProductPicker={setShowProductPicker}
-          filteredSearchProducts={filteredSearchProducts}
-          addProduct={addProduct}
-          updateQty={updateQty}
-          removeItem={removeItem}
-        />
-
-        {/* Live Preview */}
-        {form.items.length > 0 && (
-          <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-primary/20 rounded-2xl p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-primary dark:text-emerald-400 mb-2">💰 {"Price Preview"}</p>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-gray-600 dark:text-gray-400 font-bold">{"Original Total"}</span>
-              <span className="font-black text-gray-900 dark:text-white">{formatCurrency(bundleTotal, appSettings.currency)}</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px] mt-1">
-              <span className="text-red-500 font-bold">{"Discount"} ({form.discountValue}{form.discountType === 'percentage' ? '%' : ' ' + currencySymbol})</span>
-              <span className="font-black text-red-500">− {formatCurrency(discountAmount, appSettings.currency)}</span>
-            </div>
-            <div className="h-px bg-primary/20 my-2" />
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-black text-gray-900 dark:text-white uppercase">{"Bundle Price"}</span>
-              <span className="font-black text-primary dark:text-emerald-400 text-base">{formatCurrency(finalPrice, appSettings.currency)}</span>
-            </div>
+      <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-white/[0.08]">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" onClick={onClose} className="!min-h-0 !p-1.5 !rounded !bg-transparent hover:!bg-neutral-100 dark:hover:!bg-white/5 border border-neutral-200 dark:border-white/[0.08]" icon={<X className="h-4 w-4 text-neutral-500" />} />
+          <div>
+            <h2 className="text-base font-bold text-neutral-900 dark:text-white tracking-tight">
+              {editingBundle ? "Edit Bundle / Deal" : "New Bundle / Deal"}
+            </h2>
+            <p className="text-[11px] text-neutral-500 font-mono">
+              {editingBundle ? "Update combo deal pricing and products" : "Configure bundle deal with multiple products and pricing"}
+            </p>
           </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-          <Button
-            variant="secondary"
-            size="md"
-            fullWidth
-            className="flex-1 !min-h-[48px]"
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="h-8 px-3 rounded-md border border-neutral-200 dark:border-white/[0.08] text-[13px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5 transition-colors"
             onClick={onClose}
           >
             {"Cancel"}
-          </Button>
-          <Button
-            variant="primary"
-            size="md"
-            fullWidth
-            loading={saving}
-            className="flex-1 !min-h-[48px] hover:shadow-emerald-500/40"
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            className="h-8 px-4 rounded-md bg-primary hover:bg-primary-hover text-[13px] font-medium text-white transition-colors disabled:opacity-50"
             onClick={handleSave}
           >
             {saving ? "Saving..." : editingBundle ? "Update Bundle" : "Create Bundle"}
-          </Button>
+          </button>
+        </div>
+      </div>
+
+      {/* Wide Two-Column Grid matching full Inventory Canvas */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Left Column: Deal Basics & Pricing */}
+        <div className="lg:col-span-6 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] p-4 sm:p-5 space-y-4 shadow-none">
+          <FormBasics
+            form={form}
+            setForm={setForm}
+            currencySymbol={currencySymbol}
+            bundleTotal={bundleTotal}
+            onOpenMediaLibrary={() => setShowMediaLibrary(true)}
+          />
+        </div>
+
+        {/* Right Column: Products & Price Summary */}
+        <div className="lg:col-span-6 space-y-4">
+          <div className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] p-4 sm:p-5 space-y-4 shadow-none">
+            <FormItems
+              form={form}
+              setForm={setForm}
+              products={products}
+              appSettings={appSettings}
+              productSearch={productSearch}
+              setProductSearch={setProductSearch}
+              showProductPicker={showProductPicker}
+              setShowProductPicker={setShowProductPicker}
+              filteredSearchProducts={filteredSearchProducts}
+              addProduct={addProduct}
+              updateQty={updateQty}
+              removeItem={removeItem}
+            />
+          </div>
+
+          {/* Live Price Breakdown */}
+          {form.items.length > 0 && (
+            <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-4 space-y-3 shadow-none">
+              <p className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">{"Deal Pricing Breakdown"}</p>
+              <div className="space-y-1.5 text-[13px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-neutral-600 dark:text-neutral-400">{"Original Products Total"}</span>
+                  <span className="font-mono font-semibold text-neutral-900 dark:text-white tabular-nums">{formatCurrency(bundleTotal, appSettings.currency)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-rose-600 dark:text-rose-400">{"Deal Discount"} ({form.discountValue}{form.discountType === 'percentage' ? '%' : ' ' + currencySymbol})</span>
+                  <span className="font-mono font-semibold text-rose-600 dark:text-rose-400 tabular-nums">− {formatCurrency(discountAmount, appSettings.currency)}</span>
+                </div>
+                <div className="h-px bg-neutral-200 dark:border-white/[0.08] my-2" />
+                <div className="flex items-center justify-between text-[14px]">
+                  <span className="font-bold text-neutral-900 dark:text-white">{"Final Customer Price"}</span>
+                  <span className="font-mono font-bold text-primary dark:text-emerald-400 tabular-nums text-base">{formatCurrency(finalPrice, appSettings.currency)}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

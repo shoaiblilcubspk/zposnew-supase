@@ -154,3 +154,23 @@ export function computeTotalPurchases(appCustomers: Customer[], dateFilter: stri
   if (dateFilter === 'all') return appCustomers.reduce((sum: number, c: Customer) => sum + Math.max(0, c.totalPurchases || 0), 0);
   return filteredSalesByDate.reduce((sum, s) => sum + getEffectiveTotal(s), 0);
 }
+
+export const LEDGER_TYPE_LABELS: Record<string, { label: string; color: string }> = {
+  sale_credit: { label: 'Credit Sale', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+  sale: { label: 'Credit Sale', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+  payment_received: { label: 'Payment', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  payment: { label: 'Payment', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  refund: { label: 'Refund', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  adjustment: { label: 'Adjustment', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  opening: { label: 'Opening', color: 'bg-gray-100 text-gray-700 dark:bg-gray-700/50 dark:text-gray-300' },
+};
+
+export const LEDGER_DATE_PRESETS = [
+  { id: 'all', label: 'All Time' },
+  { id: 'today', label: 'Today' },
+  { id: 'yesterday', label: 'Yesterday' },
+  { id: 'last7', label: 'Last 7 Days' },
+  { id: 'thisMonth', label: 'This Month' },
+  { id: 'custom', label: 'Custom Range' },
+];
+

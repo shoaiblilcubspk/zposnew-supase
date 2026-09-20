@@ -63,10 +63,11 @@ export function renderDeliveryDetailsSection(ctx: ReceiptCtx) {
 
 export function renderMetaSection(ctx: ReceiptCtx) {
   const { sale, settings, profile } = ctx;
+  const tz = settings.timezone || settings.country;
   return (
     <>
-      <TwoCol ctx={ctx} left={`INV#: ${(sale.invoiceNumber || sale.receiptNumber || sale.id.slice(-6).toUpperCase()).replace(settings.invoicePrefix || 'INV', '')}`} right={`DATE: ${formatAppDate(sale.timestamp, settings.country).replace(/,/g, '')}`} />
-      <TwoCol ctx={ctx} left={`TIME: ${formatAppTime(sale.timestamp, settings.timezone)}`} right={`OP: ${sale.cashier?.split(' ')[0] || profile?.name?.split(' ')[0] || 'SYS'}`} />
+      <TwoCol ctx={ctx} left={`INV#: ${(sale.invoiceNumber || sale.receiptNumber || sale.id.slice(-6).toUpperCase()).replace(new RegExp(`^${settings.invoicePrefix || 'INV'}-?`, 'i'), '')}`} right={`DATE: ${formatAppDate(sale.timestamp, tz).replace(/,/g, '')}`} />
+      <TwoCol ctx={ctx} left={`TIME: ${formatAppTime(sale.timestamp, tz)}`} right={`OP: ${sale.cashier?.split(' ')[0] || profile?.name?.split(' ')[0] || 'SYS'}`} />
       {sale.salesmanName && <TwoCol ctx={ctx} left={`SM: ${sale.salesmanName}`} right="" />}
       {sale.dcNumber && <TwoCol ctx={ctx} left={`DC#: ${sale.dcNumber}`} right="" />}
       {settings.receiptShowTax && settings.taxId && <TwoCol ctx={ctx} left={`TAX/NTN ID: ${settings.taxId}`} right="" />}
@@ -80,10 +81,11 @@ export function renderMetaSection(ctx: ReceiptCtx) {
 
 export function MonoMeta(ctx: ReceiptCtx) {
   const { sale, settings, profile } = ctx;
+  const tz = settings.timezone || settings.country;
   return (
     <>
-      <TwoCol ctx={ctx} left={`INV#: ${(sale.invoiceNumber || sale.receiptNumber || sale.id.slice(-6).toUpperCase()).replace(settings.invoicePrefix || 'INV', '')}`} right={`DATE: ${formatAppDate(sale.timestamp, settings.country).replace(/,/g, '')}`} />
-      <TwoCol ctx={ctx} left={`TIME: ${formatAppTime(sale.timestamp, settings.timezone)}`} right={`OP: ${sale.cashier?.split(' ')[0] || profile?.name?.split(' ')[0] || 'SYS'}`} />
+      <TwoCol ctx={ctx} left={`INV#: ${(sale.invoiceNumber || sale.receiptNumber || sale.id.slice(-6).toUpperCase()).replace(new RegExp(`^${settings.invoicePrefix || 'INV'}-?`, 'i'), '')}`} right={`DATE: ${formatAppDate(sale.timestamp, tz).replace(/,/g, '')}`} />
+      <TwoCol ctx={ctx} left={`TIME: ${formatAppTime(sale.timestamp, tz)}`} right={`OP: ${sale.cashier?.split(' ')[0] || profile?.name?.split(' ')[0] || 'SYS'}`} />
       {sale.salesmanName && (<TwoCol ctx={ctx} left={`SM: ${sale.salesmanName}`} right="" />)}
       {sale.dcNumber && (<TwoCol ctx={ctx} left={`DC#: ${sale.dcNumber}`} right="" />)}
       {settings.receiptShowCustomerName && sale.customerName && (

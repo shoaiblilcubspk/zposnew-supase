@@ -49,28 +49,28 @@ export function CustomerDetailModal({ customer: initialCustomer, onClose }: Cust
   const { page: paidPage, totalPages: paidTotalPages, pageItems: paidPageItems, goToPage: goToPaidPage, pageSize: paidPageSize, setPageSize: setPaidPageSize } = usePagination(customerTransactions, 10);
 
   const footer = (
-    <div className="flex items-center gap-2 sm:gap-3 w-full">
+    <div className="flex items-center gap-2 w-full font-mono text-[12px]">
       {can(userRole, 'receive_payment') && (
-        <Button
-          variant="primary"
+        <button
+          type="button"
           onClick={() => setShowReceivePayment(true)}
-          className="!min-h-0 !px-4 sm:!px-6 !py-2.5 !text-[9px] sm:!text-[11px] !font-black !rounded-2xl sm:!rounded-full"
+          className="h-8 px-3 rounded bg-primary text-white text-[12px] font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5 shadow-none"
         >
-          <CreditCard className="h-3.5 w-3.5 mr-1" /> Receive Payment
-        </Button>
+          <CreditCard className="h-3.5 w-3.5" /> Receive Payment
+        </button>
       )}
-      <Button
-        variant="secondary"
+      <button
+        type="button"
         onClick={onClose}
-        className="!min-h-0 !ml-auto !px-4 sm:!px-8 !py-2.5 sm:!py-3 !text-[9px] sm:!text-[11px] !font-black !rounded-2xl sm:!rounded-full !border-gray-200 dark:!border-white/10 !shrink-0"
+        className="h-8 ml-auto px-3 rounded border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/[0.08] text-[12px] font-medium transition-colors"
       >
-        close
-      </Button>
+        Close
+      </button>
     </div>
   );
 
   const tabs = [
-    { id: 'details', label: 'details', icon: User },
+    { id: 'details', label: 'Details', icon: User },
     { id: 'transactions', label: `Sales (${totalTransactions})`, icon: Receipt },
     { id: 'ledger', label: `Ledger`, icon: TrendingUp },
   ];
@@ -78,99 +78,88 @@ export function CustomerDetailModal({ customer: initialCustomer, onClose }: Cust
   return (
     <>
       <Modal isOpen={true} onClose={onClose} title={customer.name} maxWidth="lg" footer={footer}>
-        <div className="space-y-6">
-          {/* Tabs */}
-          <div className="flex gap-1 p-1 bg-gray-100 dark:bg-black/75 rounded-2xl">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                  activeTab === tab.id
-                    ? 'bg-white dark:bg-surface text-blue-600 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-400'
-                )}
-              >
-                <tab.icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="hidden sm:inline">{tab.label}</span>
-              </button>
-            ))}
+        <div className="space-y-4 text-[13px] tracking-[-0.01em]">
+          {/* Segmented Sub-Tabs */}
+          <div className="flex items-center gap-1 p-1 bg-neutral-100 dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex-1 h-7 px-2.5 flex items-center justify-center gap-1.5 rounded text-[12px] font-medium transition-colors whitespace-nowrap ${
+                    isActive
+                      ? 'bg-white dark:bg-white/[0.1] text-neutral-900 dark:text-white shadow-none border border-neutral-200 dark:border-white/[0.1]'
+                      : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white border border-transparent'
+                  }`}
+                >
+                  <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-primary' : 'text-neutral-400'}`} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* ── Details Tab ── */}
           {activeTab === 'details' && (
-            <div className="space-y-8">
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="bg-primary/5 border border-primary/10 p-5 rounded-[1.5rem] relative overflow-hidden">
-                  <p className="text-primary/60 dark:text-emerald-400/60 text-[9px] font-black uppercase tracking-[0.2em] mb-1">{"Total Spent"}</p>
-                  <p className="text-xl font-black text-primary dark:text-emerald-400">{formatCurrency(totalSpent, appSettings.currency)}</p>
-                  <ShoppingBag className="absolute -bottom-2 -right-2 h-12 w-12 text-primary/10" />
+            <div className="space-y-4">
+              {/* Metric Cards */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] p-3 rounded-md shadow-none">
+                  <p className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider mb-0.5">Total Spent</p>
+                  <p className="text-[15px] font-mono tabular-nums font-bold text-neutral-900 dark:text-white">{formatCurrency(totalSpent, appSettings.currency)}</p>
                 </div>
-                <div className="bg-blue-500/5 border border-blue-500/10 p-5 rounded-[1.5rem] relative overflow-hidden">
-                  <p className="text-blue-600/60 dark:text-blue-400/60 text-[9px] font-black uppercase tracking-[0.2em] mb-1">{"Total Orders"}</p>
-                  <p className="text-xl font-black text-blue-600 dark:text-blue-400">{totalOrders}</p>
-                  <Receipt className="absolute -bottom-2 -right-2 h-12 w-12 text-blue-500/10" />
+                <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] p-3 rounded-md shadow-none">
+                  <p className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider mb-0.5">Total Orders</p>
+                  <p className="text-[15px] font-mono tabular-nums font-bold text-neutral-900 dark:text-white">{totalOrders}</p>
                 </div>
-                <div className="bg-indigo-500/5 border border-indigo-500/10 p-5 rounded-[1.5rem] relative overflow-hidden">
-                  <p className="text-indigo-600/60 dark:text-indigo-400/60 text-[9px] font-black uppercase tracking-[0.2em] mb-1">{"Average Sale"}</p>
-                  <p className="text-xl font-black text-indigo-600 dark:text-indigo-400">{formatCurrency(averageTransaction, appSettings.currency)}</p>
-                  <CreditCard className="absolute -bottom-2 -right-2 h-12 w-12 text-indigo-500/10" />
+                <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] p-3 rounded-md shadow-none">
+                  <p className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider mb-0.5">Average Sale</p>
+                  <p className="text-[15px] font-mono tabular-nums font-bold text-neutral-900 dark:text-white">{formatCurrency(averageTransaction, appSettings.currency)}</p>
                 </div>
               </div>
 
-              {/* Contact */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <h3 className="text-[11px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-                    <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
-                    {"Contact Info"}
-                  </h3>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-black/20 rounded-2xl border border-gray-200 dark:border-white/5">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-                        <Phone className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">Phone</p>
-                        <p className="text-sm font-black text-gray-900 dark:text-white">{customer.phone || 'Not set'}</p>
-                      </div>
+              {/* Contact & Profile */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-3.5 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] space-y-2.5">
+                  <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-white/[0.08]">
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-3.5 h-3.5 text-neutral-500" />
+                      <span className="text-[12px] font-semibold text-neutral-900 dark:text-white">Phone & WhatsApp</span>
                     </div>
-                    <Button
-                      variant="primary"
-                      onClick={() => customer.phone && window.open(`https://wa.me/${customer.phone.replace(/\D/g, '')}`, '_blank')}
-                      disabled={!customer.phone}
-                      aria-label="Send WhatsApp message"
-                      className="!min-h-0 !p-2.5 !rounded-xl !shadow-lg !shadow-emerald-500/20 active:!scale-90 disabled:!opacity-30"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                    </Button>
+                    {customer.phone && (
+                      <button
+                        type="button"
+                        onClick={() => window.open(`https://wa.me/${customer.phone.replace(/\D/g, '')}`, '_blank')}
+                        className="h-6 px-2 rounded bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                      >
+                        <MessageCircle className="w-3 h-3" /> WhatsApp
+                      </button>
+                    )}
                   </div>
-                  <div className="p-4 bg-gray-50 dark:bg-black/20 rounded-2xl border border-gray-200 dark:border-white/5">
-                    <p className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-1">Address</p>
-                    <p className="text-xs font-bold text-gray-900 dark:text-gray-300">{customer.address || 'Not set'}</p>
+                  <p className="text-[13px] font-mono text-neutral-900 dark:text-white">{customer.phone || 'No phone set'}</p>
+                  <div className="pt-2 border-t border-neutral-200 dark:border-white/[0.08]">
+                    <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-0.5">Address</span>
+                    <p className="text-[12px] text-neutral-700 dark:text-neutral-300">{customer.address || 'No address set'}</p>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-[11px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-                    <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
-                    {"details"}
-                  </h3>
-                  <div className="bg-gray-50 dark:bg-black/20 p-6 rounded-[24px] space-y-4">
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <p className="text-gray-600 text-[9px] font-black uppercase tracking-widest mb-1">Email</p>
-                        <p className="text-lg font-black text-gray-900 dark:text-white">{customer.email || 'Not set'}</p>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <p className="text-gray-600 text-[9px] font-black uppercase tracking-widest mb-1">Pricing Tier</p>
-                        <p className="text-lg font-black text-gray-900 dark:text-white capitalize">{customer.priceTier}</p>
-                      </div>
-                    </div>
+                <div className="p-3.5 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] space-y-2.5">
+                  <div className="flex items-center gap-2 pb-2 border-b border-neutral-200 dark:border-white/[0.08]">
+                    <User className="w-3.5 h-3.5 text-neutral-500" />
+                    <span className="text-[12px] font-semibold text-neutral-900 dark:text-white">Account Details</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-0.5">Email</span>
+                    <p className="text-[13px] text-neutral-900 dark:text-white font-mono">{customer.email || 'No email set'}</p>
+                  </div>
+                  <div className="pt-2 border-t border-neutral-200 dark:border-white/[0.08]">
+                    <span className="text-[10px] font-mono text-neutral-500 uppercase block mb-0.5">Pricing Tier</span>
+                    <span className="inline-block px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-white/[0.06] border border-neutral-200 dark:border-white/[0.08] text-[11px] font-mono uppercase text-neutral-700 dark:text-neutral-300">
+                      {customer.priceTier || 'Standard'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -179,50 +168,51 @@ export function CustomerDetailModal({ customer: initialCustomer, onClose }: Cust
 
           {/* ── Transactions Tab ── */}
           {activeTab === 'transactions' && (
-            <div className="space-y-6">
+            <div className="min-h-[300px] flex flex-col justify-between">
               {customerTransactions.length > 0 ? (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex-1 space-y-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {paidPageItems.map((tx) => (
-                      <div key={tx.id} onClick={() => setViewingTransaction(tx)} className="p-5 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/5 rounded-[20px] space-y-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-white/5 transition-all active:scale-[0.98]">
+                      <div key={tx.id} onClick={() => setViewingTransaction(tx)} className="p-2.5 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md space-y-1.5 cursor-pointer hover:border-neutral-300 dark:hover:border-white/[0.15] transition-colors">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-[10px] font-black text-gray-900 dark:text-white uppercase">#{tx.invoiceNumber || tx.receiptNumber || 'N/A'}</p>
-                            <p className="text-[8px] font-bold text-gray-500 mt-0.5">{formatAppDateTime(tx.timestamp, appSettings.country)}</p>
+                            <p className="text-[11px] font-mono font-medium text-neutral-900 dark:text-white uppercase">#{tx.invoiceNumber || tx.receiptNumber || 'N/A'}</p>
+                            <p className="text-[10px] text-neutral-500 font-mono mt-0.5">{formatAppDateTime(tx.timestamp, appSettings.country)}</p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-lg font-black text-blue-600">{formatCurrency(tx.total, appSettings.currency)}</p>
-                            <ChevronRight className="h-4 w-4 text-gray-400 shrink-0" />
+                          <div className="flex items-center gap-1">
+                            <p className="text-[13px] font-mono font-semibold tabular-nums text-neutral-900 dark:text-white">{formatCurrency(tx.total, appSettings.currency)}</p>
+                            <ChevronRight className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Badge tone="info" size="sm" className="!rounded-lg !text-[8px] !px-2 !py-0.5 !bg-blue-50 dark:!bg-blue-500/10 !text-blue-600 !border-blue-100 dark:!border-blue-500/20">{tx.paymentMethod}</Badge>
-                          <Badge tone="success" size="sm" className="!rounded-lg !text-[8px] !px-2 !py-0.5 !bg-emerald-50 dark:!bg-primary/10 !text-primary !border-emerald-100 dark:!border-primary/20">{tx.status}</Badge>
+                        <div className="flex gap-1.5">
+                          <Badge tone="info" size="sm">{tx.paymentMethod}</Badge>
+                          <Badge tone="success" size="sm">{tx.status}</Badge>
                         </div>
                       </div>
                     ))}
                   </div>
-                  {paidTotalPages > 1 && (
-                    <div className="pt-2 flex justify-center">
-                      <Pagination
-                        page={paidPage}
-                        totalPages={paidTotalPages}
-                        onPageChange={goToPaidPage}
-                        totalItems={customerTransactions.length}
-                        mode="numbered"
-                        pageSize={paidPageSize}
-                        onPageSizeChange={setPaidPageSize}
-                      />
-                    </div>
-                  )}
                 </div>
               ) : (
                 <EmptyState
-                  icon={<Receipt className="h-12 w-12 text-gray-500 opacity-20" />}
+                  icon={<Receipt className="h-8 w-8 text-neutral-400 opacity-40" />}
                   title="No transactions yet"
-                  className="!py-16"
+                  className="!py-12"
                 />
               )}
+              <div className="pt-3 border-t border-neutral-200 dark:border-white/[0.08] flex items-center justify-between mt-auto">
+                <span className="text-[11px] font-mono text-neutral-500">
+                  {customerTransactions.length} records
+                </span>
+                <Pagination
+                  page={paidPage}
+                  totalPages={paidTotalPages}
+                  onPageChange={goToPaidPage}
+                  totalItems={customerTransactions.length}
+                  mode="numbered"
+                  pageSize={paidPageSize}
+                  onPageSizeChange={setPaidPageSize}
+                />
+              </div>
             </div>
           )}
 

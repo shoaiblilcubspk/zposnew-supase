@@ -45,6 +45,7 @@ export function useTransactionDetailActions({
       transaction.items.forEach(item => useCartStore.getState().addToCart(item));
       useCartStore.getState().setNotes(transaction.notes || '');
       useCartStore.getState().setEditingSaleId(transaction.id);
+      useCartStore.getState().setSalesmanId(transaction.salesmanId || null);
 
       if (transaction.customerId) {
         const customer = appCustomers.find(c => c.id === transaction.customerId);

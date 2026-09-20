@@ -1,5 +1,7 @@
 import { RefObject } from 'react';
-import { Search, X, Camera, FileText, ChevronLeft, ChevronRight, Star, Gift } from 'lucide-react';
+import { Search, X, Camera, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { RealIcon } from '../../../shared/icons';
+import { CapsLockIndicator } from '../../../shared/ui';
 
 interface GridControlsProps {
   searchTerm: string;
@@ -49,11 +51,12 @@ export function GridControls({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={onSearchKeyDown}
-              className={`w-full transition-all bg-gray-50 dark:bg-white/5 dark:text-white border border-gray-200/60 dark:border-white/10 focus:border-primary/50 focus:ring-4 focus:ring-primary/10 rounded-full pl-9 pr-16 lg:pl-11 lg:pr-20 outline-none ${isTouchMode ? 'h-9 lg:h-10 text-xs lg:text-sm' : 'h-9 lg:h-10 text-xs lg:text-sm'
+              className={`w-full transition-all bg-gray-50 dark:bg-white/5 dark:text-white border border-gray-200/60 dark:border-white/10 focus:border-primary/50 focus:ring-4 focus:ring-primary/10 rounded-full pl-9 pr-20 lg:pl-11 lg:pr-24 outline-none ${isTouchMode ? 'h-9 lg:h-10 text-xs lg:text-sm' : 'h-9 lg:h-10 text-xs lg:text-sm'
                 }`}
             />
 
             <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <CapsLockIndicator variant="icon-only" />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
@@ -92,38 +95,48 @@ export function GridControls({
           {showLeftScroll && (
             <button
               onClick={() => scrollCategories('left')}
-              className="absolute left-0 z-10 flex items-center justify-center w-7 h-7 bg-white dark:bg-[#1C1C1C] border border-gray-200 dark:border-white/10 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-all focus:outline-none"
-              style={{ transform: 'translateX(-50%)' }}
+              aria-label="Scroll left"
+              className="hidden md:flex absolute left-0 z-30 items-center justify-center w-8 h-8 rounded-full bg-white dark:bg-[#222226] text-neutral-700 dark:text-neutral-200 border border-neutral-300 dark:border-white/20 shadow-[0_3px_8px_rgba(0,0,0,0.16),0_1px_3px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.5)] hover:scale-110 hover:border-primary hover:text-primary active:scale-95 active:translate-y-0.5 transition-all duration-150 cursor-pointer -translate-x-1/2"
             >
-              <ChevronLeft className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
+              <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
             </button>
           )}
 
           <div
             ref={categoriesRef}
-            className="flex overflow-x-auto space-x-1.5 w-full scrollbar-hide scroll-smooth px-1"
+            className="flex items-center overflow-x-auto space-x-2 w-full no-scrollbar scrollbar-hide overscroll-x-contain touch-pan-x px-1 py-2"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {categories.map((category) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`whitespace-nowrap transition-all flex-shrink-0 flex items-center gap-1 px-3 sm:px-4 h-8 sm:h-9 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider active:scale-95 ${selectedCategory === category
+                className={`group relative whitespace-nowrap transition-all duration-150 flex-shrink-0 flex items-center gap-2 px-3 h-8 rounded-full text-[12.5px] tracking-tight active:scale-95 border cursor-pointer select-none ${selectedCategory === category
                     ? category === '__BUNDLES__'
-                      ? 'bg-violet-600 text-white font-black shadow-lg shadow-violet-500/20'
-                      : 'bg-primary text-white font-black shadow-lg shadow-emerald-500/20'
-                    : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                      ? 'bg-emerald-600 text-white font-bold border-emerald-600 shadow-xs'
+                      : 'bg-primary text-white font-bold border-primary shadow-xs'
+                    : 'bg-white dark:bg-white/[0.05] text-neutral-900 dark:text-neutral-100 font-semibold border-neutral-200/80 dark:border-white/[0.08] hover:border-neutral-300 dark:hover:border-white/20 hover:bg-neutral-50 dark:hover:bg-white/[0.08]'
                   }`}
               >
-                {category === 'Featured' && <Star className="w-2.5 h-2.5 lg:w-3 h-3 fill-current" />}
-                {category === '__BUNDLES__' && <Gift className="w-2.5 h-2.5 lg:w-3 h-3" />}
-                {category === '__BUNDLES__'
-                  ? "Bundles & Deals"
-                  : category === 'Featured'
-                    ? "Featured"
-                    : category === 'All'
-                      ? "All"
-                      : category}
+                {category === '__BUNDLES__' && (
+                  <div className="shrink-0 flex items-center justify-center transition-transform duration-150 group-hover:scale-105">
+                    <RealIcon name="deals" size={20} />
+                  </div>
+                )}
+                {category === 'All' && (
+                  <div className="shrink-0 flex items-center justify-center transition-transform duration-150 group-hover:scale-105">
+                    <RealIcon name="product" size={20} />
+                  </div>
+                )}
+                <span>
+                  {category === '__BUNDLES__'
+                    ? "Bundles & Deals"
+                    : category === 'Featured'
+                      ? "Featured"
+                      : category === 'All'
+                        ? "All"
+                        : category}
+                </span>
               </button>
             ))}
           </div>
@@ -131,10 +144,10 @@ export function GridControls({
           {showRightScroll && (
             <button
               onClick={() => scrollCategories('right')}
-              className="absolute right-0 z-10 flex items-center justify-center w-7 h-7 bg-white dark:bg-[#1C1C1C] border border-gray-200 dark:border-white/10 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-all focus:outline-none"
-              style={{ transform: 'translateX(50%)' }}
+              aria-label="Scroll right"
+              className="hidden md:flex absolute right-0 z-30 items-center justify-center w-8 h-8 rounded-full bg-white dark:bg-[#222226] text-neutral-700 dark:text-neutral-200 border border-neutral-300 dark:border-white/20 shadow-[0_3px_8px_rgba(0,0,0,0.16),0_1px_3px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.5)] hover:scale-110 hover:border-primary hover:text-primary active:scale-95 active:translate-y-0.5 transition-all duration-150 cursor-pointer translate-x-1/2"
             >
-              <ChevronRight className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />
+              <ChevronRight className="w-4 h-4 stroke-[2.5]" />
             </button>
           )}
         </div>

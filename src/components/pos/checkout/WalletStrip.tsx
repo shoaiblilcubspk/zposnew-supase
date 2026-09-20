@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Dexie from 'dexie';
+import { RealIcon } from '../../../shared/icons';
 import { formatCurrency } from '../../../lib/currencies';
-import { HelpTooltip } from '../../../shared/ui/HelpTooltip';
 import { localDb } from '../../../lib/localDb';
 import { getStartOfDayInTimezone, getEndOfDayInTimezone } from '../../../lib/dateUtils';
 import { getAmountByMethod } from '../../../lib/services';
@@ -137,33 +137,49 @@ export function WalletStrip({ currency, timezone }: { currency: string, timezone
 
   if (!modes.length) return null;
   return (
-    <div className="mb-3">
-      <div className="flex items-center gap-1.5 mb-2">
-        <p className="text-[8px] sm:text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest flex items-center">
-          Today's Drawer
-          <HelpTooltip content="Shows total collected today for each method (Cash Flow). This is not the all-time absolute balance." />
+    <div className="mb-2">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
+          {"Today's Drawer"}
         </p>
       </div>
-      <div className="grid grid-cols-2 gap-1.5">
-        {modes.map((mode: any) => (
-          <div key={mode.id} className="relative overflow-hidden bg-white dark:bg-[#1C1C1C] border border-gray-200 dark:border-white/5 rounded-2xl p-4 flex items-center justify-between transition-all hover:scale-[1.02] shadow-sm">
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest leading-none">
-                {mode.id === 'credit' ? "Credit Wallet" : `${mode.name} Wallet`}
+      <div className={`grid gap-2 pt-2.5 ${modes.length <= 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
+        {modes.map((mode: any) => {
+          const displayName = mode.id === 'credit'
+            ? 'Credit Wallet'
+            : mode.name?.toLowerCase().includes('wallet')
+              ? mode.name
+              : `${mode.name} Wallet`;
+          const iconName = mode.id === 'cash'
+            ? 'cashWallet'
+            : mode.id === 'card'
+              ? 'cardWallet'
+              : mode.id === 'online'
+                ? 'bankWallet'
+                : 'expenses';
+
+          return (
+            <div
+              key={mode.id}
+              className="relative bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-xl h-16 sm:h-[68px] px-2 pt-2 pb-1 flex flex-col items-center justify-center text-center shadow-none hover:border-neutral-300 dark:hover:border-white/20 transition-all overflow-visible"
+            >
+              <div className="-mt-5 mb-0.5 shrink-0 flex items-center justify-center drop-shadow-md">
+                <RealIcon name={iconName} size="xl" />
+              </div>
+              <span className="text-[13.5px] sm:text-[14px] font-mono font-bold tabular-nums text-neutral-900 dark:text-white leading-none">
+                {mode.id === 'credit' ? `${formatCurrency(mode.creditGiven || 0, currency)}` : formatCurrency(mode.balance, currency)}
               </span>
-              <span className={`text-base font-black tabular-nums mt-1.5 leading-none`} style={{ color: mode.color }}>
-                {mode.id === 'credit' ? `${formatCurrency(mode.creditGiven || 0, currency)} Given` : formatCurrency(mode.balance, currency)}
+              <span className="text-[10px] sm:text-[10.5px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-tight mt-0.5 leading-none">
+                {displayName}
               </span>
               {mode.id === 'credit' && (
-                <span className="text-[9px] font-bold text-gray-500 mt-1 uppercase tracking-widest">
-                  Recovered: {formatCurrency(mode.creditRecovered || 0, currency)}
+                <span className="text-[8.5px] font-mono text-neutral-400 mt-0.5 leading-none">
+                  Rec: {formatCurrency(mode.creditRecovered || 0, currency)}
                 </span>
               )}
             </div>
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center opacity-80" style={{ backgroundColor: `${mode.color}15`, border: `1px solid ${mode.color}25` }}>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

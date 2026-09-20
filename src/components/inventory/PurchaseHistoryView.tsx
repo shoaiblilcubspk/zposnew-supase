@@ -57,9 +57,9 @@ export function PurchaseHistory() {
         currency={appSettings.currency}
       />
 
-      <div className="bg-white/50 dark:bg-black/20 p-4 rounded-[1.75rem] border border-gray-200/50 dark:border-white/5 shadow-xl">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex-1 min-w-[300px]">
+      <div className="bg-white dark:bg-surface p-2.5 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-[280px]">
             <SharedSearchBar
               value={searchTerm}
               onChange={(val) => { setSearchTerm(val); setCurrentPage(1); }}
@@ -67,29 +67,29 @@ export function PurchaseHistory() {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-            <div className="flex-1 min-w-[180px]">
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+            <div className="flex-1 min-w-[160px]">
               <SearchableSelect
                 label={"SUPPLIER"}
-                options={suppliers.map(s => ({ id: s, label: s === 'All' ? "ALL SUPPLIERS" : s }))}
+                options={suppliers.map(s => ({ id: s, label: s === 'All' ? "All" : s }))}
                 value={supplierFilter}
                 onChange={(val) => { setSupplierFilter(val); setCurrentPage(1); }}
               />
             </div>
 
-            <div className="flex-1 min-w-[180px]">
+            <div className="flex-1 min-w-[160px]">
               <SearchableSelect
                 label={"CATEGORY"}
-                options={categoriesList.map(c => ({ id: c, label: c === 'All' ? "ALL CATEGORIES" : c }))}
+                options={categoriesList.map(c => ({ id: c, label: c === 'All' ? "All" : c }))}
                 value={categoryFilter}
                 onChange={(val) => { setCategoryFilter(val); setCurrentPage(1); }}
               />
             </div>
 
-            <div className="flex-1 min-w-[180px]">
+            <div className="flex-1 min-w-[160px]">
               <SearchableSelect
                 label={"USER"}
-                options={usersList.map(u => ({ id: u, label: u === 'All' ? "ALL USERS" : u.toUpperCase() }))}
+                options={usersList.map(u => ({ id: u, label: u === 'All' ? "All" : u.toUpperCase() }))}
                 value={userFilter}
                 onChange={(val) => { setUserFilter(val); setCurrentPage(1); }}
               />
@@ -113,17 +113,17 @@ export function PurchaseHistory() {
               onStartDateChange={setStartDateInput}
               onEndDateChange={setEndDateInput}
               label={"RANGE"}
-              className="flex-1 min-w-[200px]"
+              className="flex-1 min-w-[180px]"
             />
 
-            <div className="flex items-center gap-2 h-full">
+            <div className="flex items-center gap-2">
               <Button
                 onClick={() => setView('entry')}
                 variant="primary"
-                className="!px-8 !py-4 !rounded-[1.5rem] !font-black !text-xs !gap-3 !shadow-xl !shadow-emerald-500/20 hover:!bg-primary"
-                icon={<Plus className="h-4 w-4" />}
+                size="sm"
+                icon={<Plus className="h-3.5 w-3.5" />}
               >
-                {"NEW STOCK IN"}
+                {"New Stock In"}
               </Button>
 
               <ExportButton
@@ -138,16 +138,6 @@ export function PurchaseHistory() {
           </div>
         </div>
       </div>
-
-        <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-surface rounded-[2rem] border border-gray-200 dark:border-white/5 shadow-sm">
-          <p className="hidden sm:block text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">
-            Page <span className="text-primary">{currentPage}</span> of {totalPages}
-          </p>
-          <Pagination mode="numbered" page={currentPage} totalPages={totalPages} onPageChange={setCurrentPage}
-                       pageSize={itemsPerPage}
-                       onPageSizeChange={setPageSize}
-                     />
-        </div>
 
       <PurchaseHistoryTable
         paginatedRecords={paginatedRecords}

@@ -7,6 +7,7 @@ import { receiveCustomerPayment, fetchCustomerLedger } from '../../lib/services/
 import { useSettingsStore, useCustomersStore } from '../../stores';
 import { formatCurrency } from '../../lib/currencies';
 import { sonner } from '../../lib/sonner';
+import { refreshAllStoresFromLocalDb } from '../../lib/sync/storeSync';
 
 interface Props {
   customer: Customer;
@@ -63,8 +64,9 @@ export function ReceivePaymentModal({ customer, onClose, onSuccess }: Props) {
         idempotencyKey: idempotencyKey.current,
       });
 
-      // Update customer in store
+      // Update customer in store + refresh payments store for Reports
       updateCustomer?.({ ...customer, balance: result.balanceAfter });
+      refreshAllStoresFromLocalDb().catch(() => {});
 
       sonner.success(`Payment received! New balance: ${formatCurrency(result.balanceAfter, currency)}`);
       onSuccess?.(result.balanceAfter);
@@ -94,13 +96,13 @@ export function ReceivePaymentModal({ customer, onClose, onSuccess }: Props) {
         </div>
       }
     >
-      <div className="space-y-4 p-1">
+      <div className="space-y-4">
         {/* Customer + current balance */}
-        <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 p-3 flex items-center gap-3">
-          <CreditCard className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+        <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-3 flex items-center gap-3">
+          <CreditCard className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
           <div>
-            <div className="text-xs text-amber-700 dark:text-amber-400 font-medium">{customer.name} — Outstanding</div>
-            <div className={`text-lg font-bold ${balance > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+            <div className="text-[11px] text-amber-700 dark:text-amber-400 font-mono uppercase tracking-wider">{customer.name} — Outstanding</div>
+            <div className={`text-base font-bold font-mono tabular-nums ${balance > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
               {formatCurrency(balance, currency)}
             </div>
           </div>
@@ -108,9 +110,9 @@ export function ReceivePaymentModal({ customer, onClose, onSuccess }: Props) {
 
         {/* Amount */}
         <div>
-          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Amount Received *</label>
+          <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 block mb-1">Amount Received *</label>
           <div className="relative">
-            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
             <input
               type="number"
               min="0"
@@ -118,13 +120,13 @@ export function ReceivePaymentModal({ customer, onClose, onSuccess }: Props) {
               value={amount}
               onChange={e => setAmount(e.target.value)}
               placeholder="0.00"
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full h-8 pl-8 pr-2.5 rounded border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface text-[13px] font-mono tabular-nums text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors"
               autoFocus
             />
           </div>
           {amountNum > 0 && (
-            <div className="mt-1 text-xs text-gray-500">
-              Balance after: <span className={`font-semibold ${balanceAfterPreview <= 0 ? 'text-green-600' : 'text-amber-600'}`}>
+            <div className="mt-1 text-[11px] font-mono text-neutral-500">
+              Balance after: <span className={`font-mono tabular-nums font-semibold ${balanceAfterPreview <= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
                 {formatCurrency(balanceAfterPreview, currency)}
               </span>
             </div>
@@ -133,16 +135,16 @@ export function ReceivePaymentModal({ customer, onClose, onSuccess }: Props) {
 
         {/* Payment Mode */}
         <div>
-          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Payment Method</label>
+          <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 block mb-1">Payment Method</label>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
             {activeModes.map(m => (
               <button
                 key={m.id}
                 onClick={() => setMode(m.id)}
-                className={`py-2 rounded-lg text-xs font-semibold border transition-all ${
+                className={`h-8 rounded text-[12px] font-mono border transition-colors ${
                   mode === m.id
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:border-indigo-400'
+                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium'
+                    : 'border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
                 }`}
               >
                 {m.name || m.label || m.id}
@@ -153,19 +155,19 @@ export function ReceivePaymentModal({ customer, onClose, onSuccess }: Props) {
 
         {/* Reference */}
         <div>
-          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Reference # (optional)</label>
+          <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 block mb-1">Reference # (optional)</label>
           <input
             type="text"
             value={reference}
             onChange={e => setReference(e.target.value)}
             placeholder="Cheque no. / Transfer ID"
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full h-8 px-2.5 rounded border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface text-[13px] text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors"
           />
         </div>
 
         {/* Note */}
         <div>
-          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+          <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 block mb-1">
             <FileText className="inline h-3.5 w-3.5 mr-1" />Note (optional)
           </label>
           <textarea
@@ -173,7 +175,7 @@ export function ReceivePaymentModal({ customer, onClose, onSuccess }: Props) {
             onChange={e => setNote(e.target.value)}
             placeholder="Add a note..."
             rows={2}
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+            className="w-full px-2.5 py-1.5 rounded border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface text-[13px] text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors resize-none placeholder:text-neutral-400"
           />
         </div>
       </div>

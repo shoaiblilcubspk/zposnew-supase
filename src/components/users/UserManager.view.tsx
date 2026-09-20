@@ -1,21 +1,29 @@
-import { Plus, Edit, Trash2, UserCheck, Crown, Shield, User, Users } from 'lucide-react';
-import { Avatar, Badge, Button, EmptyState, Pagination } from '../../shared/ui';
+import { Plus, Users, ChevronLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Button, Pagination, RealIcon, ScrollableTabBar } from '../../shared/ui';
 import { SharedSearchBar } from '../../shared/modules/search-and-list';
 import { UserModal } from './UserModal';
-import { formatAppDate, formatAppTime } from '../../lib/dateUtils';
-import { getRoleIcon } from './userManagerHelpers';
-import { useUserManagerLogic } from './useUserManagerLogic';
+import { UserTableDesktop } from './UserTable.desktop';
+import { UserTableMobile } from './UserTable.mobile';
+import { useUserManagerLogic, RoleFilter } from './useUserManagerLogic';
 
-export function UserManager() {
+interface UserManagerProps {
+  initialRoleFilter?: RoleFilter;
+}
+
+export function UserManager({ initialRoleFilter = 'all' }: UserManagerProps = {}) {
+  const navigate = useNavigate();
   const {
     appUsers,
     appCurrentUser,
-    appSettings,
     searchTerm,
     setSearchTerm,
+    roleFilter,
+    setRoleFilter,
     showUserModal,
     setShowUserModal,
     editingUser,
+    defaultRoleForModal,
     loading,
     filteredUsers,
     page,
@@ -32,233 +40,155 @@ export function UserManager() {
     activeUsers,
     adminUsers,
     managerUsers,
-  } = useUserManagerLogic();
+    cashierUsers,
+    salesmanUsers,
+  } = useUserManagerLogic(initialRoleFilter);
 
   return (
-    <div className="main-content-scroll p-1 sm:p-4 lg:p-6 bg-gray-50/50 dark:bg-app space-y-3 lg:space-y-6 max-w-[1400px] mx-auto">
-      {/* Layer 1: Identity & Tab Navigation */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 pb-2">
-        <div className="flex flex-col md:flex-row md:items-center gap-4 sm:gap-6 xl:gap-10">
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="h-10 w-10 sm:h-12 sm:w-12 bg-primary/10 rounded-xl flex items-center justify-center shadow-inner border border-primary/10">
-              <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-            </div>
-            <div className="shrink-0 flex flex-col">
-              <h1 className="text-lg sm:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">{"Users"}</h1>
-              <p className="hidden sm:block text-gray-600 dark:text-gray-400 text-[9px] font-black uppercase tracking-[0.2em] mt-1 opacity-60">{"Management Hub"} • {appUsers.length} {"Total"}</p>
-            </div>
-          </div>
-
-          {/* Redundant Switcher Removed to Fix Double Tabs */}
-        </div>
-
-        <div className="flex items-center gap-2">
-           <Button
-            variant="primary"
-            onClick={handleAddUser}
-            disabled={loading}
-            icon={<Plus className="h-3.5 w-3.5" />}
+    <div className="main-content-scroll p-4 sm:p-6 bg-app space-y-4 max-w-[1400px] mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2 sm:gap-3 pb-1 border-b border-gray-200 dark:border-white/[0.08]">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/pos')}
+            className="!p-1.5 text-neutral-500 hover:text-neutral-900 dark:hover:text-white shrink-0"
           >
-            {"Add User"}
+            <ChevronLeft className="w-4 h-4" />
           </Button>
+          <div className="min-w-0">
+            <h1 className="text-[15px] sm:text-xl font-semibold text-gray-900 dark:text-white tracking-[-0.01em] truncate">
+              Staff & Permissions
+            </h1>
+            <p className="text-[11px] sm:text-[12px] text-gray-500 mt-0.5 truncate">
+              Decentralized access control • {appUsers.length} total staff members
+            </p>
+          </div>
+        </div>
+
+        <Button
+          variant="primary"
+          onClick={() => handleAddUser()}
+          disabled={loading}
+          className="shrink-0 h-8 !px-2.5 sm:!px-3 !text-[11px] sm:!text-[13px]"
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" />
+          {roleFilter === 'salesman' ? 'Add Salesman' : 'Add Staff'}
+        </Button>
+      </div>
+
+      {/* Asymmetric Linear Metrics Strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: 'Total Staff', value: appUsers.length, sub: 'Registered members', cls: 'text-2xl text-gray-900 dark:text-white' },
+          { label: 'Active Operators', value: activeUsers, sub: 'Authorized for POS', cls: 'text-xl text-emerald-600 dark:text-emerald-400' },
+          { label: 'Cashiers', value: cashierUsers, sub: 'Terminal billing staff', cls: 'text-xl text-gray-900 dark:text-white' },
+          { label: 'Salesmen', value: salesmanUsers, sub: 'Order attribution', cls: 'text-xl text-gray-900 dark:text-white' },
+        ].map((m, i) => (
+          <div key={i} className="p-3 bg-surface border border-gray-200 dark:border-white/[0.08] rounded-md">
+            <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">{m.label}</div>
+            <div className={`font-semibold tabular-nums tracking-tight mt-1 ${m.cls}`}>{m.value}</div>
+            <div className="text-[11px] text-gray-400 mt-0.5">{m.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Role Filter & Search Toolbar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+        <ScrollableTabBar containerClassName="flex-1 min-w-0">
+          {[
+            { id: 'all', label: 'All Staff', realIcon: 'users' as const, count: appUsers.length },
+            { id: 'admin', label: 'Admins', realIcon: 'settings' as const, count: adminUsers },
+            { id: 'manager', label: 'Managers', realIcon: 'generalSettings' as const, count: managerUsers },
+            { id: 'cashier', label: 'Cashiers', realIcon: 'pos' as const, count: cashierUsers },
+            { id: 'salesman', label: 'Salesmen', realIcon: 'salesman' as const, count: salesmanUsers },
+          ].map((tab) => {
+            const active = roleFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setRoleFilter(tab.id as any)}
+                className={`group relative whitespace-nowrap transition-all duration-150 flex-shrink-0 flex items-center gap-2 px-3 h-8 rounded-full text-[12.5px] tracking-tight active:scale-95 border cursor-pointer select-none ${
+                  active
+                    ? 'bg-primary text-white font-bold border-primary shadow-xs'
+                    : 'bg-white dark:bg-white/[0.05] text-neutral-900 dark:text-neutral-100 font-semibold border-neutral-200/80 dark:border-white/[0.08] hover:border-neutral-300 dark:hover:border-white/20 hover:bg-neutral-50 dark:hover:bg-white/[0.08]'
+                }`}
+              >
+                <div className="shrink-0 flex items-center justify-center transition-transform duration-150 group-hover:scale-105">
+                  <RealIcon name={tab.realIcon} size={20} />
+                </div>
+                <span>{tab.label}</span>
+                <span className={`text-[10.5px] font-mono tabular-nums px-1.5 py-0.2 rounded-full ${
+                  active ? 'bg-white/20 text-white font-bold' : 'bg-neutral-100 dark:bg-white/[0.08] text-neutral-600 dark:text-neutral-400'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </ScrollableTabBar>
+
+        <div className="bg-surface p-1 border border-gray-200 dark:border-white/[0.08] rounded-md sm:w-80">
+          <SharedSearchBar
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Search by name, username..."
+          />
         </div>
       </div>
 
-      {/* Layer 2: Filter Toolbar */}
-      <div className="relative z-30 bg-white/50 dark:bg-black/20 p-3 lg:p-4 rounded-[1.75rem] border border-gray-200/50 dark:border-white/5 shadow-xl ring-1 ring-black/5 dark:ring-white/5">
-        <SharedSearchBar
-          value={searchTerm}
-          onChange={setSearchTerm}
-          placeholder={"Search users by name, username or email..."}
+      {/* High-Density Staff Table */}
+      <div className="bg-surface rounded-md border border-gray-200 dark:border-white/[0.08] overflow-hidden min-h-[calc(100vh-320px)] flex flex-col justify-between">
+        {/* Desktop High-Density Table */}
+        <UserTableDesktop
+          users={pageItems}
+          currentUserId={appCurrentUser?.id}
+          loading={loading}
+          totalUsersCount={filteredUsers.length}
+          onTogglePermission={togglePermission}
+          onToggleStatus={toggleUserStatus}
+          onEdit={handleEditUser}
+          onDelete={handleDeleteUser}
         />
-      </div>
 
-      {/* Layer 3: Vibrant Stats section */}
-      <div className="relative z-20 grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mt-2">
-        <div className="stat-card bg-gradient-to-br from-emerald-500 to-teal-700">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Total Users"}</span>
-            <span className="stat-card-value">{appUsers.length}</span>
-          </div>
-          <User className="stat-card-icon h-10 w-10 text-white" />
+        {/* Mobile Native App Cards */}
+        <div className="lg:hidden p-3 flex-1">
+          <UserTableMobile
+            users={pageItems}
+            currentUserId={appCurrentUser?.id}
+            loading={loading}
+            onTogglePermission={togglePermission}
+            onToggleStatus={toggleUserStatus}
+            onEdit={handleEditUser}
+            onDelete={handleDeleteUser}
+          />
         </div>
 
-        <div className="stat-card bg-gradient-to-br from-green-500 to-green-700">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Active Now"}</span>
-            <span className="stat-card-value">{activeUsers}</span>
-          </div>
-          <UserCheck className="stat-card-icon h-10 w-10 text-white" />
-        </div>
-
-        <div className="stat-card bg-gradient-to-br from-purple-500 to-fuchsia-700">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Admin Roles"}</span>
-            <span className="stat-card-value">{adminUsers}</span>
-          </div>
-          <Crown className="stat-card-icon h-10 w-10 text-white" />
-        </div>
-
-        <div className="stat-card bg-gradient-to-br from-orange-500 to-amber-700">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Managers"}</span>
-            <span className="stat-card-value">{managerUsers}</span>
-          </div>
-          <Shield className="stat-card-icon h-10 w-10 text-white" />
+        <div className="px-3 py-2 border-t border-gray-200 dark:border-white/[0.08] flex items-center justify-between text-[12px] text-gray-500 mt-auto">
+          <span>
+            Showing {filteredUsers.length === 0 ? '0 of 0' : `${((page - 1) * pageSize) + 1}–${Math.min(page * pageSize, filteredUsers.length)} of ${filteredUsers.length}`}
+          </span>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            totalItems={filteredUsers.length}
+            mode="numbered"
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       </div>
-
-      {/* Main Table View */}
-          <div className="bg-white dark:bg-surface rounded-3xl border border-gray-200 dark:border-white/5 overflow-hidden shadow-xl">
-            <div className="overflow-x-auto scrollbar-hide">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-50/50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/5">
-                <th className="p-4 text-[10px] font-black uppercase text-gray-700 dark:text-gray-400 tracking-widest">{"User Details"}</th>
-                <th className="p-4 text-[10px] font-black uppercase text-gray-700 dark:text-gray-400 tracking-widest text-center">{"Role"}</th>
-                <th className="p-4 text-[10px] font-black uppercase text-gray-700 dark:text-gray-400 tracking-widest text-center">{"Price Override"}</th>
-                <th className="p-4 text-[10px] font-black uppercase text-gray-700 dark:text-gray-400 tracking-widest text-center">{"Discounts"}</th>
-                <th className="p-4 text-[10px] font-black uppercase text-gray-700 dark:text-gray-400 tracking-widest text-center">{"Last Login"}</th>
-                <th className="p-4 text-[10px] font-black uppercase text-gray-700 dark:text-gray-400 tracking-widest text-center">{"Status"}</th>
-                <th className="p-4 text-[10px] font-black uppercase text-gray-700 dark:text-gray-400 tracking-widest text-right">{"Actions"}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-              {filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-20 text-center">
-                    <EmptyState
-                      icon={<Users className="h-12 w-12 text-gray-600" />}
-                      title={"No users found"}
-                      className="!p-0 !opacity-20"
-                    />
-                  </td>
-                </tr>
-              ) : (
-                pageItems.map((user) => (
-                  <tr key={user.id} className={`group hover:bg-gray-50 dark:hover:bg-white/[0.01] transition-colors ${!user.active ? 'opacity-40 grayscale-[0.5]' : ''}`}>
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar src={user.avatar || undefined} name={user.name} size="md" shape="square" />
-                        <div>
-                          <p className="text-[11px] font-black text-gray-900 dark:text-white uppercase leading-none">{user.name}</p>
-                          <p className="text-[9px] text-gray-600 font-bold mt-1 uppercase tracking-widest">@{user.username}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 text-center">
-                       <Badge
-                         tone={user.role === 'admin' ? 'warning' : user.role === 'manager' ? 'success' : 'neutral'}
-                         size="sm"
-                         icon={getRoleIcon(user.role)}
-                         className={`!px-3 !py-1 ${
-                           user.role === 'admin' ? '!text-amber-500 !border-amber-500/20' :
-                           user.role === 'manager' ? '!bg-primary/10 !text-primary !border-primary/20' :
-                           '!text-gray-600 !border-gray-500/20 dark:!text-gray-600'
-                         }`}
-                       >
-                        {user.role === 'admin' ? "ADMIN" : user.role === 'manager' ? "MANAGER" : "CASHIER"}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-center">
-                      <Button
-                        variant="ghost"
-                        onClick={() => togglePermission(user, 'canEditPrice')}
-                        disabled={loading || user.role === 'admin'}
-                        className={`!min-h-0 !text-[9px] !px-3 !py-1 !rounded-full !border ${
-                          user.canEditPrice || user.role === 'admin' ? '!bg-primary/10 !text-primary !border-primary/20' : '!bg-gray-500/10 !text-gray-600 !border-gray-500/10'
-                        }`}
-                      >
-                        {user.canEditPrice || user.role === 'admin' ? "ALLOWED" : "LOCKED"}
-                      </Button>
-                    </td>
-                    <td className="p-4 text-center">
-                      <Button
-                        variant="ghost"
-                        onClick={() => togglePermission(user, 'canGiveDiscount')}
-                        disabled={loading || user.role === 'admin'}
-                        className={`!min-h-0 !text-[9px] !px-3 !py-1 !rounded-full !border ${
-                          user.canGiveDiscount || user.role === 'admin' ? '!bg-indigo-500/10 !text-indigo-500 !border-indigo-500/20' : '!bg-gray-500/10 !text-gray-600 !border-gray-500/10'
-                        }`}
-                      >
-                        {user.canGiveDiscount || user.role === 'admin' ? "ALLOWED" : "LOCKED"}
-                      </Button>
-                    </td>
-                    <td className="p-4 text-center">
-                      {user.lastLogin ? (
-                        <div>
-                          <p className="text-[10px] font-black text-gray-900 dark:text-white uppercase leading-none">{formatAppDate(user.lastLogin, appSettings.country)}</p>
-                          <p className="text-[8px] text-gray-600 font-bold mt-1">{formatAppTime(user.lastLogin, appSettings.country)}</p>
-                        </div>
-                      ) : (
-                        <span className="text-[9px] font-black text-gray-600 uppercase">{"NEVER"}</span>
-                      )}
-                    </td>
-                    <td className="p-4 text-center">
-                      <Button
-                        variant="ghost"
-                        onClick={() => toggleUserStatus(user)}
-                        disabled={loading || user.id === appCurrentUser?.id}
-                        className={`!min-h-0 !text-[9px] !px-3 !py-1 !rounded-full !border ${
-                          user.active ? '!bg-primary/10 !text-primary !border-primary/20 hover:!bg-primary hover:!text-white' : '!bg-red-500/10 !text-red-500 !border-red-500/20 hover:!bg-red-500 hover:!text-white'
-                        }`}
-                      >
-                        {user.active ? "ACTIVE" : "INACTIVE"}
-                      </Button>
-                    </td>
-                    <td className="p-4 text-right">
-                       <div className="flex justify-end items-center gap-2 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          onClick={() => handleEditUser(user)}
-                          disabled={loading}
-                          aria-label="Edit user"
-                          className="!min-h-0 !p-2 !rounded-xl !bg-emerald-50 dark:!bg-primary/10 !text-primary hover:!scale-110 active:!scale-95"
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        {user.id !== appCurrentUser?.id && (
-                          <Button
-                            variant="ghost"
-                            onClick={() => handleDeleteUser(user.id)}
-                            disabled={loading}
-                            aria-label="Delete user"
-                            className="!min-h-0 !p-2 !rounded-xl !bg-red-50 dark:!bg-red-500/10 !text-red-600 hover:!scale-110 active:!scale-95"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        
-        
-          <div className="p-4 sm:p-6 bg-gray-50/50 dark:bg-white/[0.02] border-t border-gray-200 dark:border-white/5 flex justify-center">
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              onPageChange={goToPage}
-              totalItems={filteredUsers.length}
-              mode="numbered"
-            
-              pageSize={pageSize}
-              onPageSizeChange={setPageSize}
-            />
-          </div>
-        
-      </div>
-
 
       <UserModal
         isOpen={showUserModal}
         onClose={() => setShowUserModal(false)}
         user={editingUser}
+        defaultRole={defaultRoleForModal}
       />
     </div>
   );
 }
+

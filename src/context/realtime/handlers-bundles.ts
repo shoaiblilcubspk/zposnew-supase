@@ -11,7 +11,7 @@ export function attachBundleHandlers(channel: any, ctx: RealtimeCtx) {
   const { appSalesmen } = ctx;
 
   channel
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_order_items' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_order_items' }, async (payload: any) => {
       if (await isPendingDelete('purchase_order_items', payload.new?.id || payload.old?.id)) return;
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         await localDb.purchaseOrderItems.put(payload.new).catch(() => { });
@@ -19,7 +19,7 @@ export function attachBundleHandlers(channel: any, ctx: RealtimeCtx) {
         await localDb.purchaseOrderItems.delete(payload.old.id).catch(() => { });
       }
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'bundles' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bundles' }, async (payload: any) => {
       if (await isPendingDelete('bundles', payload.new?.id || payload.old?.id)) return;
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         await localDb.bundles.put(payload.new).catch(() => { });
@@ -27,7 +27,7 @@ export function attachBundleHandlers(channel: any, ctx: RealtimeCtx) {
         await localDb.bundles.delete(payload.old.id).catch(() => { });
       }
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'bundle_items' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bundle_items' }, async (payload: any) => {
       if (await isPendingDelete('bundle_items', payload.new?.id || payload.old?.id)) return;
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         await localDb.bundleItems.put(payload.new).catch(() => { });
@@ -35,7 +35,7 @@ export function attachBundleHandlers(channel: any, ctx: RealtimeCtx) {
         await localDb.bundleItems.delete(payload.old.id).catch(() => { });
       }
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'variant_stock_history' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'variant_stock_history' }, async (payload: any) => {
       if (await isPendingDelete('variant_stock_history', payload.new?.id || payload.old?.id)) return;
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         await localDb.variantStockHistory.put(payload.new).catch(() => { });
@@ -43,7 +43,7 @@ export function attachBundleHandlers(channel: any, ctx: RealtimeCtx) {
         await localDb.variantStockHistory.delete(payload.old.id).catch(() => { });
       }
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'salesmen' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'salesmen' }, async (payload: any) => {
       if (await isPendingDelete('salesmen', payload.new?.id || payload.old?.id)) return;
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         const mapped = mapSalesman(payload.new);

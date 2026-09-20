@@ -1,9 +1,7 @@
 import { PurchaseRecord } from '../../../types';
-import { purchaseRecordsService, generateId } from '../../../lib/services';
+import { purchaseRecordsService, productsService, generateId } from '../../../lib/services';
 import { localDb } from '../../../lib/localDb';
-import { supabase } from '../../../lib/supabase';
 import { sonner } from '../../../lib/sonner';
-import { signAction } from '../../../lib/actionToken';
 import { useProductsStore, useInventoryStore } from '../../../stores';
 import { DetailCtx } from './detailContext';
 
@@ -27,14 +25,12 @@ export async function performAdjustment(ctx: DetailCtx) {
 
   try {
     const now = new Date();
-    const freshProduct = await localDb.products.get(ctx.product.id);
-    const currentStock = freshProduct?.stock ?? ctx.product.stock ?? 0;
+    const currentStock = ctx.product.stock ?? 0;
     // Signed new stock (negative allowed per plan PART O — problem is never hidden).
     const newStock = currentStock + qtyChange;
     const adjustmentId = generateId();
 
-    const newRecord = {
-      id: adjustmentId,
+    const newRecord = await purchaseRecordsService.create({
       productId: ctx.product.id,
       productName: ctx.product.name,
       sku: ctx.product.sku || '',
@@ -45,54 +41,18 @@ export async function performAdjustment(ctx: DetailCtx) {
       supplier: reason.toUpperCase(),
       date: now,
       addedBy: ctx.profile?.email || 'System',
-      notes: ctx.adjustmentData.notes ? `${reason}: ${ctx.adjustmentData.notes ? ctx.adjustmentData.notes : reason}` : `Manual Adjustment: ${reason}`
-    } as PurchaseRecord;
+      notes: ctx.adjustmentData.notes ? `${reason}: ${ctx.adjustmentData.notes}` : `Manual Adjustment: ${reason}`
+    } as any);
 
-    // Cloud: single authoritative stock update via RPC (trigger applies it once).
-    // Never edit products.stock directly. Stable id => idempotent on retry.
-    // Signed actor proof: server guard allows admin|manager only (RBAC matrix).
-    const token = await signAction('stock_adjustment');
-    if (!token) {
-      sonner.error('Session missing action credentials. Please sign in again.');
-      ctx.setIsUpdating(false);
-      sonner.close();
-      return;
-    }
-    const { error } = await supabase.rpc('stock_adjustment', {
-      p_product_id: ctx.product.id,
-      p_change_qty: qtyChange,
-      p_type: qtyChange >= 0 ? 'adjustment' : 'adjustment_out',
-      p_note: `Adjustment: ${reason}`,
-      p_cashier: ctx.profile?.email || 'System',
-      p_variant_id: null,
-      p_variant_label: null,
-      p_adjustment_id: adjustmentId,
-      ...token
-    });
-    if (error) throw error;
-
-    // Local cache update (display only; cloud trigger already moved stock).
-    const updatedProduct = { ...ctx.product, stock: newStock, updatedAt: now };
-    await localDb.products.update(ctx.product.id, { stock: newStock, updatedAt: now });
-    useProductsStore.getState().updateProduct(updatedProduct);
-
-    const histEntry = {
-      id: adjustmentId,
-      productId: ctx.product.id,
-      changeQty: qtyChange,
-      type: (qtyChange >= 0 ? 'adjustment' : 'adjustment_out') as const,
-      referenceId: adjustmentId,
-      note: `Adjustment: ${reason}`,
-      balanceAfter: newStock,
-      cashierName: ctx.profile?.email || 'System',
-      createdAt: now
-    };
-    await localDb.stockHistory.add(histEntry);
-
-    await purchaseRecordsService.create(newRecord);
     useInventoryStore.getState().addPurchaseRecord(newRecord);
 
-    ctx.setFormData(prev => ({ ...prev, stock: String(newStock) }));
+    const freshProduct = await productsService.getById(ctx.product.id);
+    if (freshProduct) {
+      useProductsStore.getState().updateProduct(freshProduct);
+      ctx.setFormData(prev => ({ ...prev, stock: String(freshProduct.stock) }));
+    } else {
+      ctx.setFormData(prev => ({ ...prev, stock: String(newStock) }));
+    }
 
     sonner.success('Stock adjusted successfully');
     ctx.setShowAdjustment(false);

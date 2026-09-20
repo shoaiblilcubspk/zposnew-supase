@@ -10,8 +10,11 @@ import {
   Layout,
   ShieldCheck,
   CreditCard,
+  Sparkles,
+  Code2,
 } from 'lucide-react';
 import { Button, ToggleSwitch, Select } from '../../../shared/ui';
+import { useSettingsStore } from '../../../stores';
 import type { SettingsTabProps } from './types';
 
 export function GeneralModules({
@@ -23,45 +26,86 @@ export function GeneralModules({
   play,
 }: SettingsTabProps) {
   return (
-    <div className="lg:col-span-4 space-y-6">
+    <div className="lg:col-span-4 space-y-4">
       {/* User Experience Theme */}
-      <div className="p-4 sm:p-6 bg-gray-50/50 dark:bg-white/[0.02] rounded-[2rem] border border-gray-200 dark:border-white/5 space-y-6">
-        <div className="flex items-center gap-3 pb-4 border-b border-gray-200 dark:border-white/5">
-          <div className="p-2.5 bg-white dark:bg-white/10 rounded-xl shadow-sm">
-            <Layout className="w-5 h-5 text-violet-500" />
-          </div>
+      <div className="p-4 sm:p-5 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none space-y-4">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-200 dark:border-white/[0.08]">
+          <Layout className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           <div>
-            <h3 className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">{"Experience"}</h3>
-            <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{"Personalize your workspace"}</p>
+            <h3 className="text-[14px] font-semibold text-neutral-900 dark:text-white tracking-[-0.01em]">Experience</h3>
+            <p className="text-[11px] text-neutral-500 font-mono tracking-tight">Personalize your workspace</p>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"App Theme"}</label>
-            <div className="grid grid-cols-3 gap-2 bg-white dark:bg-black/25 p-1 rounded-xl border border-gray-200 dark:border-white/5">
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">App Theme</label>
+            <div className="grid grid-cols-3 gap-1 bg-neutral-100 dark:bg-white/[0.06] p-1 rounded border border-neutral-200 dark:border-white/[0.08]">
               {(['light', 'dark', 'auto'] as const).map((tVal) => (
-                <Button
+                <button
                   key={tVal}
-                  variant="ghost"
                   type="button"
                   onClick={() => {
                     setFormData(prev => ({ ...prev, theme: tVal }));
                     handleInstantUpdate('theme', tVal);
                   }}
-                  className={`!min-h-0 !gap-0 !py-2 !text-[9px] !tracking-widest !rounded-lg !shadow-none ${formData.theme === tVal
-                    ? '!bg-[#10B981] !text-white !shadow-md'
-                    : '!text-gray-500 hover:!text-gray-900 dark:hover:!text-white'
-                    }`}
+                  className={`h-7 rounded text-[12px] font-medium transition-colors ${
+                    formData.theme === tVal
+                      ? 'bg-white dark:bg-white/[0.1] text-neutral-900 dark:text-white shadow-none border border-neutral-200 dark:border-white/[0.1]'
+                      : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                  }`}
                 >
-                  {tVal === 'light' ? "Light" : (tVal === 'dark' ? "Dark" : tVal)}
-                </Button>
+                  {tVal === 'light' ? "Light" : (tVal === 'dark' ? "Dark" : "Auto")}
+                </button>
               ))}
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Interface Mode"}</label>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Icons Style</label>
+              <span className="text-[10px] font-mono text-neutral-400">
+                {(formData.iconStyle || '3d') === '3d' ? '3D Tactile' : 'Vector Code'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-1 bg-neutral-100 dark:bg-white/[0.06] p-1 rounded border border-neutral-200 dark:border-white/[0.08]">
+              {(['3d', 'system'] as const).map((sVal) => {
+                const isSelected = (formData.iconStyle || '3d') === sVal;
+                return (
+                  <button
+                    key={sVal}
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, iconStyle: sVal }));
+                      useSettingsStore.getState().setSettings({ iconStyle: sVal });
+                      handleInstantUpdate('iconStyle', sVal);
+                      try { localStorage.setItem('pos_icon_style', sVal); } catch {}
+                    }}
+                    className={`h-7 rounded text-[12px] font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-white dark:bg-white/[0.1] text-neutral-900 dark:text-white shadow-none border border-neutral-200 dark:border-white/[0.1]'
+                        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {sVal === '3d' ? (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <span>3D Custom</span>
+                      </>
+                    ) : (
+                      <>
+                        <Code2 className="w-3.5 h-3.5 text-blue-500" />
+                        <span>System Icons</span>
+                      </>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Interface Mode</label>
             <Select
               name="interfaceMode"
               value={formData.interfaceMode || 'touch'}
@@ -69,35 +113,32 @@ export function GeneralModules({
                 handleChange(e);
                 handleInstantUpdate('interfaceMode', e.target.value);
               }}
-              className="!text-xs !font-bold !py-2"
             >
-              <option value="touch">{"Touch Friendly (POS Optimized)"}</option>
-              <option value="traditional">{"Traditional (Keyboard Focused)"}</option>
+              <option value="touch">Touch Friendly (POS Optimized)</option>
+              <option value="traditional">Traditional (Keyboard Focused)</option>
             </Select>
           </div>
         </div>
       </div>
 
       {/* System Modules Toggles */}
-      <div className="p-4 sm:p-6 bg-gradient-to-br from-violet-50/40 to-emerald-50/30 dark:from-violet-900/5 dark:to-emerald-900/5 rounded-[2rem] border border-violet-200/30 dark:border-violet-900/20 space-y-6">
-        <div className="flex items-center gap-4 pb-4 border-b border-violet-200/40 dark:border-violet-900/20">
-          <div className="w-10 h-10 bg-violet-100 dark:bg-violet-900/20 rounded-xl flex items-center justify-center">
-            <Sliders className="w-5 h-5 text-violet-600" />
-          </div>
+      <div className="p-4 sm:p-5 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none space-y-4">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-200 dark:border-white/[0.08]">
+          <Sliders className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           <div>
-            <h3 className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">{"System Modules"}</h3>
-            <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{"Enable or disable advanced features"}</p>
+            <h3 className="text-[14px] font-semibold text-neutral-900 dark:text-white tracking-[-0.01em]">System Modules</h3>
+            <p className="text-[11px] text-neutral-500 font-mono tracking-tight">Enable or disable advanced features</p>
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {/* Retail Mode Toggle */}
-          <label className="flex items-center justify-between p-3 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/5 rounded-xl cursor-pointer group transition-all">
-            <div className="flex items-center gap-3">
-              <Store className="w-4 h-4 text-gray-500 group-hover:text-violet-500 transition-colors" />
+          <label className="flex items-center justify-between p-2.5 bg-neutral-50/50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] rounded cursor-pointer transition-colors hover:bg-neutral-50 dark:hover:bg-white/[0.04]">
+            <div className="flex items-center gap-2.5">
+              <Store className="w-4 h-4 text-neutral-500" />
               <div>
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block leading-none">{"Retail Sales"}</span>
-                <span className="text-[8px] text-gray-500 uppercase tracking-wider block mt-1">{"B2C direct sales"}</span>
+                <span className="text-[13px] font-medium text-neutral-900 dark:text-white block leading-tight">Retail Sales</span>
+                <span className="text-[11px] text-neutral-500 font-mono block">B2C direct sales</span>
               </div>
             </div>
             <ToggleSwitch
@@ -109,34 +150,32 @@ export function GeneralModules({
           </label>
 
           {/* Wholesale Mode Toggle */}
-          <label className="flex items-center justify-between p-3 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/5 rounded-xl cursor-pointer group transition-all">
-            <div className="flex items-center gap-3">
-              <ShoppingBag className="w-4 h-4 text-gray-500 group-hover:text-violet-500 transition-colors" />
+          <label className="flex items-center justify-between p-2.5 bg-neutral-50/50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] rounded cursor-pointer transition-colors hover:bg-neutral-50 dark:hover:bg-white/[0.04]">
+            <div className="flex items-center gap-2.5">
+              <ShoppingBag className="w-4 h-4 text-neutral-500" />
               <div>
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block leading-none">{"Wholesale Mode"}</span>
-                <span className="text-[8px] text-gray-500 uppercase tracking-wider block mt-1">{"Allow wholesale price tiers"}</span>
+                <span className="text-[13px] font-medium text-neutral-900 dark:text-white block leading-tight">Wholesale Mode</span>
+                <span className="text-[11px] text-neutral-500 font-mono block">Allow wholesale price tiers</span>
               </div>
             </div>
             <ToggleSwitch
               size="sm"
-              color="bg-violet-500"
               checked={formData.wholesaleEnabled}
               onChange={(v) => handleInstantUpdate('wholesaleEnabled', v)}
             />
           </label>
 
           {/* Touch Keyboard Toggle */}
-          <label className="flex items-center justify-between p-3 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/5 rounded-xl cursor-pointer group transition-all">
-            <div className="flex items-center gap-3">
-              <Keyboard className="w-4 h-4 text-gray-500 group-hover:text-violet-500 transition-colors" />
+          <label className="flex items-center justify-between p-2.5 bg-neutral-50/50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] rounded cursor-pointer transition-colors hover:bg-neutral-50 dark:hover:bg-white/[0.04]">
+            <div className="flex items-center gap-2.5">
+              <Keyboard className="w-4 h-4 text-neutral-500" />
               <div>
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block leading-none">{"Touch Keyboard"}</span>
-                <span className="text-[8px] text-gray-500 uppercase tracking-wider block mt-1">{"On-screen layout inputs"}</span>
+                <span className="text-[13px] font-medium text-neutral-900 dark:text-white block leading-tight">Touch Keyboard</span>
+                <span className="text-[11px] text-neutral-500 font-mono block">On-screen layout inputs</span>
               </div>
             </div>
             <ToggleSwitch
               size="sm"
-              color="bg-violet-500"
               checked={formData.touchKeyboardEnabled}
               onChange={(v) => {
                 setFormData(p => ({ ...p, touchKeyboardEnabled: v }));
@@ -146,20 +185,19 @@ export function GeneralModules({
           </label>
 
           {/* Sound Feedback Toggle */}
-          <label className="flex items-center justify-between p-3 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/5 rounded-xl cursor-pointer group transition-all">
-            <div className="flex items-center gap-3">
+          <label className="flex items-center justify-between p-2.5 bg-neutral-50/50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] rounded cursor-pointer transition-colors hover:bg-neutral-50 dark:hover:bg-white/[0.04]">
+            <div className="flex items-center gap-2.5">
               {formData.soundEnabled
-                ? <Volume2 className="w-4 h-4 text-violet-500 transition-colors" />
-                : <VolumeX className="w-4 h-4 text-gray-500 group-hover:text-violet-500 transition-colors" />
+                ? <Volume2 className="w-4 h-4 text-primary" />
+                : <VolumeX className="w-4 h-4 text-neutral-400" />
               }
               <div>
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block leading-none">{"Sound Feedback"}</span>
-                <span className="text-[8px] text-gray-500 uppercase tracking-wider block mt-1">{"Keyboard UI feedback sounds"}</span>
+                <span className="text-[13px] font-medium text-neutral-900 dark:text-white block leading-tight">Sound Feedback</span>
+                <span className="text-[11px] text-neutral-500 font-mono block">Keyboard UI feedback sounds</span>
               </div>
             </div>
             <ToggleSwitch
               size="sm"
-              color="bg-violet-500"
               checked={formData.soundEnabled}
               onChange={(v) => {
                 setFormData(p => ({ ...p, soundEnabled: v }));
@@ -170,46 +208,44 @@ export function GeneralModules({
           </label>
 
           {/* Delivery Charges Toggle */}
-          <label className="flex items-center justify-between p-3 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/5 rounded-xl cursor-pointer group transition-all">
-            <div className="flex items-center gap-3">
-              <PlusCircle className="w-4 h-4 text-gray-500 group-hover:text-violet-500 transition-colors" />
+          <label className="flex items-center justify-between p-2.5 bg-neutral-50/50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] rounded cursor-pointer transition-colors hover:bg-neutral-50 dark:hover:bg-white/[0.04]">
+            <div className="flex items-center gap-2.5">
+              <PlusCircle className="w-4 h-4 text-neutral-500" />
               <div>
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block leading-none">{"Enable DC Charges"}</span>
-                <span className="text-[8px] text-gray-500 uppercase tracking-wider block mt-1">{"Extra packaging & delivery fees"}</span>
+                <span className="text-[13px] font-medium text-neutral-900 dark:text-white block leading-tight">Enable DC Charges</span>
+                <span className="text-[11px] text-neutral-500 font-mono block">Extra packaging & delivery fees</span>
               </div>
             </div>
             <ToggleSwitch
               size="sm"
-              color="bg-[#10B981]"
               checked={formData.enableExtraCharges}
               onChange={(v) => handleInstantUpdate('enableExtraCharges', v)}
             />
           </label>
 
           {/* Allow Negative Stock Toggle — §4.2 MASTER */}
-          <label className="flex items-center justify-between p-3 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/5 rounded-xl cursor-pointer group transition-all">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-4 h-4 text-gray-500 group-hover:text-amber-500 transition-colors" />
+          <label className="flex items-center justify-between p-2.5 bg-neutral-50/50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] rounded cursor-pointer transition-colors hover:bg-neutral-50 dark:hover:bg-white/[0.04]">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 text-neutral-500" />
               <div>
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block leading-none">{"Allow Negative Stock"}</span>
-                <span className="text-[8px] text-gray-500 uppercase tracking-wider block mt-1">{"Let sales proceed when stock is zero"}</span>
+                <span className="text-[13px] font-medium text-neutral-900 dark:text-white block leading-tight">Allow Negative Stock</span>
+                <span className="text-[11px] text-neutral-500 font-mono block">Let sales proceed when stock is zero</span>
               </div>
             </div>
             <ToggleSwitch
               size="sm"
-              color="bg-amber-500"
               checked={formData.allowNegativeStock ?? false}
               onChange={(v) => handleInstantUpdate('allowNegativeStock', v)}
             />
           </label>
 
           {/* RBAC: Refund Approval Threshold */}
-          <label className="flex items-center justify-between p-3 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/5 rounded-xl group transition-all">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="w-4 h-4 text-gray-500 group-hover:text-emerald-500 transition-colors" />
+          <div className="flex items-center justify-between p-2.5 bg-neutral-50/50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] rounded">
+            <div className="flex items-center gap-2.5">
+              <ShieldCheck className="w-4 h-4 text-neutral-500" />
               <div className="min-w-0">
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block leading-none">{"Refund Approval Threshold"}</span>
-                <span className="text-[8px] text-gray-500 uppercase tracking-wider block mt-1">{"Refunds above this need admin approval (0 = off)"}</span>
+                <span className="text-[13px] font-medium text-neutral-900 dark:text-white block leading-tight">Refund Approval Threshold</span>
+                <span className="text-[11px] text-neutral-500 font-mono block">Refunds above this need admin approval (0 = off)</span>
               </div>
             </div>
             <input
@@ -221,42 +257,32 @@ export function GeneralModules({
                 setFormData((p: any) => ({ ...p, refundApprovalThreshold: val }));
                 handleInstantUpdate('refundApprovalThreshold', val);
               }}
-              className="w-24 shrink-0 px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-xs font-bold text-gray-900 dark:text-white text-right focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-24 h-7 shrink-0 px-2 rounded border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-app text-[13px] font-mono tabular-nums text-neutral-900 dark:text-white text-right focus:outline-none focus:border-primary"
             />
-          </label>
+          </div>
 
           {/* Credit Sales System */}
-          <label className="flex items-center justify-between p-3 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/5 rounded-xl group transition-all cursor-pointer">
-            <div className="flex items-center gap-3">
-              <CreditCard className="w-4 h-4 text-gray-500 group-hover:text-indigo-500 transition-colors" />
+          <label className="flex items-center justify-between p-2.5 bg-neutral-50/50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] rounded cursor-pointer transition-colors hover:bg-neutral-50 dark:hover:bg-white/[0.04]">
+            <div className="flex items-center gap-2.5">
+              <CreditCard className="w-4 h-4 text-neutral-500" />
               <div>
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block leading-none">Enable Credit Sales</span>
-                <span className="text-[8px] text-gray-500 uppercase tracking-wider block mt-1">Allow udhar / credit sales globally</span>
+                <span className="text-[13px] font-medium text-neutral-900 dark:text-white block leading-tight">Enable Credit Sales</span>
+                <span className="text-[11px] text-neutral-500 font-mono block">Allow udhar / credit sales globally</span>
               </div>
             </div>
-            <ToggleSwitch
-              size="sm"
-              color="bg-indigo-500"
-              checked={formData.enableCreditSales ?? true}
-              onChange={(v) => handleInstantUpdate('enableCreditSales', v)}
-            />
+            <ToggleSwitch size="sm" checked={formData.enableCreditSales ?? true} onChange={(v) => handleInstantUpdate('enableCreditSales', v)} />
           </label>
 
           {(formData.enableCreditSales ?? true) && (
-            <label className="flex items-center justify-between p-3 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/5 rounded-xl group transition-all cursor-pointer">
-              <div className="flex items-center gap-3">
-                <CreditCard className="w-4 h-4 text-gray-500 group-hover:text-amber-500 transition-colors" />
+            <label className="flex items-center justify-between p-2.5 bg-neutral-50/50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] rounded cursor-pointer transition-colors hover:bg-neutral-50 dark:hover:bg-white/[0.04]">
+              <div className="flex items-center gap-2.5">
+                <CreditCard className="w-4 h-4 text-neutral-500" />
                 <div>
-                  <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block leading-none">Cashier Can Give Credit</span>
-                  <span className="text-[8px] text-gray-500 uppercase tracking-wider block mt-1">If off, only Admin/Manager can create credit sales</span>
+                  <span className="text-[13px] font-medium text-neutral-900 dark:text-white block leading-tight">Cashier Can Give Credit</span>
+                  <span className="text-[11px] text-neutral-500 font-mono block">If off, only Admin/Manager can create credit sales</span>
                 </div>
               </div>
-              <ToggleSwitch
-                size="sm"
-                color="bg-amber-500"
-                checked={formData.cashierCanCredit ?? true}
-                onChange={(v) => handleInstantUpdate('cashierCanCredit', v)}
-              />
+              <ToggleSwitch size="sm" checked={formData.cashierCanCredit ?? true} onChange={(v) => handleInstantUpdate('cashierCanCredit', v)} />
             </label>
           )}
 

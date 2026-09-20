@@ -26,7 +26,7 @@ export function ProductOptionsBody({ product, appProducts, appSettings, childVar
           <h4 className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest border-b border-gray-200 dark:border-white/10 pb-2">
             {"Select Variation"}
           </h4>
-          <div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-1 gap-1.5">
             {childVariations.map(child => {
               const isOutOfStock = child.trackInventory && child.stock <= 0;
               return (
@@ -34,23 +34,23 @@ export function ProductOptionsBody({ product, appProducts, appSettings, childVar
                   key={child.id}
                   onClick={() => !isOutOfStock && setSelectedVariationChildId(child.id)}
                   disabled={isOutOfStock}
-                  className={`text-left p-3 rounded-xl border transition-all ${
+                  className={`text-left p-2.5 rounded-md border transition-colors shadow-none ${
                     selectedVariationChildId === child.id
-                      ? 'bg-primary text-white border-primary shadow-md shadow-emerald-500/20'
+                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
                       : isOutOfStock
-                        ? 'bg-gray-100 dark:bg-black/60 border-gray-200 dark:border-white/5 opacity-60 grayscale cursor-not-allowed'
-                        : 'bg-white dark:bg-black text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:border-primary/50'
+                        ? 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-white/5 opacity-50 cursor-not-allowed'
+                        : 'bg-white dark:bg-surface text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-white/[0.08] hover:border-neutral-300 dark:hover:border-white/20'
                   }`}
                 >
                   <div className="flex justify-between items-center">
-                    <span className="text-xs font-black uppercase">{child.name.replace(`${product.name} - `, '')}</span>
-                    <span className="text-[10px] font-bold tracking-widest">
+                    <span className="text-[13px] font-medium">{child.name.replace(`${product.name} - `, '')}</span>
+                    <span className="text-[13px] font-mono font-medium tabular-nums">
                       {formatCurrency(child.price, appSettings.currency)}
                     </span>
                   </div>
                   {child.trackInventory && (
-                    <div className={`text-[9px] font-black uppercase tracking-widest mt-1 ${
-                      selectedVariationChildId === child.id ? 'text-emerald-100' : isOutOfStock ? 'text-red-500' : 'text-gray-400'
+                    <div className={`text-[11px] font-mono mt-0.5 ${
+                      selectedVariationChildId === child.id ? 'text-emerald-600 dark:text-emerald-400' : isOutOfStock ? 'text-rose-500' : 'text-neutral-400'
                     }`}>
                       {isOutOfStock ? 'Out of Stock' : `Stock: ${child.stock}`}
                     </div>
@@ -62,21 +62,21 @@ export function ProductOptionsBody({ product, appProducts, appSettings, childVar
         </div>
       ) : product.variants && product.variants.length > 0 && (
         <div className="space-y-4">
-          <h4 className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest border-b border-gray-200 dark:border-white/10 pb-2">
+          <h4 className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider border-b border-neutral-200 dark:border-white/[0.08] pb-1.5">
             {"Select Variants"}
           </h4>
           {product.variants.map((variant: ProductVariant) => (
-            <div key={variant.name} className="space-y-2">
-              <label className="text-xs font-bold text-gray-800 dark:text-gray-200 uppercase">{variant.name}</label>
-              <div className="flex flex-wrap gap-2">
+            <div key={variant.name} className="space-y-1.5">
+              <label className="text-[12px] font-medium text-neutral-700 dark:text-neutral-300">{variant.name}</label>
+              <div className="flex flex-wrap gap-1.5">
                 {variant.options.map((opt) => (
                   <button
                     key={opt}
                     onClick={() => setSelectedVariants({ ...selectedVariants, [variant.name]: opt })}
-                    className={`px-4 py-2 text-xs font-black uppercase rounded-lg border transition-all ${
+                    className={`px-3 h-8 text-[13px] font-medium rounded border transition-colors shadow-none ${
                       selectedVariants[variant.name] === opt
-                        ? 'bg-primary text-white border-primary shadow-md shadow-emerald-500/20'
-                        : 'bg-white dark:bg-black text-gray-600 dark:text-gray-400 border-gray-200 dark:border-white/10 hover:border-primary'
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-white dark:bg-surface text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-white/[0.08] hover:border-neutral-300 dark:hover:border-white/20'
                     }`}
                   >
                     {opt}
@@ -90,10 +90,10 @@ export function ProductOptionsBody({ product, appProducts, appSettings, childVar
 
       {product.productAddons && product.productAddons.length > 0 && (
         <div className="space-y-4">
-          <h4 className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest border-b border-gray-200 dark:border-white/10 pb-2">
+          <h4 className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider border-b border-neutral-200 dark:border-white/[0.08] pb-1.5">
             {"Add-ons & Extras"}
           </h4>
-          <div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-1 gap-1.5">
             {product.productAddons
               .filter(addon => addon.active)
               .map((addon) => {
@@ -105,41 +105,41 @@ export function ProductOptionsBody({ product, appProducts, appSettings, childVar
                 return (
                   <div
                     key={addon.id}
-                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                    className={`flex items-center justify-between p-2.5 rounded-md border transition-colors shadow-none ${
                       quantity > 0
-                        ? 'bg-emerald-50 dark:bg-emerald-900/20 border-primary shadow-sm'
+                        ? 'bg-emerald-500/10 border-emerald-500/30'
                         : isOutOfStock
-                          ? 'bg-gray-100 dark:bg-black/60 border-gray-200 dark:border-white/5 opacity-60 grayscale'
-                          : 'bg-gray-50 dark:bg-black/40 border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/20'
+                          ? 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-white/5 opacity-50'
+                          : 'bg-white dark:bg-surface border-neutral-200 dark:border-white/[0.08] hover:border-neutral-300 dark:hover:border-white/20'
                     }`}
                   >
                     <div className="flex flex-col">
-                      <span className={`text-xs font-black uppercase ${quantity > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                      <span className={`text-[13px] font-medium ${quantity > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-neutral-900 dark:text-neutral-100'}`}>
                         {addon.name}
                       </span>
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">
+                      <span className="text-[11px] font-mono text-neutral-500 mt-0.5">
                         +{formatCurrency(addon.price, appSettings.currency)} {isOutOfStock ? '(Out of Stock)' : ''}
                       </span>
                     </div>
 
                     {!isOutOfStock && (
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center bg-white dark:bg-black/60 rounded-lg border border-gray-200 dark:border-white/10 p-0.5 shadow-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center bg-neutral-100 dark:bg-neutral-900 rounded border border-neutral-200 dark:border-white/[0.08] p-0.5 shadow-none">
                           <button
                             onClick={() => updateAddonQuantity(addon, -1)}
-                            className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-md transition-colors"
+                            className="p-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded transition-colors"
                           >
-                            <Minus className="w-3.5 h-3.5" />
+                            <Minus className="w-3 h-3" />
                           </button>
-                          <span className="w-6 text-center text-xs font-black text-gray-900 dark:text-white">
+                          <span className="w-6 text-center text-[12px] font-mono font-medium text-neutral-900 dark:text-white">
                             {quantity}
                           </span>
                           <button
                             onClick={() => updateAddonQuantity(addon, 1)}
                             disabled={quantity >= addon.maxQty}
-                            className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-md transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
+                            className="p-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded transition-colors disabled:opacity-40"
                           >
-                            <Plus className="w-3.5 h-3.5" />
+                            <Plus className="w-3 h-3" />
                           </button>
                         </div>
                       </div>
@@ -153,18 +153,18 @@ export function ProductOptionsBody({ product, appProducts, appSettings, childVar
 
       {product.requireSerial && (
         <div className="space-y-4">
-          <h4 className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest border-b border-gray-200 dark:border-white/10 pb-2">
+          <h4 className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider border-b border-neutral-200 dark:border-white/[0.08] pb-1.5">
             {"Device Registration"}
           </h4>
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-800 dark:text-gray-200 uppercase">{"Serial Number / IMEI *"}</label>
+          <div className="space-y-1.5">
+            <label className="text-[12px] font-medium text-neutral-700 dark:text-neutral-300">{"Serial Number / IMEI *"}</label>
             <input
               type="text"
               autoFocus
               placeholder={"Scan or type serial number..."}
               value={serialNumber}
               onChange={(e) => setSerialNumber(e.target.value.toUpperCase())}
-              className="w-full bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-sm rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 uppercase font-black tracking-widest placeholder:text-gray-400 placeholder:font-medium placeholder:normal-case"
+              className="w-full bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] text-neutral-900 dark:text-white text-[13px] font-mono rounded h-8 px-2.5 focus:border-primary focus:outline-none placeholder:text-neutral-400 placeholder:font-normal"
             />
           </div>
         </div>

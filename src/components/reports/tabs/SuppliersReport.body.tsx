@@ -3,7 +3,7 @@ import { Building2, TrendingUp, TrendingDown, Wallet, ChevronDown, ChevronUp } f
 import { formatCurrency, getCurrencySymbol } from '../../../lib/currencies';
 import { formatAppDate } from '../../../lib/dateUtils';
 import { SharedSearchBar } from '../../../shared/modules/search-and-list';
-import { Button } from '../../../shared/ui';
+import { Button, Pagination, usePagination } from '../../../shared/ui';
 import { ExportButton } from '../../../shared/export';
 import { useSuppliersReportData } from './SuppliersReport.data';
 import { getSourceBadge } from './SuppliersReport.utils';
@@ -30,6 +30,8 @@ export function SuppliersReport({ currency, country }: SuppliersReportProps) {
     handleExpand,
   } = useSuppliersReportData();
 
+  const { page, totalPages, pageItems, goToPage, pageSize, setPageSize } = usePagination(filteredRows, 15);
+
   const exportColumns = [
     { key: 'name', label: "Supplier" },
     { key: 'phone', label: "Phone" },
@@ -41,9 +43,9 @@ export function SuppliersReport({ currency, country }: SuppliersReportProps) {
 
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-20 bg-gray-200/50 dark:bg-white/[0.03] rounded-2xl animate-pulse" />
+          <div key={i} className="h-16 bg-neutral-200/50 dark:bg-white/[0.03] rounded-md animate-pulse" />
         ))}
       </div>
     );
@@ -52,40 +54,54 @@ export function SuppliersReport({ currency, country }: SuppliersReportProps) {
   return (
     <>
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div className="stat-card bg-gradient-to-br from-blue-500 to-indigo-700 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Total Billed"}</span>
-            <span className="stat-card-value">{formatCurrency(totals.billed, currency)}</span>
-            <p className="text-[7px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">{totals.count} {"suppliers"}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Total Billed</span>
+            <Building2 className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <Building2 className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {formatCurrency(totals.billed, currency)}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono">{totals.count} suppliers</p>
         </div>
-        <div className="stat-card bg-gradient-to-br from-emerald-500 to-teal-700 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Total Paid"}</span>
-            <span className="stat-card-value">{formatCurrency(totals.paid, currency)}</span>
+
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Total Paid</span>
+            <Wallet className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <Wallet className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {formatCurrency(totals.paid, currency)}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono">Disbursed</p>
         </div>
-        <div className="stat-card bg-gradient-to-br from-rose-500 to-red-700 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Outstanding"}</span>
-            <span className="stat-card-value">{formatCurrency(totals.outstanding, currency)}</span>
+
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Outstanding</span>
+            <TrendingDown className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <TrendingDown className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-rose-500">
+            {formatCurrency(totals.outstanding, currency)}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono">Payables balance</p>
         </div>
-        <div className="stat-card bg-gradient-to-br from-violet-500 to-purple-700 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Suppliers"}</span>
-            <span className="stat-card-value">{totals.count}</span>
+
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Suppliers</span>
+            <TrendingUp className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <TrendingUp className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {totals.count}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono">Registered vendors</p>
         </div>
       </div>
 
       {/* Search & Export */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row gap-2.5 mb-3">
         <div className="flex-1">
           <SharedSearchBar
             value={searchTerm}
@@ -99,17 +115,17 @@ export function SuppliersReport({ currency, country }: SuppliersReportProps) {
           title={"Supplier Report"}
           filtersSummary={searchTerm ? `${"Search"}: ${searchTerm}` : undefined}
           currencySymbol={getCurrencySymbol(currency)}
-          className="!min-h-0 !px-5 !py-3 !rounded-xl !text-[10px] !font-black !bg-gray-100 dark:!bg-white/5 !text-gray-600 dark:!text-gray-400 !border-gray-200 dark:!border-white/5 hover:!text-primary"
+          className="!min-h-0 !h-8 !px-3 !rounded !text-[11px] !bg-neutral-100 dark:!bg-white/[0.06] !text-neutral-700 dark:!text-neutral-300 !border-neutral-200 dark:!border-white/[0.08] hover:!bg-neutral-200 dark:hover:!bg-white/[0.1] shadow-none"
         />
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-[#080808] rounded-[2rem] border border-gray-200 dark:border-white/5 overflow-hidden">
+      <div className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] overflow-hidden shadow-none min-h-[calc(100vh-360px)] flex flex-col justify-between">
         {/* Desktop Table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left">
+        <div className="hidden md:block overflow-x-auto flex-1">
+          <table className="w-full text-left border-collapse text-[13px]">
             <thead>
-              <tr className="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/5">
+              <tr className="bg-neutral-50 dark:bg-white/[0.02] border-b border-neutral-200 dark:border-white/[0.06] h-8">
                 {[
                   { key: 'name' as const, label: "Supplier" },
                   { key: 'billed' as const, label: "Billed" },
@@ -119,7 +135,7 @@ export function SuppliersReport({ currency, country }: SuppliersReportProps) {
                   <th
                     key={col.key}
                     onClick={() => { setSortBy(col.key); setSortDesc(sortBy === col.key ? !sortDesc : true); }}
-                    className="px-6 py-4 text-[9px] font-black text-gray-600 uppercase tracking-[0.2em] cursor-pointer hover:text-primary transition-colors select-none"
+                    className="px-3 text-[11px] font-medium text-neutral-500 uppercase tracking-wider cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors select-none"
                   >
                     <span className="flex items-center gap-1">
                       {col.label}
@@ -127,62 +143,62 @@ export function SuppliersReport({ currency, country }: SuppliersReportProps) {
                     </span>
                   </th>
                 ))}
-                <th className="px-6 py-4 text-[9px] font-black text-gray-600 uppercase tracking-[0.2em] text-center">{"Details"}</th>
+                <th className="px-3 text-[11px] font-medium text-neutral-500 uppercase tracking-wider text-center">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-              {filteredRows.length === 0 ? (
+            <tbody className="divide-y divide-neutral-100 dark:divide-white/[0.04]">
+              {pageItems.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500 text-sm font-bold">{"No suppliers found"}</td>
+                  <td colSpan={5} className="px-3 py-10 text-center text-neutral-500 text-[12px]">No suppliers found</td>
                 </tr>
               ) : (
-                filteredRows.map(row => (
+                pageItems.map(row => (
                   <Fragment key={row.supplier.id}>
-                    <tr className="hover:bg-gray-50 dark:hover:bg-white/[0.01] transition-colors">
-                      <td className="px-6 py-4">
-                        <p className="text-[11px] font-black text-gray-900 dark:text-white uppercase">{row.supplier.name}</p>
-                        <p className="text-[9px] text-gray-500 mt-0.5">{row.supplier.phone || '—'}</p>
+                    <tr className="h-9 hover:bg-neutral-50 dark:hover:bg-white/[0.02] transition-colors">
+                      <td className="px-3">
+                        <span className="font-medium text-neutral-900 dark:text-white text-[13px]">{row.supplier.name}</span>
+                        <span className="text-[11px] text-neutral-500 font-mono ml-2">{row.supplier.phone || '—'}</span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-[12px] font-black text-red-500 tabular-nums">{formatCurrency(row.totalBilled, currency)}</span>
+                      <td className="px-3">
+                        <span className="text-[13px] font-mono tabular-nums text-neutral-900 dark:text-white">{formatCurrency(row.totalBilled, currency)}</span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-[12px] font-black text-emerald-500 tabular-nums">{formatCurrency(row.totalPaid, currency)}</span>
+                      <td className="px-3">
+                        <span className="text-[13px] font-mono tabular-nums text-neutral-900 dark:text-white">{formatCurrency(row.totalPaid, currency)}</span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`text-[12px] font-black tabular-nums ${row.balance > 0 ? 'text-rose-500' : 'text-primary'}`}>
+                      <td className="px-3">
+                        <span className={`text-[13px] font-mono tabular-nums font-semibold ${row.balance > 0 ? 'text-rose-500' : 'text-neutral-900 dark:text-white'}`}>
                           {formatCurrency(row.balance, currency)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-3 text-center">
                         <Button
                           variant="ghost"
                           onClick={() => handleExpand(row.supplier.id)}
                           icon={expandedId === row.supplier.id ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                          className="!min-h-0 !px-3 !py-1.5 !rounded-lg !text-[9px] !font-black !bg-gray-100 dark:!bg-white/5 !text-gray-600 hover:!text-primary !hover:bg-gray-100 dark:!hover:bg-white/5"
+                          className="!min-h-0 !h-6 !px-2 !rounded !text-[10px] !bg-neutral-100 dark:!bg-white/[0.06] !text-neutral-600 dark:!text-neutral-400 hover:!text-neutral-900 dark:hover:!text-white"
                         />
                       </td>
                     </tr>
                     {expandedId === row.supplier.id && (
                       <tr key={`${row.supplier.id}-detail`}>
-                        <td colSpan={5} className="px-6 py-4 bg-gray-50/50 dark:bg-white/[0.01]">
-                          <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                        <td colSpan={5} className="px-3 py-2 bg-neutral-50/60 dark:bg-white/[0.01]">
+                          <div className="space-y-1.5 max-h-[260px] overflow-y-auto">
                             {expandedLedger.length === 0 ? (
-                              <p className="text-center text-gray-500 text-[10px] font-bold py-4">{"No transactions"}</p>
+                              <p className="text-center text-neutral-500 text-[11px] py-3">No transactions recorded</p>
                             ) : (
                               expandedLedger.map((tx: any, idx: number) => (
-                                <div key={idx} className="flex items-center justify-between p-3 bg-white dark:bg-black/20 rounded-xl border border-gray-200 dark:border-white/5">
-                                  <div className="flex items-center gap-3">
+                                <div key={idx} className="flex items-center justify-between p-2 bg-white dark:bg-surface rounded border border-neutral-200 dark:border-white/[0.06]">
+                                  <div className="flex items-center gap-2">
                                     {getSourceBadge(tx.sourceType)}
                                     <div>
-                                      <p className="text-[10px] font-bold text-gray-900 dark:text-white">{tx.detail}</p>
-                                      <p className="text-[9px] text-gray-500">{formatAppDate(tx.date, country)}</p>
+                                      <p className="text-[12px] font-medium text-neutral-900 dark:text-white">{tx.detail}</p>
+                                      <p className="text-[10px] text-neutral-500 font-mono">{formatAppDate(tx.date, country)}</p>
                                     </div>
                                   </div>
                                   <div className="text-right">
-                                    {tx.credit > 0 && <p className="text-[11px] font-black text-red-500">+{formatCurrency(tx.credit, currency)}</p>}
-                                    {tx.debit > 0 && <p className="text-[11px] font-black text-emerald-500">-{formatCurrency(tx.debit, currency)}</p>}
-                                    {tx.isManualOverride && <span className="text-[8px] font-black text-amber-500 uppercase">Override</span>}
+                                    {tx.credit > 0 && <p className="text-[12px] font-mono tabular-nums font-semibold text-rose-500">+{formatCurrency(tx.credit, currency)}</p>}
+                                    {tx.debit > 0 && <p className="text-[12px] font-mono tabular-nums font-semibold text-neutral-900 dark:text-white">-{formatCurrency(tx.debit, currency)}</p>}
+                                    {tx.isManualOverride && <span className="text-[8px] font-mono text-amber-500 uppercase">Override</span>}
                                   </div>
                                 </div>
                               ))
@@ -199,39 +215,39 @@ export function SuppliersReport({ currency, country }: SuppliersReportProps) {
         </div>
 
         {/* Mobile Cards */}
-        <div className="md:hidden divide-y divide-gray-100 dark:divide-white/5">
-          {filteredRows.length === 0 ? (
-            <div className="p-12 text-center text-gray-500 text-sm font-bold">{"No suppliers found"}</div>
+        <div className="md:hidden divide-y divide-neutral-100 dark:divide-white/[0.04] flex-1">
+          {pageItems.length === 0 ? (
+            <div className="p-8 text-center text-neutral-500 text-[12px]">No suppliers found</div>
           ) : (
-            filteredRows.map(row => (
-              <div key={row.supplier.id} className="p-4">
+            pageItems.map(row => (
+              <div key={row.supplier.id} className="p-3">
                 <button onClick={() => handleExpand(row.supplier.id)} className="w-full text-left">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-[11px] font-black text-gray-900 dark:text-white uppercase">{row.supplier.name}</p>
-                      <p className="text-[9px] text-gray-500 mt-0.5">{row.supplier.phone || '—'}</p>
+                      <p className="text-[13px] font-medium text-neutral-900 dark:text-white">{row.supplier.name}</p>
+                      <p className="text-[11px] text-neutral-500 font-mono mt-0.5">{row.supplier.phone || '—'}</p>
                     </div>
                     <div className="text-right">
-                      <p className={`text-sm font-black tabular-nums ${row.balance > 0 ? 'text-rose-500' : 'text-primary'}`}>
+                      <p className={`text-[13px] font-mono tabular-nums font-bold ${row.balance > 0 ? 'text-rose-500' : 'text-neutral-900 dark:text-white'}`}>
                         {formatCurrency(row.balance, currency)}
                       </p>
-                      <p className="text-[8px] text-gray-500 uppercase tracking-widest">{"Balance"}</p>
+                      <p className="text-[10px] text-neutral-500 font-mono">Balance</p>
                     </div>
                   </div>
-                  <div className="flex gap-4 mt-2">
-                    <span className="text-[9px] text-red-400 font-bold">{"Billed"}: {formatCurrency(row.totalBilled, currency)}</span>
-                    <span className="text-[9px] text-emerald-400 font-bold">{"Paid"}: {formatCurrency(row.totalPaid, currency)}</span>
+                  <div className="flex gap-3 mt-1.5 text-[11px] font-mono">
+                    <span className="text-neutral-600 dark:text-neutral-400">Billed: {formatCurrency(row.totalBilled, currency)}</span>
+                    <span className="text-neutral-600 dark:text-neutral-400">Paid: {formatCurrency(row.totalPaid, currency)}</span>
                   </div>
                 </button>
                 {expandedId === row.supplier.id && (
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-2 space-y-1.5">
                     {expandedLedger.map((tx: any, idx: number) => (
-                      <div key={idx} className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-white/[0.02] rounded-xl">
+                      <div key={idx} className="flex items-center justify-between p-2 bg-neutral-50 dark:bg-white/[0.02] rounded">
                         <div className="flex items-center gap-2">
                           {getSourceBadge(tx.sourceType)}
-                          <span className="text-[9px] text-gray-700 dark:text-gray-300 font-bold truncate max-w-[120px]">{tx.detail}</span>
+                          <span className="text-[11px] text-neutral-700 dark:text-neutral-300 truncate max-w-[120px]">{tx.detail}</span>
                         </div>
-                        <span className={`text-[10px] font-black tabular-nums ${tx.credit > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                        <span className={`text-[11px] font-mono tabular-nums font-medium ${tx.credit > 0 ? 'text-rose-500' : 'text-neutral-900 dark:text-white'}`}>
                           {tx.credit > 0 ? `+${formatCurrency(tx.credit, currency)}` : `-${formatCurrency(tx.debit, currency)}`}
                         </span>
                       </div>
@@ -241,6 +257,24 @@ export function SuppliersReport({ currency, country }: SuppliersReportProps) {
               </div>
             ))
           )}
+        </div>
+
+        {/* Pinned Pagination Footer */}
+        <div className="px-3 py-2 bg-neutral-50 dark:bg-white/[0.02] border-t border-neutral-200 dark:border-white/[0.08] flex items-center justify-between gap-4 mt-auto">
+          <p className="hidden sm:block text-[11px] text-neutral-500 font-mono">
+            Showing {filteredRows.length === 0 ? '0 of 0' : `${((page - 1) * pageSize) + 1}–${Math.min(page * pageSize, filteredRows.length)} of ${filteredRows.length}`}
+          </p>
+          <div className="mx-auto sm:mx-0">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={goToPage}
+              totalItems={filteredRows.length}
+              mode="numbered"
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
         </div>
       </div>
     </>

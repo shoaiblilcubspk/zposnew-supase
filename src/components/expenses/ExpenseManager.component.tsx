@@ -4,7 +4,8 @@ import {
   Plus, TrendingDown,
   Tag, CreditCard, User,
   Wallet,
-  Receipt
+  Receipt,
+  ChevronLeft
 } from 'lucide-react';
 import { computeExpenseDateBoundaries, buildCashiersList, filterExpenses, computeExpenseStats, computeTopCategory } from './expenseManagerUtils';
 import { Expense, EXPENSE_CATEGORIES } from '../../types';
@@ -75,52 +76,66 @@ export function ExpenseManager() {
     [filteredExpenses]);
 
   return (
-    <div className="main-content-scroll p-1 sm:p-4 lg:p-6 bg-gray-50/50 dark:bg-app space-y-3 lg:space-y-6 max-w-[1400px] mx-auto">
-      {/* Layer 1: Identity & Tab Navigation */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 pb-2">
-        <div className="flex flex-col md:flex-row md:items-center gap-4 sm:gap-6 xl:gap-10">
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="h-10 w-10 sm:h-12 sm:w-12 bg-primary/10 rounded-xl flex items-center justify-center shadow-inner border border-primary/10">
-              <TrendingDown className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-            </div>
-            <div className="shrink-0 flex flex-col">
-              <h1 className="text-lg sm:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">{"Expenses"}</h1>
-              <p className="hidden sm:block text-gray-600 dark:text-gray-400 text-[9px] font-black uppercase tracking-[0.2em] mt-1 opacity-60">{"Management Hub"} • {appExpenses.length} {"Records"}</p>
+    <div className="main-content-scroll p-1 sm:p-4 lg:p-6 bg-gray-50/50 dark:bg-app space-y-3 lg:space-y-4 max-w-[1400px] mx-auto">
+      {/* Layer 1: Header */}
+      <div className="flex items-center justify-between gap-2 sm:gap-3 pb-1 border-b border-neutral-200 dark:border-white/[0.08]">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Button
+            variant="ghost"
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'pos' }))}
+            icon={<ChevronLeft className="h-4 w-4" />}
+            className="h-8 px-2.5 rounded text-neutral-500 hover:text-neutral-900 dark:hover:text-white border border-transparent hover:border-neutral-200 dark:hover:border-white/[0.08] shrink-0"
+          >
+            <span className="hidden sm:inline text-[12px] font-medium">POS</span>
+          </Button>
+
+          <div className="h-4 w-px bg-neutral-200 dark:bg-white/[0.08] hidden sm:block shrink-0" />
+
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <TrendingDown className="h-4 w-4 text-neutral-500 dark:text-neutral-400 shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-[14px] sm:text-base font-semibold text-neutral-900 dark:text-white tracking-[-0.01em] leading-tight truncate">
+                Expenses
+              </h1>
+              <p className="text-[11px] text-neutral-500 font-mono tracking-tight mt-0.5">
+                {appExpenses.length} total records
+              </p>
             </div>
           </div>
-
-          {/* Redundant Switcher Removed to Fix Double Tabs */}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditingExpense(null);
-              setIsModalOpen(true);
-            }}
-            className="!min-h-0 !px-5 !py-2.5 !rounded-xl !text-[10px] !font-black !shadow-lg !shadow-emerald-500/20 hover:!scale-[1.02]"
-          >
-            <Plus className="h-3.5 w-3.5" /> <span>{"Add Expense"}</span>
-          </Button>
-        </div>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => {
+            setEditingExpense(null);
+            setIsModalOpen(true);
+          }}
+          icon={<Plus className="h-3.5 w-3.5" />}
+          className="shrink-0 h-8 !px-2.5 sm:!px-3 !text-[11px] sm:!text-[12px]"
+        >
+          <span>{"Add Expense"}</span>
+        </Button>
       </div>
 
-      {/* Layer 2: Filter Toolbar (Smart Context) */}
-      <div className="relative z-30 bg-white/50 dark:bg-black/20 p-3 lg:p-4 rounded-[1.75rem] border border-gray-200/50 dark:border-white/5 shadow-xl ring-1 ring-black/5 dark:ring-white/5">
-        <div className="flex flex-col xl:flex-row gap-4">
+      {/* Layer 2: Filter Toolbar */}
+      <div className="relative z-30 bg-white dark:bg-surface p-2.5 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
+        <div className="flex flex-col xl:flex-row gap-3">
           {/* Search Box — shared module */}
-          <SharedSearchBar
-            value={searchTerm}
-            onChange={setSearchTerm}
-            placeholder={"Search expenses..."}
-          />
+          <div className="flex-1">
+            <SharedSearchBar
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder={"Search expenses..."}
+            />
+          </div>
 
           {/* Filters Grid */}
           <div className="grid grid-cols-2 sm:flex items-center gap-2">
             <SearchableSelect
               options={[
-                { id: 'all', label: "All Categories" },
+                { id: 'all', label: "All" },
                 ...EXPENSE_CATEGORIES.map(c => ({ id: c, label: c }))
               ]}
               value={selectedCategory}
@@ -130,7 +145,7 @@ export function ExpenseManager() {
             />
             <SearchableSelect
               options={[
-                { id: 'all', label: "All Methods" },
+                { id: 'all', label: "All" },
                 { id: 'cash', label: "Cash" },
                 { id: 'card', label: "Card" },
                 { id: 'online', label: "Online Wallet" }
@@ -141,7 +156,7 @@ export function ExpenseManager() {
               icon={CreditCard}
             />
             <SearchableSelect
-              options={cashiersList.map(u => ({ id: u, label: u === 'all' ? "All Users" : u.toUpperCase() }))}
+              options={cashiersList.map(u => ({ id: u, label: u === 'all' ? "All" : u.toUpperCase() }))}
               value={selectedCashier}
               onChange={setSelectedCashier}
               placeholder={"User"}
@@ -169,38 +184,57 @@ export function ExpenseManager() {
         </div>
       </div>
 
-      {/* Layer 3: Vibrant Stats section */}
-      <div className="relative z-20 grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 mt-2">
-        <div className="stat-card bg-gradient-to-br from-rose-500 to-red-700 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Filtered Total"}</span>
-            <span className="stat-card-value">{formatCurrency(stats.filteredTotal, appSettings.currency)}</span>
-            <p className="text-[7px] font-black text-rose-100/40 uppercase tracking-[0.2em] mt-1">{filteredExpenses.length} {"Records"}</p>
+      {/* Layer 3: Flat Linear Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              Filtered Total
+            </span>
+            <TrendingDown className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <TrendingDown className="stat-card-icon" />
+          <div className="mt-1.5 flex items-baseline justify-between">
+            <span className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white font-mono tabular-nums">
+              {formatCurrency(stats.filteredTotal, appSettings.currency)}
+            </span>
+            <span className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400">
+              {filteredExpenses.length} records
+            </span>
+          </div>
         </div>
 
-        <div className="stat-card bg-gradient-to-br from-amber-500 to-orange-700 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"This Month"}</span>
-            <span className="stat-card-value">{formatCurrency(stats.thisMonthTotal, appSettings.currency)}</span>
-            <p className="text-[7px] font-black text-amber-100/40 uppercase tracking-[0.2em] mt-1">{"Current Month"}</p>
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              This Month
+            </span>
+            <Wallet className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <Wallet className="stat-card-icon" />
+          <div className="mt-1.5 text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white font-mono tabular-nums">
+            {formatCurrency(stats.thisMonthTotal, appSettings.currency)}
+          </div>
         </div>
 
-        <div className="stat-card bg-gradient-to-br from-blue-500 to-indigo-700 col-span-2 lg:col-span-1 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Top Category"}</span>
-            <span className="stat-card-value">{topCategory?.name || "None"}</span>
-            <p className="text-[7px] font-black text-blue-100/40 uppercase tracking-[0.2em] mt-1">{topCategory ? formatCurrency(topCategory.amount, appSettings.currency) : '—'}</p>
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              Top Category
+            </span>
+            <Tag className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <Tag className="stat-card-icon" />
+          <div className="mt-1.5 flex items-baseline justify-between">
+            <span className="text-lg font-semibold text-neutral-900 dark:text-white truncate">
+              {topCategory?.name || "None"}
+            </span>
+            <span className="text-[12px] font-mono text-neutral-500 dark:text-neutral-400 tabular-nums">
+              {topCategory ? formatCurrency(topCategory.amount, appSettings.currency) : '—'}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Main View Container */}
-      <div className="bg-white dark:bg-surface rounded-3xl border border-gray-200 dark:border-white/5 overflow-hidden shadow-xl">
+      {/* Main View Container (Pinned Height for Pagination) */}
+      <div className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] overflow-hidden shadow-none sm:min-h-[calc(100vh-340px)] min-h-[280px] flex flex-col justify-between">
 
         <ExpenseTable
           filteredExpenses={filteredExpenses}
@@ -211,10 +245,11 @@ export function ExpenseManager() {
           handleDelete={handleDelete}
         />
 
-        {/* Premium Pagination Footer */}
-
-        <div className="p-4 bg-gray-50/50 dark:bg-white/[0.02] border-t border-gray-200 dark:border-white/5 flex items-center justify-between gap-4">
-          <p className="hidden sm:block text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest italic truncate">{"Records"} {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredExpenses.length)} {"of"} {filteredExpenses.length}</p>
+        {/* Pinned Pagination Footer */}
+        <div className="px-3 py-2 bg-neutral-50 dark:bg-white/[0.02] border-t border-neutral-200 dark:border-white/[0.08] flex items-center justify-between gap-4 mt-auto">
+          <p className="hidden sm:block text-[11px] text-neutral-500 font-mono">
+            Showing {filteredExpenses.length === 0 ? '0 of 0' : `${((currentPage - 1) * ITEMS_PER_PAGE) + 1}–${Math.min(currentPage * ITEMS_PER_PAGE, filteredExpenses.length)} of ${filteredExpenses.length}`}
+          </p>
           <div className="mx-auto sm:mx-0">
             <Pagination
               page={currentPage}

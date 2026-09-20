@@ -1,6 +1,7 @@
 import { formatCurrency } from '../../../lib/currencies';
 import { commitStockInToInventory } from '../../../lib/stockInCommit';
 import { sonner } from '../../../lib/sonner';
+import { useProductsStore } from '../../../stores';
 import { DetailCtx } from './detailContext';
 
 export async function performQuickRestock(ctx: DetailCtx) {
@@ -29,7 +30,7 @@ export async function performQuickRestock(ctx: DetailCtx) {
   sonner.loading('Adding stock...');
 
   try {
-    await commitStockInToInventory({
+    const updatedProd = await commitStockInToInventory({
       items: [{
         id: ctx.product.id,
         name: ctx.product.name,
@@ -45,8 +46,13 @@ export async function performQuickRestock(ctx: DetailCtx) {
       profile: ctx.profile
     });
 
-    const newStock = (ctx.product.stock || 0) + qty;
-    ctx.setFormData(prev => ({ ...prev, stock: String(newStock) }));
+    if (updatedProd) {
+      useProductsStore.getState().updateProduct(updatedProd);
+      ctx.setFormData(prev => ({ ...prev, stock: String(updatedProd.stock) }));
+    } else {
+      const newStock = (ctx.product.stock || 0) + qty;
+      ctx.setFormData(prev => ({ ...prev, stock: String(newStock) }));
+    }
 
     sonner.success('Stock added successfully');
     ctx.setShowRestock(false);

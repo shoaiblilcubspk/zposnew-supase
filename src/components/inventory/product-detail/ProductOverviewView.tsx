@@ -12,33 +12,31 @@ export function ProductOverview({ d }: { d: ProductDetailController }) {
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
-            { label: 'Revenue', value: formatCurrency(totalRevenue, currency), icon: CircleDollarSign, color: 'text-primary', bg: 'bg-primary/10' },
-            { label: 'Sold', value: `${totalSoldUnits}`, icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-            { label: 'COGS (Cost)', value: formatCurrency(totalCOGS, currency), icon: Package, color: 'text-gray-600', bg: 'bg-gray-500/10' },
-            { label: 'Margin', value: `${profitMargin.toFixed(1)}%`, icon: TrendingUp, color: profitMargin > 20 ? 'text-violet-500' : 'text-orange-500', bg: profitMargin > 20 ? 'bg-violet-500/10' : 'bg-orange-500/10' },
-            { label: 'Stock Value (Cost)', value: formatCurrency(stockValueCost, currency), icon: Database, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-            { label: 'Stock Value (Sale)', value: formatCurrency(stockValueSale, currency), icon: Tag, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+            { label: 'Revenue', value: formatCurrency(totalRevenue, currency), icon: CircleDollarSign },
+            { label: 'Sold Units', value: `${totalSoldUnits}`, icon: ShoppingBag },
+            { label: 'COGS (Cost)', value: formatCurrency(totalCOGS, currency), icon: Package },
+            { label: 'Margin', value: `${profitMargin.toFixed(1)}%`, icon: TrendingUp },
+            { label: 'Stock Value (Cost)', value: formatCurrency(stockValueCost, currency), icon: Database },
+            { label: 'Stock Value (Sale)', value: formatCurrency(stockValueSale, currency), icon: Tag },
           ].map(m => (
-            <div key={m.label} className="bg-white dark:bg-[#1C1C1C] p-4 sm:p-4 rounded-[2rem] border border-gray-200 dark:border-white/5 shadow-sm transition-all hover:shadow-md active:scale-95 group">
-              <div className={`p-2.5 rounded-2xl w-fit ${m.bg} ${m.color} transition-transform group-hover:scale-110`}>
-                <m.icon className="w-5 h-5" />
+            <div key={m.label} className="bg-white dark:bg-surface p-3.5 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider">{m.label}</p>
+                <m.icon className="w-3.5 h-3.5 text-neutral-400" />
               </div>
-              <p className={`text-base sm:text-sm font-black mt-4 tracking-tighter ${m.color}`}>{m.value}</p>
-              <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest leading-none mt-1">{m.label}</p>
+              <p className="text-[15px] font-mono tabular-nums font-semibold text-neutral-900 dark:text-white mt-2">{m.value}</p>
             </div>
           ))}
         </div>
 
-        <div className="bg-white dark:bg-[#1C1C1C] p-6 rounded-[2.5rem] border border-gray-200 dark:border-white/5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-2xl shrink-0">
-                <ShieldAlert className="w-5 h-5" />
-              </div>
-              <h4 className="text-[11px] font-black text-gray-700 dark:text-white uppercase tracking-wider">{"Quick Controls"}</h4>
+        <div className="bg-white dark:bg-surface p-4 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-neutral-400 shrink-0" />
+              <h4 className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">{"Quick Controls"}</h4>
             </div>
             <div className="flex flex-wrap gap-2">
               {d.canManageStock && !isInfinite && (
@@ -53,19 +51,19 @@ export function ProductOverview({ d }: { d: ProductDetailController }) {
                     });
                     setShowRestock(true);
                   }}
-                  className="!px-4 !py-2 !bg-emerald-500 hover:!bg-emerald-600 !text-[10px] !font-black !rounded-xl !shadow-sm hover:!scale-[1.02]"
-                  icon={<PackagePlus className="w-3.5 h-3.5" />}
+                  className="h-8 px-2.5 text-[12px] font-medium rounded-md"
+                  icon={<PackagePlus className="w-3.5 h-3.5 mr-1" />}
                 >
-                  {"RESTOCK"}
+                  {"Restock"}
                 </Button>
               )}
               {d.canManageStock && !isInfinite && (
                 <Button
-                  variant="primary"
+                  variant="secondary"
                   onClick={() => setShowAdjustment(true)}
-                  className="!px-4 !py-2 !bg-amber-500 hover:!bg-amber-600 !text-[10px] !font-black !rounded-xl !shadow-sm hover:!scale-[1.02]"
+                  className="h-8 px-2.5 text-[12px] font-medium rounded-md"
                 >
-                  {"ADJUST"}
+                  {"Adjust"}
                 </Button>
               )}
             </div>
@@ -74,8 +72,8 @@ export function ProductOverview({ d }: { d: ProductDetailController }) {
           {formData.productType === 'simple' && (
             <div className="space-y-3">
               <div>
-                <div className="flex items-center justify-between mb-1 ml-1">
-                  <p className="text-[9px] text-gray-600 uppercase font-bold">{"Min Stock Alert"}</p>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">{"Min Stock Alert"}</p>
                   {parseInt(formData.minStock) !== (product.minStock || 0) && (
                     <Button
                       variant="ghost"
@@ -89,7 +87,7 @@ export function ProductOverview({ d }: { d: ProductDetailController }) {
                           sonner.error('Failed to save min stock');
                         }
                       }}
-                      className="!min-h-0 !p-0 !bg-transparent !text-[9px] !font-black !text-primary hover:!underline"
+                      className="!min-h-0 !p-0 !bg-transparent text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
                     >
                       {"Save"}
                     </Button>
@@ -99,16 +97,14 @@ export function ProductOverview({ d }: { d: ProductDetailController }) {
                   type="number"
                   value={formData.minStock}
                   onChange={(e) => setFormData({ ...formData, minStock: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-black/30 border-none px-4 py-2.5 rounded-xl text-xs font-bold outline-none ring-1 ring-transparent focus:ring-emerald-500/50 transition-all"
+                  className="w-full h-8 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] px-2.5 rounded-md text-[13px] font-mono text-neutral-900 dark:text-white outline-none focus:border-neutral-400 transition-colors"
                 />
               </div>
               {isEditMode && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
                   <div>
-                    <div className="flex items-center justify-between mb-1 ml-1">
-                      <div className="flex items-center gap-1">
-                        <p className="text-[9px] text-gray-600 uppercase font-bold">{"Stock Qty"}</p>
-                      </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">{"Stock Qty"}</p>
                     </div>
                     <input
                       type="number"
@@ -116,14 +112,12 @@ export function ProductOverview({ d }: { d: ProductDetailController }) {
                       value={formData.trackInventory === false ? '' : formData.stock}
                       onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                       placeholder={formData.trackInventory === false ? '∞' : '0'}
-                      className="w-full bg-gray-50 dark:bg-black/30 border-none px-4 py-2.5 rounded-xl text-xs font-bold text-gray-900 dark:text-white outline-none ring-1 ring-transparent focus:ring-emerald-500/50 transition-all disabled:opacity-50"
+                      className="w-full h-8 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] px-2.5 rounded-md text-[13px] font-mono text-neutral-900 dark:text-white outline-none focus:border-neutral-400 transition-colors disabled:opacity-50"
                     />
                   </div>
                   <div>
-                    <div className="flex items-center justify-between mb-1 ml-1">
-                      <div className="flex items-center gap-1">
-                        <p className="text-[9px] text-gray-600 uppercase font-bold">{"Sale Price"}</p>
-                      </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">{"Sale Price"}</p>
                       {parseFloat(formData.price) !== product.price && (
                         <Button
                           variant="ghost"
@@ -137,7 +131,7 @@ export function ProductOverview({ d }: { d: ProductDetailController }) {
                               sonner.error('Failed to save sale price');
                             }
                           }}
-                          className="!min-h-0 !p-0 !bg-transparent !text-[9px] !font-black !text-primary hover:!underline"
+                          className="!min-h-0 !p-0 !bg-transparent text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
                         >
                           {"Save"}
                         </Button>
@@ -147,13 +141,13 @@ export function ProductOverview({ d }: { d: ProductDetailController }) {
                       type="number"
                       value={formData.price}
                       onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      className="w-full bg-gray-50 dark:bg-black/30 border-none px-4 py-2.5 rounded-xl text-xs font-bold text-gray-900 dark:text-white outline-none ring-1 ring-transparent focus:ring-emerald-500/50 transition-all"
+                      className="w-full h-8 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] px-2.5 rounded-md text-[13px] font-mono text-neutral-900 dark:text-white outline-none focus:border-neutral-400 transition-colors"
                     />
                   </div>
                   <div>
-                    <div className="flex items-center justify-between mb-1 ml-1">
+                    <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1">
-                        <p className="text-[9px] text-gray-600 uppercase font-bold">{"Cost Price"}</p>
+                        <p className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">{"Cost Price"}</p>
                         <HelpTooltip content="Cost changes will instantly update the product's cost price for accurate profit calculations." />
                       </div>
                       {parseFloat(formData.cost) !== product.cost && (
@@ -169,7 +163,7 @@ export function ProductOverview({ d }: { d: ProductDetailController }) {
                               sonner.error('Failed to save cost price');
                             }
                           }}
-                          className="!min-h-0 !p-0 !bg-transparent !text-[9px] !font-black !text-primary hover:!underline"
+                          className="!min-h-0 !p-0 !bg-transparent text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
                         >
                           {"Save"}
                         </Button>
@@ -179,7 +173,7 @@ export function ProductOverview({ d }: { d: ProductDetailController }) {
                       type="number"
                       value={formData.cost}
                       onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                      className="w-full bg-gray-50 dark:bg-black/30 border-none px-4 py-2.5 rounded-xl text-xs font-bold text-gray-900 dark:text-white outline-none ring-1 ring-transparent focus:ring-emerald-500/50 transition-all"
+                      className="w-full h-8 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] px-2.5 rounded-md text-[13px] font-mono text-neutral-900 dark:text-white outline-none focus:border-neutral-400 transition-colors"
                     />
                   </div>
                 </div>

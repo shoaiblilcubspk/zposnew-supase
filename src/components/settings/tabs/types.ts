@@ -3,6 +3,7 @@ import type { ChangeEvent, Dispatch, SetStateAction } from 'react';
 export interface SettingsTabProps {
   formData: any;
   setFormData: Dispatch<SetStateAction<any>>;
+  setFormDataDirect: Dispatch<SetStateAction<any>>;
   handleChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   handleInstantUpdate: (name: string, value: any) => Promise<void>;
   handleRepairCounter: () => Promise<void>;

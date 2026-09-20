@@ -1,4 +1,4 @@
-import { useAppStore, useSettingsStore } from '../../../stores';
+import { useAppStore, useSettingsStore, useUsersStore } from '../../../stores';
 import { type Sale } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { getCountryByCode } from '../../../lib/countries';
@@ -9,6 +9,10 @@ import { type ReceiptCtx } from './types';
 export function useReceiptCtx(sale: Sale): ReceiptCtx {
   const appSettings = useSettingsStore(s => s.settings);
   const appBundles = useAppStore(s => s.bundles);
+  const appUsers = useUsersStore(s => s.users);
+
+  const resolvedSalesmanName = sale.salesmanName || (sale.salesmanId ? appUsers.find(u => u.id === sale.salesmanId)?.name : undefined);
+  const activeSale = resolvedSalesmanName ? { ...sale, salesmanName: resolvedSalesmanName } : sale;
 
   const { profile } = useAuth();
   const settings = appSettings;
@@ -95,7 +99,7 @@ export function useReceiptCtx(sale: Sale): ReceiptCtx {
   const bodyPadL = `${Math.max(0, padLeft)}mm`;
   const bodyPadR = `${Math.max(0, padRight)}mm`;
 
-  const { shBundles, shStandalone, bd, shDealDiscount, shItemDiscount, shBillDiscount } = computeGrouped(sale, appBundles);
+  const { shBundles, shStandalone, bd, shDealDiscount, shItemDiscount, shBillDiscount } = computeGrouped(activeSale, appBundles);
 
   const baseContainer: React.CSSProperties = {
     width: paperWidthPx, maxWidth: paperWidthPx, margin: '0 auto', position: 'relative',
@@ -107,20 +111,20 @@ export function useReceiptCtx(sale: Sale): ReceiptCtx {
     lineHeight: '1.4', wordWrap: 'break-word', overflowWrap: 'break-word',
   };
 
-  const refundWatermark = sale.status === 'refunded' ? (
+  const refundWatermark = activeSale.status === 'refunded' ? (
     <div style={{ border: '2px solid black', padding: '8px', textAlign: 'center', margin: '10px 0', fontWeight: clamp(baseWeight + 300), fontSize: `${fs.shopName}px`, textTransform: 'uppercase' }}>*** REFUNDED ***</div>
   ) : null;
 
-  const editWatermark = sale.editedFromInvoice ? (
-    <div style={{ border: '2px solid black', padding: '8px', textAlign: 'center', margin: '10px 0', fontWeight: clamp(baseWeight + 300), fontSize: `${fs.shopName}px`, textTransform: 'uppercase', color: '#7c3aed' }}>*** EDITED FROM INV #{sale.editedFromInvoice} ***</div>
+  const editWatermark = activeSale.editedFromInvoice ? (
+    <div style={{ border: '2px solid black', padding: '8px', textAlign: 'center', margin: '10px 0', fontWeight: clamp(baseWeight + 300), fontSize: `${fs.shopName}px`, textTransform: 'uppercase', color: '#7c3aed' }}>*** EDITED FROM INV #{activeSale.editedFromInvoice} ***</div>
   ) : null;
 
-  const notesBox = settings.receiptShowNotes && sale.notes ? (
-    <div style={{ border: '2px solid black', padding: '6px', textAlign: 'center', margin: '12px auto', width: '90%', wordWrap: 'break-word', textTransform: 'uppercase', fontWeight: clamp(baseWeight + 100) }}>{sale.notes}</div>
+  const notesBox = settings.receiptShowNotes && activeSale.notes ? (
+    <div style={{ border: '2px solid black', padding: '6px', textAlign: 'center', margin: '12px auto', width: '90%', wordWrap: 'break-word', textTransform: 'uppercase', fontWeight: clamp(baseWeight + 100) }}>{activeSale.notes}</div>
   ) : null;
 
   const ctx: ReceiptCtx = {
-    sale,
+    sale: activeSale,
     settings,
     profile,
     appBundles,

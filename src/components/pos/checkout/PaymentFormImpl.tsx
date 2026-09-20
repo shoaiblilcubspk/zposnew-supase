@@ -1,10 +1,8 @@
 import { Check, AlertCircle, FileText, Wallet, PlusCircle, UserCircle, Info } from 'lucide-react';
 import { formatCurrency } from '../../../lib/currencies';
-import { HelpTooltip } from '../../../shared/ui/HelpTooltip';
-import { SearchableSelect } from '../../../shared/ui/SearchableSelect';
+import { SearchableSelect, RealIcon, CapsLockIndicator } from '../../../shared/ui';
 import { cn } from '../../../lib/utils';
 import { useCartStore, useSettingsStore } from '../../../stores';
-import { WalletStrip } from './WalletStrip';
 
 type AppSettings = ReturnType<typeof useSettingsStore.getState>['settings'];
 
@@ -44,6 +42,11 @@ interface PaymentFormProps {
   saleNotes: string;
   setSaleNotes: (v: string) => void;
   appActiveSalesTab: string;
+  // Customer selector in settlement modal (for inline credit enable)
+  appCustomers?: any[];
+  appSelectedCustomer?: any;
+  handleSelectCustomer?: (id: string) => void;
+  isCreditAllowed?: boolean;
 }
 
 export function PaymentForm({
@@ -77,20 +80,22 @@ export function PaymentForm({
   saleNotes,
   setSaleNotes,
   appActiveSalesTab,
+  appCustomers = [],
+  appSelectedCustomer,
+  handleSelectCustomer,
+  isCreditAllowed,
 }: PaymentFormProps) {
   return (
-    <div className="p-4 space-y-4 order-1 md:order-2 bg-gray-50/50 dark:bg-app">
-
+    <div className="p-4 space-y-3.5 order-1 md:order-2 bg-app">
       {/* Net Payable card — mobile only */}
-      <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20 relative overflow-hidden md:hidden mb-1">
-        <div className="absolute right-3 top-3 opacity-10"><Wallet className="w-10 h-10 sm:w-14 sm:h-14 text-white rotate-12" /></div>
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="p-3.5 rounded-xl bg-primary text-white border border-primary relative md:hidden mb-1 shadow-sm">
+        <div className="flex items-center justify-between">
           <div>
-            <p className="text-[7px] sm:text-[8px] font-black text-white/60 uppercase tracking-[0.25em]">{"Net Payable"}</p>
-            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight tabular-nums mt-0.5">{formatCurrency(finalTotal, appSettings.currency)}</h3>
+            <p className="text-[11px] font-semibold text-emerald-100 uppercase tracking-wider">{"Net Payable"}</p>
+            <h3 className="text-2xl font-sans font-bold text-white tabular-nums mt-0.5">{formatCurrency(finalTotal, appSettings.currency)}</h3>
           </div>
-          <div className="px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/20 border border-white/10">
-            <p className="text-[8px] sm:text-[9px] font-black text-white uppercase tracking-widest">{totalQty} {"QTY"}</p>
+          <div className="px-2 py-0.5 rounded-lg bg-white/20 text-[12px] font-sans font-bold text-white tabular-nums">
+            {totalQty} QTY
           </div>
         </div>
       </div>
@@ -102,7 +107,7 @@ export function PaymentForm({
             const Icon = st.icon;
             return (
               <button key={st.id} onClick={() => setSaleType(st.id as any)}
-                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-[9px] font-black uppercase tracking-wide transition-all active:scale-95 touch-manipulation ${saleType === st.id ? 'bg-primary text-white border-primary shadow-sm shadow-emerald-500/20' : 'bg-gray-50 dark:bg-white/[0.03] text-gray-600 border-gray-200 dark:border-white/5 hover:text-gray-600 dark:hover:text-gray-200'}`}>
+                className={`flex items-center justify-center gap-1.5 h-8 rounded-md border text-[12px] font-medium transition-colors ${saleType === st.id ? 'bg-primary text-white border-primary' : 'bg-white dark:bg-surface text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-white/[0.08]'}`}>
                 <Icon className="w-3.5 h-3.5" />
                 {st.label}
               </button>
@@ -110,22 +115,37 @@ export function PaymentForm({
           })}
         </div>
       )}
-      {/* Payment Method */}
-      <WalletStrip currency={appSettings.currency} timezone={appSettings.timezone} />
 
+      {/* Payment Method */}
       <div>
-        <p className="text-[8px] sm:text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-1.5 sm:mb-2 flex items-center">
+        <p className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider mb-1">
           {"Payment Method"}
-          <HelpTooltip content="Select how the bill is being paid." />
         </p>
-        <div className={cn("grid gap-1 sm:gap-1.5", "grid-cols-2 sm:grid-cols-4")}>
+        <div className="grid gap-2 sm:gap-2.5 gap-y-5 sm:gap-y-5 pt-4 sm:pt-4.5 grid-cols-2 sm:grid-cols-4">
           {payMethods.map(m => {
             const isActive = paymentMethod === m.id;
             return (
-              <button key={m.id} onClick={() => handleSelectMethod(m.id)}
-                className={`flex flex-col items-center justify-center gap-1.5 py-2.5 sm:py-3.5 rounded-2xl border transition-all active:scale-95 touch-manipulation ${isActive ? 'bg-primary border-primary shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-white/[0.03] border-gray-200 dark:border-white/10 hover:border-primary/30'}`}>
-                <m.icon className={`w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 ${isActive ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`} />
-                <span className={`text-[7px] sm:text-[8px] font-black uppercase tracking-widest ${isActive ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>{m.label}</span>
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => handleSelectMethod(m.id)}
+                className={`group relative flex flex-col items-center justify-end h-[70px] sm:h-[74px] rounded-xl border transition-all px-2 pb-2.5 pt-1 overflow-visible cursor-pointer select-none active:scale-95 ${
+                  isActive
+                    ? 'bg-primary border-primary text-white font-bold shadow-sm'
+                    : 'bg-white dark:bg-surface border-neutral-200 dark:border-white/[0.08] text-neutral-800 dark:text-neutral-200 hover:border-neutral-300 dark:hover:border-white/20 hover:bg-neutral-50 dark:hover:bg-surface-hover'
+                }`}
+              >
+                <div className="absolute -top-3 sm:-top-3.5 left-1/2 -translate-x-1/2 flex items-center justify-center shrink-0 pointer-events-none transition-transform duration-200 ease-out group-hover:-translate-y-1 group-hover:scale-105 group-active:scale-95">
+                  {(m as any).realIcon ? (
+                    <>
+                      <span className="sm:hidden"><RealIcon name={(m as any).realIcon} size={42} className="filter drop-shadow-[0_6px_10px_rgba(0,0,0,0.18)]" /></span>
+                      <span className="hidden sm:inline-block"><RealIcon name={(m as any).realIcon} size={50} className="filter drop-shadow-[0_8px_14px_rgba(0,0,0,0.22)] dark:drop-shadow-[0_10px_18px_rgba(0,0,0,0.55)]" /></span>
+                    </>
+                  ) : (
+                    <m.icon className={`w-7 h-7 sm:w-8 sm:h-8 ${isActive ? 'text-white' : 'text-neutral-600 dark:text-neutral-400'}`} />
+                  )}
+                </div>
+                <span className="text-[12px] sm:text-[12.5px] font-bold tracking-tight leading-tight select-none">{m.label}</span>
               </button>
             );
           })}
@@ -133,119 +153,109 @@ export function PaymentForm({
       </div>
 
       {/* Amount Input */}
-      <div className="min-h-[200px]">
+      <div className="min-h-[160px]">
         {paymentMethod === 'split' ? (
-          <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="space-y-2.5">
             {[
               { m: splitMethodA, setM: setSplitMethodA, amt: splitAmountA, setAmt: setSplitAmountA, label: "Part 1" },
               { m: splitMethodB, setM: setSplitMethodB, amt: splitAmountB, setAmt: setSplitAmountB, label: "Part 2" },
             ].map((p, i) => (
-              <div key={i} className="p-3 rounded-2xl bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 space-y-2">
+              <div key={i} className="p-2.5 rounded-md bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-gray-600">{p.label}</span>
+                  <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider">{p.label}</span>
                   <div className="flex gap-1">
                     {(['cash', 'card', 'online'] as const).map(mm => (
                       <button key={mm} type="button" onClick={() => p.setM(mm)}
-                        className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest transition-all ${p.m === mm ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400'}`}>
+                        className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${p.m === mm ? 'bg-primary text-white' : 'bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400'}`}>
                         {mm}
                       </button>
                     ))}
                   </div>
                 </div>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-gray-600">{appSettings.currency || 'PKR'}</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-neutral-400">{appSettings.currency || 'PKR'}</span>
                   <input
                     type="text" inputMode="decimal"
                     value={p.amt}
                     onChange={e => p.setAmt(e.target.value.replace(/[^0-9.]/g, ''))}
-                    className="w-full h-12 pl-12 pr-4 bg-gray-50 dark:bg-surface border border-gray-200 dark:border-white/10 rounded-full text-lg font-black text-gray-900 dark:text-white focus:border-primary outline-none transition-all [appearance:textfield] text-center"
+                    className="w-full h-8 pl-10 pr-3 bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] rounded-md text-[13px] font-mono font-medium text-neutral-900 dark:text-white focus:border-primary outline-none text-right"
                     placeholder="0"
                   />
                 </div>
               </div>
             ))}
-            <div className={`p-4 rounded-2xl flex items-center justify-between border transition-all duration-300 animate-in fade-in ${Math.abs(((parseFloat(splitAmountA) || 0) + (parseFloat(splitAmountB) || 0)) - finalTotal) < 0.01 ? 'bg-primary/10 border-transparent text-primary dark:text-emerald-400' : 'bg-amber-500/10 border-transparent text-amber-600 dark:text-amber-400'}`}>
+            <div className={`p-3 rounded-md flex items-center justify-between border ${Math.abs(((parseFloat(splitAmountA) || 0) + (parseFloat(splitAmountB) || 0)) - finalTotal) < 0.01 ? 'bg-primary/5 border-primary/20 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/5 border-amber-500/20 text-amber-600 dark:text-amber-400'}`}>
               <div>
-                <p className="text-[8px] font-black uppercase tracking-widest mb-1">{"Split Total"}</p>
-                <p className="text-xl font-black tabular-nums tracking-tighter">
+                <p className="text-[11px] font-medium uppercase tracking-wider mb-0.5">{"Split Total"}</p>
+                <p className="text-[15px] font-mono font-semibold tabular-nums">
                   {formatCurrency((parseFloat(splitAmountA) || 0) + (parseFloat(splitAmountB) || 0), appSettings.currency)}
-                  <span className="text-[10px] font-bold opacity-60"> / {formatCurrency(finalTotal, appSettings.currency)}</span>
+                  <span className="text-[12px] font-normal opacity-60"> / {formatCurrency(finalTotal, appSettings.currency)}</span>
                 </p>
               </div>
             </div>
           </div>
         ) : (
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Received Amount"}</label>
-              <button onClick={() => setAmountPaid(finalTotal.toString())} className="text-[8px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full hover:bg-primary/20 active:scale-95 transition-all">{"Exact Amount"}</button>
+              <label className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{"Received Amount"}</label>
+              <button onClick={() => setAmountPaid(finalTotal.toString())} className="text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded hover:bg-primary/20 transition-colors">{"Exact Amount"}</button>
             </div>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-gray-600">{appSettings.currency || 'PKR'}</span>
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[12px] font-mono text-neutral-400">{appSettings.currency || 'PKR'}</span>
               <input
                 type="text" inputMode="decimal"
                 value={amountPaid}
                 onChange={e => setAmountPaid(e.target.value.replace(/[^0-9.]/g, ''))}
-                className="w-full h-14 pl-12 pr-12 py-3 bg-white dark:bg-surface border border-gray-200 dark:border-white/10 rounded-full text-xl font-black text-gray-900 dark:text-white focus:border-primary outline-none transition-all [appearance:textfield] text-center disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-white/5"
+                className="w-full h-10 pl-12 pr-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md text-[16px] font-mono font-semibold text-neutral-900 dark:text-white focus:border-primary outline-none transition-colors text-center disabled:opacity-50 disabled:bg-neutral-100 dark:disabled:bg-white/5"
                 placeholder="0"
                 disabled={paymentMethod !== 'cash'}
               />
             </div>
-            <div className="grid grid-cols-4 gap-1.5 min-h-[32px]">
+            <div className="grid grid-cols-4 gap-1.5 min-h-[28px]">
               {paymentMethod === 'cash' && quickAmounts.map((amt, idx) => (
                 <button key={`${amt}-${idx}`} onClick={() => setAmountPaid(amt.toString())}
-                  className="py-1.5 sm:py-2 bg-white dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 text-[8px] sm:text-[9px] font-black border border-gray-200 dark:border-white/10 rounded-full active:scale-95 touch-manipulation transition-all tabular-nums hover:border-transparent">
+                  className="h-7 bg-white dark:bg-surface text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/10 text-[12px] font-mono font-medium border border-neutral-200 dark:border-white/[0.08] rounded transition-colors tabular-nums">
                   {appSettings.currency || 'Rs'} {Math.round(amt)}
                 </button>
               ))}
             </div>
             {paymentMethod === 'credit' && (
-              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl flex items-start gap-2 animate-in fade-in slide-in-from-top-2">
+              <div className="p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-md flex items-start gap-2">
                 <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-                <p className="text-[9.5px] font-bold text-blue-800 dark:text-blue-200 leading-snug">
-                  <span className="uppercase tracking-wide opacity-80 block mb-0.5">Partial Udhar / Half Pay?</span>
-                  Is system mein Cash Drawer ko safe rakhne ke liye partial udhar ka direct option nahi. <br/><br/>
-                  <span className="text-blue-900 dark:text-blue-100">Tareeqa:</span> Pehle yeh bill poora <b>Credit</b> pe save karein. Phir <b>Customers</b> page par ja kar <b>Receive Payment</b> dabayen aur cash amount enter kar dein.
+                <p className="text-[12px] text-blue-800 dark:text-blue-200 leading-snug">
+                  <span className="font-semibold block mb-0.5">Partial Udhar / Half Pay?</span>
+                  Pehle yeh bill poora <b>Credit</b> pe save karein. Phir <b>Customers</b> page par ja kar <b>Receive Payment</b> enter karein.
                 </p>
               </div>
             )}
-            {/* Change / Due Display (Always visible, solves blank area issue) */}
-            <div className={`p-4 rounded-2xl flex items-center justify-between border transition-all duration-300 animate-in fade-in zoom-in-95 ${change >= 0 ? 'bg-primary/10 border-transparent text-primary dark:text-emerald-400' : 'bg-amber-500/10 border-transparent text-amber-600 dark:text-amber-400'
-              }`}>
+            {/* Change / Due Display */}
+            <div className={`p-3 rounded-md flex items-center justify-between border ${change >= 0 ? 'bg-primary/5 border-primary/20 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/5 border-amber-500/20 text-amber-600 dark:text-amber-400'}`}>
               <div>
-                <p className="text-[8px] font-black uppercase tracking-widest mb-1">
+                <p className="text-[11px] font-medium uppercase tracking-wider mb-0.5">
                   {change >= 0 ? "Change" : "Balance Due"}
                 </p>
-                <p className="text-xl font-black tabular-nums tracking-tighter">
+                <p className="text-lg font-mono font-semibold tabular-nums">
                   {formatCurrency(Math.abs(change), appSettings.currency)}
                 </p>
               </div>
-              {change >= 0 ? (
-                <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                  <Check className="w-4.5 h-4.5" />
-                </div>
-              ) : (
-                <div className="w-8 h-8 bg-amber-500/10 text-amber-500 dark:text-amber-400 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-4.5 h-4.5" />
-                </div>
-              )}
+              <div className={`w-7 h-7 rounded flex items-center justify-center ${change >= 0 ? 'bg-primary text-white' : 'bg-amber-500/20 text-amber-500'}`}>
+                {change >= 0 ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Extra Info: Custom Extra Charges - ONLY IF ENABLED IN SETTINGS */}
+      {/* Extra Charges */}
       {appSettings.enableExtraCharges && (
-        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-          <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest px-1 flex items-center gap-2">
-            <PlusCircle className="w-3 h-3" /> {"Extra Charges"}
+        <div className="space-y-2">
+          <p className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider flex items-center gap-1.5">
+            <PlusCircle className="w-3.5 h-3.5" /> {"Extra Charges"}
           </p>
-          <div className="grid grid-cols-1 gap-2 sm:gap-3">
+          <div className="grid grid-cols-1 gap-2">
             {extraCharges.map((charge, idx) => (
-              <div key={idx} className="flex gap-1.5 p-2 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 rounded-xl transition-all hover:border-primary/30">
-                <div className="flex-1 flex items-center px-2">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{"Delivery Charges (DC)"}</span>
-                </div>
+              <div key={idx} className="flex items-center gap-2 p-2 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md">
+                <span className="flex-1 text-[12px] text-neutral-600 dark:text-neutral-400">Delivery Charges (DC)</span>
                 <input
                   type="text"
                   inputMode="decimal"
@@ -256,7 +266,7 @@ export function PaymentForm({
                     setExtraCharges(newCharges);
                   }}
                   placeholder="0"
-                  className="w-32 bg-primary/5 dark:bg-primary/10 border border-transparent rounded-lg px-3 py-2 text-[12px] font-black text-primary dark:text-emerald-400 text-center focus:border-primary focus:ring-0 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-24 h-7 bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] rounded px-2 text-[12px] font-mono text-right text-neutral-900 dark:text-white outline-none focus:border-primary"
                 />
               </div>
             ))}
@@ -264,15 +274,29 @@ export function PaymentForm({
         </div>
       )}
 
+      {/* Customer Selector — enables Credit when selected */}
+      {appSettings?.enableCreditSales && handleSelectCustomer && (
+        <div className="mb-2">
+          <SearchableSelect
+            label={appSelectedCustomer?.id ? `CUSTOMER — ${appSelectedCustomer.name}` : 'CUSTOMER (Required for Credit)'}
+            options={[{ id: '', label: 'None (No Credit)' }, ...(appCustomers || []).map((c: any) => ({ id: c.id, label: `${c.name}${c.phone ? ` · ${c.phone}` : ''}` }))]}
+            value={appSelectedCustomer?.id || ''}
+            onChange={handleSelectCustomer}
+            icon={UserCircle}
+          />
+          {!appSelectedCustomer?.id && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 ml-0.5">
+              Customer select karo to Credit button appear hoga
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Salesman Selection */}
-      <div className="mb-4">
+      <div className="mb-2">
         <SearchableSelect
           label={"SALESMAN (OPTIONAL)"}
-          options={[
-            { id: '', label: 'None' },
-            ...appUsers.filter(u => u.active).map(u => ({ id: u.id, label: u.name })),
-            ...appSalesmen.filter(s => s.active).map(s => ({ id: s.id, label: s.name }))
-          ]}
+          options={[{ id: '', label: 'None' }, ...appUsers.filter(u => u.active).map(u => ({ id: u.id, label: u.name })), ...appSalesmen.filter(s => s.active).map(s => ({ id: s.id, label: s.name }))]}
           value={salesmanId}
           onChange={setSalesmanId}
           icon={UserCircle}
@@ -281,22 +305,18 @@ export function PaymentForm({
 
       {/* Notes */}
       <div>
-        <div className="flex items-center gap-2 mb-2">
-          <FileText className="w-3.5 h-3.5 text-primary" />
-          <span className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest flex items-center">
-            {"Internal Memo"}
-            <HelpTooltip content="Special remarks or shipping notes printed on dispatch notes and saved in transaction history." />
-          </span>
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5 text-primary" />
+            <span className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">Internal Memo</span>
+          </div>
+          <CapsLockIndicator variant="inline" />
         </div>
         <textarea
           value={saleNotes}
-          onChange={e => {
-            setSaleNotes(e.target.value);
-            useCartStore.getState().setNotes(e.target.value);
-            useCartStore.getState().updateSalesTab({ id: appActiveSalesTab, updates: { notes: e.target.value } });
-          }}
-          placeholder={"Add notes or memo..."}
-          className="w-full px-3 py-2.5 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 rounded-xl text-[10px] font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-primary outline-none resize-none min-h-[60px] placeholder:text-gray-600 dark:placeholder:text-gray-600 transition-all"
+          onChange={e => { const val = e.target.value; setSaleNotes(val); useCartStore.getState().setNotes(val); useCartStore.getState().updateSalesTab({ id: appActiveSalesTab, updates: { notes: val } }); }}
+          placeholder="Add notes or memo..."
+          className="w-full px-3 py-2 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md text-[13px] text-neutral-900 dark:text-white focus:border-primary outline-none resize-none min-h-[50px] placeholder:text-neutral-400 transition-colors"
         />
       </div>
     </div>

@@ -28,7 +28,7 @@ const sizeClass: Record<AvatarSize, string> = {
 
 const shapeClass: Record<AvatarShape, string> = {
   circle: 'rounded-full',
-  square: 'rounded-2xl',
+  square: 'rounded-md',
 };
 
 const gradients = [

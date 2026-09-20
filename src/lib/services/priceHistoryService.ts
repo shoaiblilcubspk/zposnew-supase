@@ -1,4 +1,3 @@
-import { supabase } from '../supabase';
 import { localDb, generateId } from '../localDb';
 import { getActor } from '../actionToken';
 
@@ -30,24 +29,6 @@ export async function logPriceChange(input: PriceChangeInput): Promise<void> {
     createdAt: now,
   };
   await localDb.priceHistory.add(row as any).catch(() => {});
-
-  if (navigator.onLine) {
-    await supabase
-      .from('price_history')
-      .insert({
-        id,
-        product_id: input.productId,
-        old_price: input.oldPrice ?? null,
-        new_price: input.newPrice ?? null,
-        old_cost: input.oldCost ?? null,
-        new_cost: input.newCost ?? null,
-        changed_by: actor?.id ?? null,
-        note: input.note ?? null,
-        created_at: now.toISOString(),
-      })
-      .then(() => {})
-      .catch(() => {});
-  }
 }
 
 export async function getPriceHistory(productId: string): Promise<any[]> {

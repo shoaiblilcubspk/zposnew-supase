@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface SkeletonLoaderProps {
   type?: 'grid' | 'list' | 'detail' | 'order-timer' | 'item-rows';
   count?: number;
@@ -7,19 +5,19 @@ interface SkeletonLoaderProps {
 
 export function SkeletonLoader({ type = 'grid', count = 4 }: SkeletonLoaderProps) {
   // Shimmer pulse styling
-  const shimmer = "animate-pulse bg-gray-200 dark:bg-zinc-800 rounded-xl";
+  const shimmer = "animate-pulse bg-neutral-200 dark:bg-white/[0.06] rounded";
 
   if (type === 'grid') {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className="bg-white dark:bg-zinc-900 rounded-[2rem] border border-black/5 p-3 sm:p-5 flex flex-col gap-4 shadow-sm h-full">
-            <div className={`w-full aspect-square ${shimmer} rounded-[1.5rem]`} />
-            <div className="space-y-2">
-              <div className={`w-3/4 h-4 ${shimmer}`} />
-              <div className={`w-1/2 h-4 ${shimmer}`} />
+          <div key={i} className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] p-3 flex flex-col gap-3 shadow-none h-full">
+            <div className={`w-full aspect-square ${shimmer} rounded`} />
+            <div className="space-y-1.5">
+              <div className={`w-3/4 h-3.5 ${shimmer}`} />
+              <div className={`w-1/2 h-3 ${shimmer}`} />
             </div>
-            <div className={`w-full h-11 ${shimmer} rounded-full mt-auto`} />
+            <div className={`w-full h-8 ${shimmer} rounded-md mt-auto`} />
           </div>
         ))}
       </div>
@@ -28,17 +26,17 @@ export function SkeletonLoader({ type = 'grid', count = 4 }: SkeletonLoaderProps
 
   if (type === 'list') {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className="bg-white dark:bg-zinc-900 border border-black/5 p-4 rounded-2xl flex items-center justify-between shadow-sm">
+          <div key={i} className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] p-3 rounded-md flex items-center justify-between shadow-none">
             <div className="flex items-center gap-3 w-full">
-              <div className={`w-10 h-10 ${shimmer} rounded-xl shrink-0`} />
-              <div className="space-y-1.5 w-full">
-                <div className={`w-1/3 h-4 ${shimmer}`} />
+              <div className={`w-8 h-8 ${shimmer} rounded shrink-0`} />
+              <div className="space-y-1 w-full">
+                <div className={`w-1/3 h-3.5 ${shimmer}`} />
                 <div className={`w-1/4 h-3 ${shimmer}`} />
               </div>
             </div>
-            <div className={`w-16 h-8 ${shimmer} rounded-lg shrink-0`} />
+            <div className={`w-16 h-7 ${shimmer} rounded shrink-0`} />
           </div>
         ))}
       </div>
@@ -47,24 +45,24 @@ export function SkeletonLoader({ type = 'grid', count = 4 }: SkeletonLoaderProps
 
   if (type === 'detail') {
     return (
-      <div className="bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl p-6 space-y-6 shadow-sm">
-        <div className={`w-full h-64 ${shimmer} rounded-[2rem]`} />
-        <div className="space-y-3">
-          <div className={`w-1/3 h-7 ${shimmer}`} />
+      <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-5 space-y-4 shadow-none">
+        <div className={`w-full h-48 ${shimmer} rounded-md`} />
+        <div className="space-y-2">
+          <div className={`w-1/3 h-6 ${shimmer}`} />
           <div className={`w-2/3 h-4 ${shimmer}`} />
-          <div className={`w-1/2 h-4 ${shimmer}`} />
+          <div className={`w-1/2 h-3.5 ${shimmer}`} />
         </div>
-        <div className="space-y-4 pt-4 border-t border-black/5">
-          <div className={`w-24 h-5 ${shimmer}`} />
+        <div className="space-y-3 pt-3 border-t border-neutral-200 dark:border-white/[0.08]">
+          <div className={`w-24 h-4 ${shimmer}`} />
           <div className="flex gap-2">
-            <div className={`w-20 h-10 ${shimmer} rounded-xl`} />
-            <div className={`w-20 h-10 ${shimmer} rounded-xl`} />
-            <div className={`w-20 h-10 ${shimmer} rounded-xl`} />
+            <div className={`w-20 h-8 ${shimmer} rounded-md`} />
+            <div className={`w-20 h-8 ${shimmer} rounded-md`} />
+            <div className={`w-20 h-8 ${shimmer} rounded-md`} />
           </div>
         </div>
-        <div className="flex gap-4 pt-6">
-          <div className={`w-32 h-12 ${shimmer} rounded-full`} />
-          <div className={`flex-1 h-12 ${shimmer} rounded-full`} />
+        <div className="flex gap-2 pt-4">
+          <div className={`w-28 h-8 ${shimmer} rounded-md`} />
+          <div className={`flex-1 h-8 ${shimmer} rounded-md`} />
         </div>
       </div>
     );
@@ -72,22 +70,22 @@ export function SkeletonLoader({ type = 'grid', count = 4 }: SkeletonLoaderProps
 
   if (type === 'order-timer') {
     return (
-      <div className={`w-24 h-5 ${shimmer} rounded-full mt-2`} />
+      <div className={`w-20 h-4 ${shimmer} rounded mt-1`} />
     );
   }
 
   if (type === 'item-rows') {
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 p-2 rounded-xl">
-            <div className={`w-12 h-12 sm:w-16 sm:h-16 ${shimmer} shrink-0`} />
-            <div className="space-y-2 w-full">
+          <div key={i} className="flex items-center gap-2.5 p-2 rounded-md">
+            <div className={`w-8 h-8 ${shimmer} rounded shrink-0`} />
+            <div className="space-y-1 w-full">
               <div className={`w-1/3 h-3 ${shimmer}`} />
-              <div className={`w-2/3 h-4 ${shimmer}`} />
-              <div className={`w-1/4 h-3 ${shimmer}`} />
+              <div className={`w-2/3 h-3.5 ${shimmer}`} />
+              <div className={`w-1/4 h-2.5 ${shimmer}`} />
             </div>
-            <div className={`w-8 h-8 sm:w-9 sm:h-9 ${shimmer} rounded-lg shrink-0`} />
+            <div className={`w-8 h-7 ${shimmer} rounded shrink-0`} />
           </div>
         ))}
       </div>

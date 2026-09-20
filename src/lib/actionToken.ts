@@ -81,18 +81,17 @@ export async function signWithSupervisor(
   password: string
 ): Promise<{ p_user_id: string; p_role: string; p_sig: string } | null> {
   try {
-    const { supabase } = await import('./supabase');
-    const { data } = await supabase
-      .from('users')
-      .select('id, role, active')
-      .eq('email', String(email || '').toLowerCase().trim())
-      .maybeSingle();
-    if (!data || data.active === false) return null;
-    if (data.role !== 'admin') return null; // approvals are ADMIN-only (RBAC matrix)
+    const { localDb } = await import('./localDb');
+    const user = await localDb.users
+      .where('email')
+      .equalsIgnoreCase(String(email || '').toLowerCase().trim())
+      .first();
+    if (!user || user.active === false) return null;
+    if (user.role !== 'admin') return null; // approvals are ADMIN-only (RBAC matrix)
     const hash = await sha256Hex(password);
-    const message = `${hash}|${data.id}|${data.role}|${action}`;
+    const message = `${hash}|${user.id}|${user.role}|${action}`;
     const sig = await sha256Hex(message);
-    return { p_user_id: data.id as string, p_role: data.role as string, p_sig: sig };
+    return { p_user_id: user.id as string, p_role: user.role as string, p_sig: sig };
   } catch {
     return null;
   }

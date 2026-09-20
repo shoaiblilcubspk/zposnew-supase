@@ -13,15 +13,15 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         <select
           ref={ref}
           className={cn(
-            'input appearance-none w-full text-[13px] font-medium py-2.5 px-3 cursor-pointer rounded-xl pr-10 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all',
+            'h-8 px-2.5 pr-8 rounded text-[13px] font-medium appearance-none w-full cursor-pointer border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface text-neutral-900 dark:text-white focus:outline-none focus:border-primary transition-colors',
             className
           )}
           {...props}
         >
           {children}
         </select>
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-          <ChevronDown className="w-4 h-4" />
+        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400 dark:text-neutral-500">
+          <ChevronDown className="w-3.5 h-3.5" />
         </div>
       </div>
     );

@@ -1,231 +1,186 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User as SupabaseUser, Session } from '@supabase/supabase-js'
-import { supabase, enableFullAuthInit } from '../lib/supabase'
-import { User } from '../types'
-import { usersService } from '../lib/services'
-import { sonner } from '../lib/sonner'
-import { signInLogic, signUpLogic, signOutLogic, loadProfileLogic } from './authOperations'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { User } from '../types';
+import { sonner } from '../lib/sonner';
+import { initDb, queryOne, execute, TABLES } from '../lib/db';
+import {
+  isFirstLaunch as checkFirstLaunch,
+  loginWithPin,
+  mapDbRowToUser,
+} from '../lib/auth/localAuthService';
+import { useUsersStore } from '../stores/usersStore';
 
 interface AuthContextType {
-  user: SupabaseUser | null
-  profile: User | null
-  session: Session | null
-  loading: boolean
-  signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, name: string, username: string) => Promise<void>
-  signOut: () => Promise<void>
-  updateProfile: (updates: Partial<User>) => Promise<void>
-  updatePassword: (password: string) => Promise<void>
-  refreshProfile: () => Promise<void>
-  isRecoveringPassword: boolean
-  setIsRecoveringPassword: (value: boolean) => void
+  user: any | null;
+  profile: User | null;
+  session: any | null;
+  loading: boolean;
+  isFirstLaunch: boolean;
+  signInWithPin: (pin: string, userId?: string) => Promise<void>;
+  signIn: (emailOrUsername: string, pinOrPassword: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string, username: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  updateProfile: (updates: Partial<User>) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
+  isRecoveringPassword: boolean;
+  setIsRecoveringPassword: (value: boolean) => void;
+  onBootstrapComplete: (user: User) => void;
 }
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export { hashPasswordString } from '../lib/authUtils'
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export { hashPasswordString } from '../lib/authUtils';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<SupabaseUser | null>(null)
-  const [profile, setProfile] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false)
+  const [profile, setProfile] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isFirstLaunch, setIsFirstLaunch] = useState(false);
+  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
+  const setCurrentUser = useUsersStore((s) => s.setCurrentUser);
 
-  useEffect(() => {
-    const checkSessionExpiry = () => {
-      const loginTimestamp = localStorage.getItem('pos_session_start');
-      if (!loginTimestamp) return;
-
-      const loginDate = new Date(loginTimestamp);
-      const now = new Date();
-      const hoursDiff = (now.getTime() - loginDate.getTime()) / (1000 * 60 * 60);
-
-      if (hoursDiff >= 24) {
-        localStorage.removeItem('pos_session_start');
-        localStorage.removeItem('pos_actor_profile');
-        supabase.auth.signOut();
-        sonner.error('Your session has expired (24 hours). Please sign in again.');
-      }
-    };
-
-    checkSessionExpiry();
-    const expiryTimer = setInterval(checkSessionExpiry, 60_000);
-
-    // PHASE 39A: real-time block/delete enforcement for ALREADY-LOGGED-IN users.
-    // Polls the cached flag locally and (when online) the server, force-logging
-    // out immediately if the account was blocked/removed after login.
-    const forceLogout = async (reason: string) => {
-      localStorage.removeItem('pos_actor_profile');
+  const applyUserSession = useCallback((userObj: User | null) => {
+    setProfile(userObj);
+    setCurrentUser(userObj);
+    if (userObj) {
+      localStorage.setItem('pos_active_user_id', userObj.id);
+      localStorage.setItem('pos_session_start', new Date().toISOString());
+    } else {
+      localStorage.removeItem('pos_active_user_id');
       localStorage.removeItem('pos_session_start');
-      try { await supabase.auth.signOut(); } catch (_e) { /* ignore */ }
-      setProfile(null);
-      setUser(null);
-      setSession(null);
-      sonner.error(reason);
-    };
+    }
+  }, [setCurrentUser]);
 
-    const verifyActiveStatus = async () => {
-      if (!navigator.onLine) return;
+  // Bootstrapping local auth check on mount
+  useEffect(() => {
+    let mounted = true;
+
+    async function initAuth() {
       try {
-        const { data: sess } = await supabase.auth.getSession();
-        const uid = sess?.session?.user?.id;
-        if (!uid) return;
-        const { data: prof, error } = await supabase
-          .from('users')
-          .select('active, deleted_at')
-          .eq('id', uid)
-          .single();
-        if (!error && prof && (prof.active === false || prof.deleted_at != null)) {
-          forceLogout('Your account has been deactivated. You have been logged out.');
-        }
-      } catch (_e) { /* network error: never sign out on network failure (GEMINI rule) */ }
-    };
+        await initDb();
+        const firstLaunch = await checkFirstLaunch();
+        if (!mounted) return;
 
-    const activeTimer = setInterval(verifyActiveStatus, 30_000);
-
-    (supabase.auth as any)._initCalled = true;
-    supabase.auth.stopAutoRefresh?.().catch(() => { });
-
-    const initSession = async () => {
-      try {
-        const { data: { session: storedSession } } = await supabase.auth.getSession();
-        setSession(storedSession ?? null);
-        setUser(storedSession?.user ?? null);
-        
-        if (storedSession?.access_token) {
-          try { supabase.realtime.setAuth(storedSession.access_token); } catch { /* noop */ }
-        }
-
-        if (storedSession?.user) {
-          await loadProfileLogic(storedSession.user.id, setProfile, setUser, setLoading);
-        } else {
+        if (firstLaunch) {
+          setIsFirstLaunch(true);
           setLoading(false);
+          return;
         }
-      } catch (_err) {
-        setLoading(false);
+
+        // Check if there was a saved session
+        const savedUserId = localStorage.getItem('pos_active_user_id');
+        if (savedUserId) {
+          const row = await queryOne(
+            `SELECT * FROM ${TABLES.USERS} WHERE id = ? AND active = 1;`,
+            [savedUserId]
+          );
+          if (row) {
+            const restoredUser = mapDbRowToUser(row);
+            applyUserSession(restoredUser);
+          } else {
+            applyUserSession(null);
+          }
+        }
+      } catch (err) {
+        console.error('Local auth initialization error:', err);
+      } finally {
+        if (mounted) setLoading(false);
       }
-    };
-    initSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      // Keep the Realtime WebSocket's JWT fresh. Without this the socket holds a
-      // stale token; the server CLOSES the channel when it expires (~1h) and the
-      // client reconnects with the same dead token → endless CLOSED→retry loop
-      // (and multi-device sync silently dies). setAuth pushes the new token to
-      // the socket on SIGNED_IN / TOKEN_REFRESHED.
-      if (session?.access_token) {
-        try { supabase.realtime.setAuth(session.access_token); } catch { /* noop */ }
-      }
-
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsRecoveringPassword(true);
-      }
-
-      if (!session?.user) {
-        setProfile(null)
-        setLoading(false)
-      }
-
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        loadProfileLogic(session.user.id, setProfile, setUser, setLoading)
-      } else {
-        setProfile(null)
-        setLoading(false)
-      }
-    })
-
-    const handleOnline = () => {
-      enableFullAuthInit();
-    };
-    const handleOffline = () => {
-      supabase.auth.stopAutoRefresh?.().catch(() => { });
-    };
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    if (navigator.onLine) {
-      enableFullAuthInit();
     }
 
+    initAuth();
     return () => {
-      subscription.unsubscribe();
-      clearInterval(expiryTimer);
-      clearInterval(activeTimer);
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      mounted = false;
     };
-  }, [])
+  }, [applyUserSession]);
 
-
-  async function signIn(identifier: string, password: string) {
-    await signInLogic(identifier, password, setLoading, setProfile, setUser);
-  }
-
-  async function signUp(email: string, password: string, name: string, username: string) {
-    await signUpLogic(email, password, name, username, setLoading, setProfile);
-  }
-
-  async function signOut() {
-    await signOutLogic(setLoading, setSession, setUser, setProfile);
-  }
-
-  async function updateProfile(updates: Partial<User>) {
-    if (!user) throw new Error('No user logged in')
-
-    const updatedProfile = await usersService.update(user.id, updates)
-    setProfile(updatedProfile)
-  }
-
-  async function updatePassword(password: string) {
-    const { error } = await supabase.auth.updateUser({ password })
-    if (error) throw error
-  }
-
-  async function refreshProfile() {
-    if (user?.id) {
-      await loadProfileLogic(user.id, setProfile, setUser, setLoading);
+  const signInWithPin = async (pin: string, identifierOrUserId?: string): Promise<void> => {
+    setLoading(true);
+    try {
+      const authenticatedUser = await loginWithPin(pin, identifierOrUserId);
+      applyUserSession(authenticatedUser);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const value = {
-    user,
-    profile,
-    session,
-    loading,
-    signIn,
-    signUp,
-    signOut,
-    updateProfile,
-    updatePassword,
-    refreshProfile,
-    isRecoveringPassword,
-    setIsRecoveringPassword,
-  }
+  const signIn = async (emailOrUsername: string, pinOrPassword: string): Promise<void> => {
+    return signInWithPin(pinOrPassword, emailOrUsername);
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  const signUp = async (
+    _email: string,
+    _password: string,
+    _name: string,
+    _username: string
+  ): Promise<void> => {
+    sonner.warning('User creation must be performed by an Admin in User Management.');
+  };
+
+  const signOut = async (): Promise<void> => {
+    applyUserSession(null);
+    sonner.info('Signed out successfully.');
+  };
+
+  const updateProfile = async (updates: Partial<User>): Promise<void> => {
+    if (!profile) return;
+    const { updateUser } = await import('../lib/services/users/userRepository');
+    const updated = await updateUser(profile.id, updates);
+    applyUserSession(updated);
+  };
+
+  const updatePassword = async (newPin: string): Promise<void> => {
+    if (!profile) return;
+    const { hashPin } = await import('../lib/auth/pinCrypto');
+    const { fullHash } = await hashPin(newPin);
+    await execute(
+      `UPDATE ${TABLES.USERS} SET pin_hash = ?, updated_at = ? WHERE id = ?;`,
+      [fullHash, Date.now(), profile.id]
+    );
+    sonner.success('PIN updated successfully.');
+  };
+
+  const refreshProfile = async (): Promise<void> => {
+    if (!profile) return;
+    const row = await queryOne(`SELECT * FROM ${TABLES.USERS} WHERE id = ?;`, [profile.id]);
+    if (row) {
+      applyUserSession(mapDbRowToUser(row));
+    }
+  };
+
+  const onBootstrapComplete = (adminUser: User) => {
+    setIsFirstLaunch(false);
+    applyUserSession(adminUser);
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user: profile as any,
+        profile,
+        session: profile ? ({ user: profile } as any) : null,
+        loading,
+        isFirstLaunch,
+        signInWithPin,
+        signIn,
+        signUp,
+        signOut,
+        updateProfile,
+        updatePassword,
+        refreshProfile,
+        isRecoveringPassword,
+        setIsRecoveringPassword,
+        onBootstrapComplete,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    return {
-      user: null,
-      profile: null,
-      session: null,
-      loading: false,
-      isRecoveringPassword: false,
-      setIsRecoveringPassword: () => { },
-      signIn: async () => { throw new Error('Auth not ready'); },
-      signUp: async () => { },
-      signOut: async () => { },
-      updateProfile: async () => { },
-      updatePassword: async () => { },
-      refreshProfile: async () => { }
-    };
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }

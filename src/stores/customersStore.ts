@@ -7,6 +7,7 @@ interface CustomersState {
   addCustomer: (c: Customer) => void;
   updateCustomer: (c: Customer) => void;
   deleteCustomer: (id: string) => void;
+  adjustBalance: (id: string, delta: number) => void;
 }
 
 export const useCustomersStore = create<CustomersState>((set) => ({
@@ -23,4 +24,10 @@ export const useCustomersStore = create<CustomersState>((set) => ({
   ),
 
   deleteCustomer: (id) => set((st) => ({ customers: st.customers.filter((c) => c.id !== id) })),
+
+  adjustBalance: (id: string, delta: number) => set((st) => ({
+    customers: (st.customers || []).map((c) =>
+      c.id === id ? { ...c, balance: (c.balance || 0) + delta, currentBalance: (c.currentBalance || 0) + delta } : c
+    )
+  })),
 }));

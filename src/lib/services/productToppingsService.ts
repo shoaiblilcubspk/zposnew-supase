@@ -1,22 +1,24 @@
-import { supabase } from '../supabase';
-import { cloudWrite } from '../cloudWrite';
+/**
+ * Product Toppings Service
+ * Local-First storage for product to topping associations.
+ */
 
 export const productToppingsService = {
   async getByProduct(productId: string): Promise<string[]> {
-    const { data, error } = await supabase
-      .from('product_toppings')
-      .select('topping_id')
-      .eq('product_id', productId);
-    if (error) throw error;
-    return (data || []).map(r => r.topping_id);
+    try {
+      const raw = localStorage.getItem(`product_toppings_${productId}`);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
   },
 
   async setByProduct(productId: string, toppingIds: string[]): Promise<void> {
-    // Cloud-direct: replace the join rows for this product atomically enough for
-    // our needs — delete the old set, then upsert the new set. Throws on failure.
-    await cloudWrite('product_toppings', 'delete', productId, {});
-    if (toppingIds.length === 0) return;
-    const rows = toppingIds.map(toppingId => ({ product_id: productId, topping_id: toppingId }));
-    await cloudWrite('product_toppings', 'create', productId, rows);
+    try {
+      localStorage.setItem(`product_toppings_${productId}`, JSON.stringify(toppingIds));
+    } catch (e) {
+      console.error('[productToppingsService] Failed to save toppings locally:', e);
+    }
   },
 };
+

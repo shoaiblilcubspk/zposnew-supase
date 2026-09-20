@@ -3,39 +3,20 @@ import { ArrowDownCircle, ArrowUpCircle, RefreshCw, TrendingUp, CheckCircle, Dow
 import { Customer, CustomerLedger } from '../../types';
 import { fetchCustomerLedger } from '../../lib/services/customerLedgerService';
 import { useSettingsStore, useUsersStore } from '../../stores';
-import { formatCurrency } from '../../lib/currencies';
+import { formatCurrency, getCurrencySymbol } from '../../lib/currencies';
 import { formatAppDateTime } from '../../lib/dateUtils';
 import { Badge, Button, EmptyState, Pagination, usePagination, Select } from '../../shared/ui';
 import { SkeletonLoader } from '../../shared/ui/SkeletonLoader';
 import { ExportButton } from '../../shared/export';
 import { sonner } from '../../lib/sonner';
 import { DateRangePicker, DateRangePreset } from '../../shared/ui/DateRangePicker';
-import { computeCustomerDateRange } from './customerManagerUtils';
+import { computeCustomerDateRange, LEDGER_TYPE_LABELS, LEDGER_DATE_PRESETS } from './customerManagerUtils';
 import { ReceivePaymentModal } from './ReceivePaymentModal';
 import { RefundCustomerModal } from './RefundCustomerModal';
 
 interface Props {
   customer: Customer;
 }
-
-const TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  sale_credit: { label: 'Credit Sale', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-  sale: { label: 'Credit Sale', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-  payment_received: { label: 'Payment', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-  payment: { label: 'Payment', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-  refund: { label: 'Refund', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-  adjustment: { label: 'Adjustment', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-  opening: { label: 'Opening', color: 'bg-gray-100 text-gray-700 dark:bg-gray-700/50 dark:text-gray-300' },
-};
-
-const DATE_PRESETS: DateRangePreset[] = [
-  { id: 'all', label: 'All Time' },
-  { id: 'today', label: 'Today' },
-  { id: 'yesterday', label: 'Yesterday' },
-  { id: 'last7', label: 'Last 7 Days' },
-  { id: 'thisMonth', label: 'This Month' },
-  { id: 'custom', label: 'Custom Range' },
-];
 
 export function CustomerLedgerTab({ customer }: Props) {
   const settings = useSettingsStore(s => s.settings);
@@ -127,21 +108,21 @@ export function CustomerLedgerTab({ customer }: Props) {
   };
 
   const exportColumns = [
-    { header: 'Date', key: 'date' },
-    { header: 'Type', key: 'type' },
-    { header: 'Note/Ref', key: 'note' },
-    { header: 'Debit (Pay)', key: 'debit' },
-    { header: 'Credit (Receive)', key: 'credit' },
-    { header: 'Balance', key: 'balance' }
+    { label: 'Date', key: 'date' },
+    { label: 'Type', key: 'type' },
+    { label: 'Note/Ref', key: 'note' },
+    { label: 'Debit (Pay)', key: 'debit', format: 'currency' as const },
+    { label: 'Credit (Receive)', key: 'credit', format: 'currency' as const },
+    { label: 'Balance', key: 'balance', format: 'currency' as const },
   ];
 
   const exportRows = filteredEntries.map(e => ({
     date: formatAppDateTime(e.createdAt),
-    type: TYPE_LABELS[e.type]?.label || e.type,
+    type: LEDGER_TYPE_LABELS[e.type]?.label || e.type,
     note: e.note || e.reference || '',
     debit: e.debit,
     credit: e.credit,
-    balance: e.balanceAfter
+    balance: e.balanceAfter,
   }));
 
   if (loading) return <SkeletonLoader rows={6} />;
@@ -152,13 +133,13 @@ export function CustomerLedgerTab({ customer }: Props) {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Filters & Actions Header */}
-      <div className="flex flex-col md:flex-row gap-3 md:items-center p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10">
-        <div className="flex-1 flex flex-col md:flex-row items-stretch md:items-center gap-3">
+      <div className="flex flex-col md:flex-row gap-2.5 md:items-center p-2.5 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
+        <div className="flex-1 flex flex-col md:flex-row items-stretch md:items-center gap-2">
           <DateRangePicker
             preset={preset}
-            presets={DATE_PRESETS}
+            presets={LEDGER_DATE_PRESETS}
             onPresetChange={setPreset}
             startDate={startDate}
             endDate={endDate}
@@ -166,11 +147,11 @@ export function CustomerLedgerTab({ customer }: Props) {
             onEndDateChange={setEndDate}
             className="flex-1 md:max-w-md"
           />
-          <div className="w-full md:w-48">
+          <div className="w-full md:w-44">
             <Select 
               value={typeFilter} 
               onChange={e => setTypeFilter(e.target.value)} 
-              className="!w-full !bg-white dark:!bg-surface !border-gray-200 dark:!border-white/10 !rounded-xl"
+              className="!w-full !h-8 !text-[12px]"
             >
               <option value="all">All Types</option>
               <option value="sale">Credit Sales</option>
@@ -182,100 +163,100 @@ export function CustomerLedgerTab({ customer }: Props) {
         </div>
         <div className="flex gap-2 w-full md:w-auto">
           {filteredEntries.length > 0 && (
-            <ExportButton data={exportRows} columns={exportColumns} filename={`Ledger_${customer.name}_${Date.now()}`} className="flex-1 md:flex-none justify-center" />
+            <ExportButton
+              data={exportRows}
+              columns={exportColumns}
+              title={`Customer Ledger — ${customer.name}`}
+              filtersSummary={`Customer: ${customer.name} • Net Balance: ${formatCurrency(balance, currency)}`}
+              filename={`Ledger_${customer.name}_${Date.now()}`}
+              currencySymbol={getCurrencySymbol(currency)}
+              className="!h-8 !px-2.5 !text-[11px]"
+            />
           )}
-          <Button variant="secondary" onClick={handleWhatsApp} className="flex-1 md:flex-none justify-center !min-h-0 !py-2 !px-4 !rounded-xl !bg-[#25D366]/10 !text-[#25D366] !border-[#25D366]/20 hover:!bg-[#25D366]/20">
-            <Send className="w-4 h-4 mr-2" /> Share
+          <Button variant="secondary" size="sm" onClick={handleWhatsApp} className="!h-8 !px-2.5 !text-[11px]">
+            <Send className="w-3.5 h-3.5 mr-1 text-emerald-500" /> Share
           </Button>
         </div>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/30 p-4">
-          <div className="text-[11px] text-red-600 dark:text-red-400 font-black mb-1 uppercase tracking-tight">Total Credit Given (Sales)</div>
-          <div className="text-2xl font-black text-red-700 dark:text-red-300">{formatCurrency(totalDebit, currency)}</div>
+        <div className="rounded-md bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] p-3.5 shadow-none">
+          <div className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider mb-1">Total Credit Given (Sales)</div>
+          <div className="text-xl font-bold font-mono tabular-nums text-rose-500">{formatCurrency(totalDebit, currency)}</div>
         </div>
-        <div className="rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/30 p-4">
-          <div className="text-[11px] text-green-600 dark:text-green-400 font-black mb-1 uppercase tracking-tight">Total Received (Payments)</div>
-          <div className="text-2xl font-black text-green-700 dark:text-green-300">{formatCurrency(totalCredit, currency)}</div>
+        <div className="rounded-md bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] p-3.5 shadow-none">
+          <div className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider mb-1">Total Received (Payments)</div>
+          <div className="text-xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">{formatCurrency(totalCredit, currency)}</div>
         </div>
-        <div className={`rounded-2xl border p-4 relative overflow-hidden group ${balance === 0 ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700' : balance > 0
-          ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700/50'
-          : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700/50'}`}>
-          <div className="flex justify-between items-start z-10 relative">
-            <div>
-              <div className={`text-[11px] font-black uppercase tracking-tight mb-1 ${balance === 0 ? 'text-gray-500' : balance > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                {balance === 0 ? 'Balance Clear' : balance > 0 ? 'Aapne Lene Hain (Receive)' : 'Aapne Dene Hain (Pay)'}
-              </div>
-              <div className={`text-2xl font-black ${balance === 0 ? 'text-gray-900 dark:text-white' : balance > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
-                {formatCurrency(Math.abs(balance), currency)}
-              </div>
+        <div className="rounded-md bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] p-3.5 shadow-none flex justify-between items-center">
+          <div>
+            <div className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider mb-1">
+              {balance === 0 ? 'Balance Clear' : balance > 0 ? 'To Receive' : 'To Pay'}
             </div>
-            {balance !== 0 && (
-              <Button onClick={handleClearKhata} variant="primary" className="!min-h-0 !py-1.5 !px-3 !text-[10px] !rounded-xl shadow-sm">
-                Clear Khata
-              </Button>
-            )}
+            <div className={`text-xl font-bold font-mono tabular-nums ${balance > 0 ? 'text-amber-600 dark:text-amber-400' : balance < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-neutral-900 dark:text-white'}`}>
+              {formatCurrency(Math.abs(balance), currency)}
+            </div>
           </div>
+          {balance !== 0 && (
+            <Button onClick={handleClearKhata} variant="primary" size="sm" className="!h-7 !px-2.5 !text-[11px]">
+              Clear Khata
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Refresh & Count */}
-      <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-bold text-gray-500">{filteredEntries.length} entries found</span>
-        <button onClick={load} className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:opacity-70 transition-opacity">
-          <RefreshCw className="h-3.5 w-3.5" /> REFRESH
-        </button>
-      </div>
-
-      {/* Ledger table */}
-      {filteredEntries.length === 0 ? (
-        <EmptyState icon={<TrendingUp className="w-12 h-12 text-gray-400" />} title="No ledger entries found" description="Try adjusting your filters" className="!py-10" />
-      ) : (
-        <>
-          <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm">
-            <table className="w-full text-xs">
+      {/* Ledger table container */}
+      <div className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] overflow-hidden shadow-none min-h-[calc(100vh-360px)] flex flex-col justify-between">
+        {filteredEntries.length === 0 ? (
+          <div className="p-12 text-center flex-1 flex flex-col items-center justify-center">
+            <EmptyState icon={<TrendingUp className="w-8 h-8 text-neutral-400 opacity-60" />} title="No ledger entries found" description="Try adjusting your filters" className="!p-0" />
+          </div>
+        ) : (
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left border-collapse text-[13px]">
               <thead>
-                <tr className="bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-white/10">
-                  <th className="text-left px-4 py-3 font-bold uppercase text-[10px] tracking-wider">Date</th>
-                  <th className="text-left px-4 py-3 font-bold uppercase text-[10px] tracking-wider">Type</th>
-                  <th className="text-left px-4 py-3 font-bold uppercase text-[10px] tracking-wider">Note / Ref</th>
-                  <th className="text-right px-4 py-3 font-bold uppercase text-[10px] tracking-wider text-red-600 dark:text-red-400">Debit (Advance)</th>
-                  <th className="text-right px-4 py-3 font-bold uppercase text-[10px] tracking-wider text-green-600 dark:text-green-400">Credit (Debt)</th>
-                  <th className="text-right px-4 py-3 font-bold uppercase text-[10px] tracking-wider">Balance</th>
+                <tr className="h-8 bg-neutral-50/50 dark:bg-white/[0.02] border-b border-neutral-200 dark:border-white/[0.08]">
+                  <th className="px-3.5 text-[11px] font-medium uppercase text-neutral-500 dark:text-neutral-400 tracking-wider">Date & Time</th>
+                  <th className="px-3.5 text-[11px] font-medium uppercase text-neutral-500 dark:text-neutral-400 tracking-wider">Type</th>
+                  <th className="px-3.5 text-[11px] font-medium uppercase text-neutral-500 dark:text-neutral-400 tracking-wider">Note / Ref</th>
+                  <th className="px-3.5 text-[11px] font-medium uppercase text-neutral-500 dark:text-neutral-400 tracking-wider text-right">Debit</th>
+                  <th className="px-3.5 text-[11px] font-medium uppercase text-neutral-500 dark:text-neutral-400 tracking-wider text-right">Credit</th>
+                  <th className="px-3.5 text-[11px] font-medium uppercase text-neutral-500 dark:text-neutral-400 tracking-wider text-right">Balance</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-surface">
+              <tbody className="divide-y divide-neutral-100 dark:divide-white/[0.04]">
                 {pageItems.map(entry => {
-                  const meta = TYPE_LABELS[entry.type] || { label: entry.type, color: 'bg-gray-100 text-gray-600' };
+                  const meta = LEDGER_TYPE_LABELS[entry.type] || { label: entry.type, color: 'bg-neutral-100 text-neutral-600 dark:bg-white/[0.06] dark:text-neutral-300' };
                   return (
-                    <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <td className="px-4 py-3.5 text-gray-600 dark:text-gray-400 whitespace-nowrap font-medium">
+                    <tr key={entry.id} className="h-10 hover:bg-neutral-50/50 dark:hover:bg-white/[0.02] transition-colors">
+                      <td className="px-3.5 text-neutral-600 dark:text-neutral-400 whitespace-nowrap font-mono text-[12px]">
                         {formatAppDateTime(entry.createdAt)}
                       </td>
-                      <td className="px-4 py-3.5">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${meta.color}`}>
+                      <td className="px-3.5">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-neutral-100 dark:bg-white/[0.06] text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/[0.08]">
                           {meta.label}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5 text-gray-500 dark:text-gray-400 max-w-[150px] truncate">
+                      <td className="px-3.5 text-neutral-700 dark:text-neutral-300 max-w-[150px] truncate">
                         {entry.note || entry.reference || '—'}
                       </td>
-                      <td className="px-4 py-3.5 text-right font-black">
-                        {entry.debit > 0
-                          ? <span className="text-red-600 dark:text-red-400">{formatCurrency(entry.debit, currency)}</span>
-                          : <span className="text-gray-300 dark:text-gray-700">—</span>}
+                      <td className="px-3.5 text-right font-mono tabular-nums text-[13px]">
+                        {entry.debit > 0 ? (
+                          <span className="text-rose-500 font-medium">{formatCurrency(entry.debit, currency)}</span>
+                        ) : <span className="text-neutral-400 opacity-40">—</span>}
                       </td>
-                      <td className="px-4 py-3.5 text-right font-black">
-                        {entry.credit > 0
-                          ? <span className="text-green-600 dark:text-green-400">{formatCurrency(entry.credit, currency)}</span>
-                          : <span className="text-gray-300 dark:text-gray-700">—</span>}
+                      <td className="px-3.5 text-right font-mono tabular-nums text-[13px]">
+                        {entry.credit > 0 ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">{formatCurrency(entry.credit, currency)}</span>
+                        ) : <span className="text-neutral-400 opacity-40">—</span>}
                       </td>
-                      <td className={`px-4 py-3.5 text-right font-black text-sm ${entry.balanceAfter > 0 ? 'text-amber-600 dark:text-amber-400' : entry.balanceAfter < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                        {formatCurrency(Math.abs(entry.balanceAfter), currency)}
+                      <td className="px-3.5 text-right font-mono tabular-nums font-semibold text-[13px]">
+                        <span className={entry.balanceAfter > 0 ? 'text-amber-600 dark:text-amber-400' : entry.balanceAfter < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-neutral-900 dark:text-white'}>
+                          {formatCurrency(Math.abs(entry.balanceAfter), currency)}
+                        </span>
                         {entry.balanceAfter !== 0 && (
-                          <span className="text-[9px] ml-1 opacity-70 uppercase tracking-tighter">
+                          <span className="text-[9px] ml-1 opacity-70 uppercase">
                             {entry.balanceAfter > 0 ? 'DR' : 'CR'}
                           </span>
                         )}
@@ -286,29 +267,30 @@ export function CustomerLedgerTab({ customer }: Props) {
               </tbody>
             </table>
           </div>
-          {totalPages > 1 && (
-            <div className="pt-2">
-              <Pagination page={page} totalPages={totalPages} onPageChange={goToPage}
-                pageSize={pageSize} onPageSizeChange={setPageSize} totalItems={filteredEntries.length} />
-            </div>
-          )}
-        </>
-      )}
+        )}
+
+        {/* Pinned Pagination Footer */}
+        <div className="px-3.5 py-2.5 bg-neutral-50/50 dark:bg-white/[0.01] border-t border-neutral-200 dark:border-white/[0.08] flex items-center justify-between text-[11px] text-neutral-500 font-mono mt-auto">
+          <span>
+            Showing {filteredEntries.length === 0 ? '0 of 0' : `${((page - 1) * pageSize) + 1}–${Math.min(page * pageSize, filteredEntries.length)} of ${filteredEntries.length}`}
+          </span>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            totalItems={filteredEntries.length}
+            mode="numbered"
+          />
+        </div>
+      </div>
 
       {isReceiveModalOpen && (
-        <ReceivePaymentModal 
-          customer={customer} 
-          onClose={() => setIsReceiveModalOpen(false)} 
-          onSuccess={() => load()} 
-        />
+        <ReceivePaymentModal customer={customer} onClose={() => setIsReceiveModalOpen(false)} onSuccess={() => load()} />
       )}
       {isRefundModalOpen && (
-        <RefundCustomerModal 
-          customer={customer} 
-          onClose={() => setIsRefundModalOpen(false)} 
-          onSuccess={() => load()} 
-          initialAmount={Math.abs(balance)}
-        />
+        <RefundCustomerModal customer={customer} onClose={() => setIsRefundModalOpen(false)} onSuccess={() => load()} initialAmount={Math.abs(balance)} />
       )}
     </div>
   );

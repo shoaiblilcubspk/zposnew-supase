@@ -89,98 +89,101 @@ export function SalesReport({
         currency={currency}
       />
 
-      {(wholesaleEnabled) && (
-        <div className="mt-6">
-          <h3 className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-            {"Sale Mode Performance"}
+      {wholesaleEnabled && (
+        <div className="mt-4">
+          <h3 className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2.5">
+            Sale Mode Performance
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {(retailEnabled ?? true) && (
-              <div className="p-5 rounded-3xl border border-blue-500/20 bg-blue-500/5 shadow-sm relative overflow-hidden group hover:border-blue-500/40 transition-all">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 opacity-10 rounded-bl-full group-hover:scale-110 transition-transform duration-500" />
-                <div className="relative z-10 space-y-1">
-                  <span className="text-[10px] font-black text-blue-600/70 uppercase tracking-widest">{"Retail Sales"} ({retailCount})</span>
-                  <p className="text-2xl font-black text-blue-600">{formatCurrency(retailVol, currency)}</p>
-                  <p className="text-[9px] font-bold text-gray-500 mt-2">{"Direct sales to walk-in or retail customers"}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[
+              (retailEnabled ?? true) && { label: `Retail Sales (${retailCount})`, val: retailVol, desc: "Direct sales to walk-in or retail customers" },
+              wholesaleEnabled && { label: `Wholesale Sales (${wholesaleCount})`, val: wholesaleVol, desc: "Bulk orders to businesses and vendors" }
+            ].filter(Boolean).map((card: any, idx) => (
+              <div key={idx} className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                    {card.label}
+                  </span>
                 </div>
-              </div>
-            )}
-            {wholesaleEnabled && (
-              <div className="p-5 rounded-3xl border border-purple-500/20 bg-purple-500/5 shadow-sm relative overflow-hidden group hover:border-purple-500/40 transition-all">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-600 opacity-10 rounded-bl-full group-hover:scale-110 transition-transform duration-500" />
-                <div className="relative z-10 space-y-1">
-                  <span className="text-[10px] font-black text-purple-600/70 uppercase tracking-widest">{"Wholesale Sales"} ({wholesaleCount})</span>
-                  <p className="text-2xl font-black text-purple-600">{formatCurrency(wholesaleVol, currency)}</p>
-                  <p className="text-[9px] font-bold text-gray-500 mt-2">{"Bulk orders to businesses and vendors"}</p>
+                <div className="mt-2 text-xl font-bold font-mono text-neutral-900 dark:text-white tabular-nums">
+                  {formatCurrency(card.val, currency)}
                 </div>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+                  {card.desc}
+                </p>
               </div>
-            )}
+            ))}
           </div>
         </div>
       )}
 
-      <div className="mt-8">
-        <h3 className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-          {"Expected Wallet Balances (Sales − Expenses)"}
+      <div className="mt-4">
+        <h3 className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2.5">
+          Expected Wallet Balances (Sales − Expenses)
         </h3>
-        <div className={`grid grid-cols-1 sm:grid-cols-3 ${walletStats.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4 lg:gap-6`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-3 ${walletStats.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-3`}>
           {walletStats.map(wallet => (
-            <div key={wallet.method} className={`p-5 rounded-3xl border border-white/10 shadow-xl transition-all group overflow-hidden relative ${
-                wallet.method === 'cash' ? 'bg-gradient-to-br from-emerald-500 to-teal-700' :
-                wallet.method === 'card' ? 'bg-gradient-to-br from-blue-500 to-indigo-700' :
-                wallet.method === 'credit' ? 'bg-gradient-to-br from-amber-600 to-orange-800' :
-                'bg-gradient-to-br from-cyan-600 to-blue-800'
-              }`}>
-              <div className="absolute top-0 right-0 w-24 h-24 opacity-20 transition-opacity group-hover:opacity-40 bg-white"></div>
-              <div className="space-y-3 relative z-10 text-white">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-black text-white uppercase tracking-wider">{wallet.method.replace('_', ' ')}</span>
-                  <span className="text-[8px] font-black uppercase tracking-widest bg-white/20 px-1.5 py-0.5 rounded-md">Wallet</span>
+            <div
+              key={wallet.method}
+              className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-white/[0.06]">
+                <span className="text-[12px] font-semibold uppercase tracking-wider text-neutral-900 dark:text-white">
+                  {wallet.method.replace('_', ' ')}
+                </span>
+                <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-white/[0.06] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-white/[0.06]">
+                  Wallet
+                </span>
+              </div>
+
+              <div className="space-y-1.5 pt-2.5">
+                <div className="flex justify-between items-center text-[12px]">
+                  <span className="text-neutral-500 dark:text-neutral-400">Sales</span>
+                  <span className="font-mono tabular-nums font-medium text-neutral-900 dark:text-white">
+                    +{formatCurrency(wallet.sales, currency)}
+                  </span>
                 </div>
-                
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-end">
-                    <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">{"Sales"}</span>
-                    <span className="text-xs font-black text-white">+{formatCurrency(wallet.sales, currency)}</span>
-                  </div>
-                  
-                  <div className="pl-2 border-l border-white/10 space-y-0.5 text-[8px] text-white/70 font-bold">
-                    {(retailEnabled ?? true) && (wallet.retailSales > 0 || (wallet.retailSales === 0 && wallet.wholesaleSales === 0)) && (
-                      <div className="flex justify-between items-center">
-                        <span>Retail</span>
-                        <span>{formatCurrency(wallet.retailSales, currency)}</span>
-                      </div>
-                    )}
-                    {wholesaleEnabled && wallet.wholesaleSales > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span>Wholesale</span>
-                        <span>{formatCurrency(wallet.wholesaleSales, currency)}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {wallet.method !== 'credit' && (
-                    <div className="flex justify-between items-end pt-1">
-                      <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">{"Expenses"}</span>
-                      <span className="text-xs font-black text-white">-{formatCurrency(wallet.expenses + wallet.refunds, currency)}</span>
+
+                <div className="pl-2 border-l border-neutral-200 dark:border-white/[0.08] space-y-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+                  {(retailEnabled ?? true) && (wallet.retailSales > 0 || (wallet.retailSales === 0 && wallet.wholesaleSales === 0)) && (
+                    <div className="flex justify-between items-center">
+                      <span>Retail</span>
+                      <span className="font-mono tabular-nums">{formatCurrency(wallet.retailSales, currency)}</span>
                     </div>
                   )}
-                  {wallet.method === 'credit' && (
-                    <div className="flex justify-between items-end pt-1">
-                      <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">{"Recovered"}</span>
-                      <span className="text-xs font-black text-white">-{formatCurrency(wallet.customerPayments || 0, currency)}</span>
+                  {wholesaleEnabled && wallet.wholesaleSales > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span>Wholesale</span>
+                      <span className="font-mono tabular-nums">{formatCurrency(wallet.wholesaleSales, currency)}</span>
                     </div>
                   )}
                 </div>
-                
-                <div className="pt-3 mt-1 border-t border-white/20">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black text-white/90 uppercase tracking-widest">{wallet.method === 'credit' ? "Pending Debt" : "Expected"}</span>
-                    <span className="text-lg font-black text-white">{formatCurrency(wallet.net, currency)}</span>
+
+                {wallet.method !== 'credit' && (
+                  <div className="flex justify-between items-center text-[12px] pt-1">
+                    <span className="text-neutral-500 dark:text-neutral-400">Expenses</span>
+                    <span className="font-mono tabular-nums font-medium text-rose-500">
+                      -{formatCurrency(wallet.expenses + wallet.refunds, currency)}
+                    </span>
                   </div>
-                </div>
+                )}
+                {wallet.method === 'credit' && (
+                  <div className="flex justify-between items-center text-[12px] pt-1">
+                    <span className="text-neutral-500 dark:text-neutral-400">Recovered</span>
+                    <span className="font-mono tabular-nums font-medium text-primary">
+                      -{formatCurrency(wallet.customerPayments || 0, currency)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2.5 mt-2.5 border-t border-neutral-200 dark:border-white/[0.06] flex justify-between items-baseline">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  {wallet.method === 'credit' ? 'Pending Debt' : 'Expected'}
+                </span>
+                <span className="text-base font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+                  {formatCurrency(wallet.net, currency)}
+                </span>
               </div>
             </div>
           ))}
@@ -196,29 +199,33 @@ export function SalesReport({
       />
 
       {(wholesaleEnabled) && saleTypeData.length > 0 && (
-        <div className="card p-6">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-            <ShoppingBag className="h-5 w-5 mr-2 text-blue-600" />{"Sale Type Breakdown"}
-          </h3>
-          <div className="flex flex-col lg:flex-row items-center gap-8">
-            <div className="w-full lg:w-1/2 h-[250px]">
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-4 shadow-none">
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-neutral-200 dark:border-white/[0.06]">
+            <span className="text-[12px] font-semibold text-neutral-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <ShoppingBag className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+              Sale Type Breakdown
+            </span>
+            <span className="text-[11px] text-neutral-500 font-mono">Retail vs Wholesale</span>
+          </div>
+          <div className="flex flex-col lg:flex-row items-center gap-6">
+            <div className="w-full lg:w-1/2 h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={saleTypeData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                    {saleTypeData.map((_, index) => (<Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#ec4899'][index % 3]} />))}
+                  <Pie data={saleTypeData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={4} dataKey="value">
+                    {saleTypeData.map((_, index) => (<Cell key={`cell-${index}`} fill={['#10b981', '#6b7280', '#3b82f6'][index % 3]} />))}
                   </Pie>
-                  <Tooltip formatter={(val: number) => formatCurrency(val, currency)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', backgroundColor: theme === 'dark' ? '#171717' : 'white', color: theme === 'dark' ? '#fff' : '#000' }} />
+                  <Tooltip formatter={(val: number) => formatCurrency(val, currency)} contentStyle={{ borderRadius: '6px', border: theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e5e7eb', boxShadow: 'none', backgroundColor: theme === 'dark' ? '#141414' : 'white', color: theme === 'dark' ? '#fff' : '#000', fontSize: '12px' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="w-full lg:w-1/2 space-y-3">
+            <div className="w-full lg:w-1/2 space-y-2">
               {saleTypeData.map((type, index) => (
-                <div key={type.name} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-transparent hover:border-gray-200 dark:hover:border-white/10 transition-all">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: ['#3b82f6', '#8b5cf6', '#ec4899'][index % 3] }} />
-                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300 capitalize">{type.name}</span>
+                <div key={type.name} className="flex items-center justify-between px-3 py-2 bg-neutral-50 dark:bg-white/[0.02] rounded border border-neutral-200 dark:border-white/[0.06]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ['#10b981', '#6b7280', '#3b82f6'][index % 3] }} />
+                    <span className="text-[13px] font-medium text-neutral-800 dark:text-neutral-200 capitalize">{type.name}</span>
                   </div>
-                  <span className="font-black text-gray-900 dark:text-white">{formatCurrency(type.value, currency)}</span>
+                  <span className="font-mono tabular-nums font-semibold text-neutral-900 dark:text-white text-[13px]">{formatCurrency(type.value, currency)}</span>
                 </div>
               ))}
             </div>
@@ -233,33 +240,49 @@ export function SalesReport({
         users={users}
       />
 
-      <div className="card overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
-            <ShoppingCart className="h-5 w-5 mr-2 text-green-600" />{"Top Selling Products"}
-          </h3>
+      <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md overflow-hidden shadow-none">
+        <div className="px-3.5 py-2.5 border-b border-neutral-200 dark:border-white/[0.06] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+            <h3 className="text-[13px] font-semibold text-neutral-900 dark:text-white uppercase tracking-wider">
+              Top Selling Products
+            </h3>
+          </div>
+          <span className="text-[11px] font-mono text-neutral-500">By volume & revenue</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="table">
-            <thead className="table-header">
-              <tr>
-                <th className="table-header-cell hidden sm:table-cell">{"Rank"}</th>
-                <th className="table-header-cell">{"Product"}</th>
-                <th className="table-header-cell">{"Quantity Sold"}</th>
-                <th className="table-header-cell">{"Revenue"}</th>
-                <th className="table-header-cell hidden sm:table-cell">{"Avg. Price"}</th>
+          <table className="w-full text-left border-collapse text-[13px]">
+            <thead>
+              <tr className="bg-neutral-50 dark:bg-white/[0.02] border-b border-neutral-200 dark:border-white/[0.06] h-8">
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 w-12 hidden sm:table-cell">#</th>
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500">Product</th>
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 text-center">Qty Sold</th>
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 text-right">Revenue</th>
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 text-right hidden sm:table-cell">Avg. Price</th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-surface divide-y divide-gray-200 dark:divide-white/5">
-              {topProducts.map((product, index) => (
-                <tr key={index} className="table-row">
-                  <td className="table-cell hidden sm:table-cell">
-                    <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-full font-bold text-sm">{index + 1}</div>
+            <tbody className="divide-y divide-neutral-100 dark:divide-white/[0.04]">
+              {topProducts.length === 0 ? (
+                <tr><td colSpan={5} className="px-3 py-8 text-center text-neutral-500 text-[12px]">No product sales recorded in this period.</td></tr>
+              ) : topProducts.map((product, index) => (
+                <tr key={index} className="h-9 hover:bg-neutral-50 dark:hover:bg-white/[0.02] transition-colors">
+                  <td className="px-3 hidden sm:table-cell">
+                    <span className="w-5 h-5 rounded flex items-center justify-center text-[11px] font-mono text-neutral-500 bg-neutral-100 dark:bg-white/[0.06] border border-neutral-200 dark:border-white/[0.06]">
+                      {index + 1}
+                    </span>
                   </td>
-                  <td className="table-cell font-semibold text-gray-900 dark:text-white">{product.name}</td>
-                  <td className="table-cell"><span className="badge badge-emerald-light">{product.quantity}</span></td>
-                  <td className="table-cell font-semibold text-green-600">{formatCurrency(product.revenue, currency)}</td>
-                  <td className="table-cell text-gray-600 dark:text-gray-400 hidden sm:table-cell">{formatCurrency(product.revenue / product.quantity, currency)}</td>
+                  <td className="px-3 font-medium text-neutral-900 dark:text-white">{product.name}</td>
+                  <td className="px-3 text-center">
+                    <span className="font-mono tabular-nums text-[12px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-white/[0.06] text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/[0.06]">
+                      {product.quantity}
+                    </span>
+                  </td>
+                  <td className="px-3 font-mono tabular-nums font-semibold text-neutral-900 dark:text-white text-right">
+                    {formatCurrency(product.revenue, currency)}
+                  </td>
+                  <td className="px-3 font-mono tabular-nums text-neutral-600 dark:text-neutral-400 text-right hidden sm:table-cell">
+                    {formatCurrency(product.quantity > 0 ? product.revenue / product.quantity : 0, currency)}
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -56,7 +56,7 @@ export function BundleCard({
   return (
     <div
       key={bundle.id}
-      className={`bg-white dark:bg-surface rounded-2xl border transition-all ${bundle.active ? 'border-gray-200 dark:border-white/5' : 'border-gray-100 dark:border-white/[0.02] opacity-60'} overflow-visible shadow-sm`}
+      className={`bg-white dark:bg-surface rounded-md border transition-colors ${bundle.active ? 'border-neutral-200 dark:border-white/[0.08]' : 'border-neutral-200/50 dark:border-white/[0.04] opacity-60'} overflow-visible shadow-none`}
     >
       <BundleCardDesktop
         bundle={bundle}

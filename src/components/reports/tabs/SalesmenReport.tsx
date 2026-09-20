@@ -1,7 +1,7 @@
 import { TrendingUp, Users, DollarSign, ShoppingBag, Star } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line, ResponsiveContainer } from 'recharts';
 import { formatCurrency, getCurrencySymbol } from '../../../lib/currencies';
-import { EmptyState, Avatar } from '../../../shared/ui';
+import { EmptyState, Avatar, Pagination, usePagination } from '../../../shared/ui';
 import { ExportButton } from '../../../shared/export';
 import { useMemo } from 'react';
 
@@ -53,75 +53,82 @@ export function SalesmenReport({ salesmanData, currency, theme }: SalesmenReport
     return [...salesmanData].sort((a, b) => b.totalSales - a.totalSales);
   }, [salesmanData]);
 
+  const { page, totalPages, pageItems, goToPage, pageSize, setPageSize } = usePagination(sortedData, 20);
+
   if (!salesmanData || salesmanData.length === 0) {
     return (
       <EmptyState
-        icon={<Users className="h-10 w-10" />}
-        title={"No Insights Found"}
-        subtext={"We couldn't find any salesman records for the selected period."}
-        className="min-h-[400px] bg-white/50 dark:bg-white/5 rounded-[2.5rem] border border-dashed border-gray-200 dark:border-white/10 p-12"
+        icon={<Users className="h-8 w-8 text-neutral-400" />}
+        title="No Insights Found"
+        subtext="We couldn't find any salesman records for the selected period."
+        className="min-h-[300px] bg-white dark:bg-surface rounded-md border border-dashed border-neutral-200 dark:border-white/[0.08] p-8 shadow-none"
       />
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Stat Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* Total Salesmen */}
-        <div className="stat-card bg-gradient-to-br from-indigo-500 to-blue-600 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Active Salesmen"}</span>
-            <span className="stat-card-value">{totalSalesmen}</span>
-            <div className="flex items-center gap-1 mt-2">
-              <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[8px] font-black text-white uppercase tracking-tighter">{"In Period"}</span>
-            </div>
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Active Salesmen</span>
+            <Users className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <Users className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {totalSalesmen}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono">Assigned staff</p>
         </div>
 
         {/* Total Revenue */}
-        <div className="stat-card bg-gradient-to-br from-emerald-500 to-teal-600 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Salesmen Revenue"}</span>
-            <span className="stat-card-value">{formatCurrency(totalSales, currency)}</span>
-            <div className="flex items-center gap-1 mt-2">
-              <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[8px] font-black text-white uppercase tracking-tighter">{"Current Range"}</span>
-            </div>
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Salesmen Revenue</span>
+            <DollarSign className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <DollarSign className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {formatCurrency(totalSales, currency)}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono">Current range</p>
         </div>
 
         {/* Total Orders */}
-        <div className="stat-card bg-gradient-to-br from-amber-500 to-orange-600 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Total Invoices"}</span>
-            <span className="stat-card-value">{totalOrders}</span>
-            <div className="flex items-center gap-1 mt-2">
-              <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[8px] font-black text-white uppercase tracking-tighter">{"Current Range"}</span>
-            </div>
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Total Invoices</span>
+            <ShoppingBag className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <ShoppingBag className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {totalOrders}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono">Transactions</p>
         </div>
 
         {/* Avg Value */}
-        <div className="stat-card bg-gradient-to-br from-rose-500 to-pink-600 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Avg. Transaction"}</span>
-            <span className="stat-card-value">{formatCurrency(avgOrderValue, currency)}</span>
-            <div className="flex items-center gap-1 mt-2">
-              <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[8px] font-black text-white uppercase tracking-tighter">{"Per Transaction"}</span>
-            </div>
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Avg. Ticket</span>
+            <Star className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <Star className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {formatCurrency(avgOrderValue, currency)}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono">Per transaction</p>
         </div>
       </div>
+
       {/* Salesman Chart */}
-      <div className="bg-white dark:bg-surface rounded-[2.5rem] border border-gray-200 dark:border-white/5 p-6 shadow-sm">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-          <TrendingUp className="h-5 w-5 mr-2 text-primary" />{"Top Salesmen Revenue"}
-        </h3>
-        <ResponsiveContainer width="100%" height={window.innerWidth < 768 ? 240 : 300}>
+      <div className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] p-4 shadow-none">
+        <div className="flex items-center justify-between pb-3 mb-3 border-b border-neutral-200 dark:border-white/[0.06]">
+          <span className="text-[12px] font-semibold text-neutral-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+            Top Salesmen Revenue
+          </span>
+          <span className="text-[11px] text-neutral-500 font-mono">Attribution</span>
+        </div>
+        <ResponsiveContainer width="100%" height={240}>
           <LineChart data={sortedData.slice(0, 10).map(s => {
             const safeName = s.name || 'Unknown';
             return { 
@@ -130,60 +137,69 @@ export function SalesmenReport({ salesmanData, currency, theme }: SalesmenReport
               transactions: s.totalTransactions 
             };
           })}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="name" stroke={theme === 'dark' ? '#9ca3af' : '#6b7280'} fontSize={12} />
-            <YAxis stroke={theme === 'dark' ? '#9ca3af' : '#6b7280'} fontSize={12} />
+            <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#262626' : '#f0f0f0'} />
+            <XAxis dataKey="name" stroke={theme === 'dark' ? '#737373' : '#a3a3a3'} fontSize={11} tickLine={false} />
+            <YAxis stroke={theme === 'dark' ? '#737373' : '#a3a3a3'} fontSize={11} tickLine={false} />
             <Tooltip formatter={(value: any, name: string) => [name === 'revenue' ? formatCurrency(Number(value), currency) : value, name === 'revenue' ? "Revenue" : "Transactions"]} contentStyle={tooltipStyle} itemStyle={{ color: theme === 'dark' ? '#e5e7eb' : '#4b5563' }} />
-            <Legend />
-            <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} name={"Revenue"} dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }} activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2 }} />
+            <Legend wrapperStyle={{ fontSize: '11px' }} />
+            <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} name={"Revenue"} dot={false} activeDot={{ r: 4 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
       {/* Salesman Analytics Table */}
-      <div className="bg-white dark:bg-surface rounded-[2.5rem] border border-gray-200 dark:border-white/5 overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
-            <Users className="h-5 w-5 mr-2 text-primary" />{"Salesman Analytics"}
-          </h3>
+      <div className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] overflow-hidden shadow-none min-h-[calc(100vh-360px)] flex flex-col justify-between">
+        <div className="px-3.5 py-2.5 border-b border-neutral-200 dark:border-white/[0.06] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+            <h3 className="text-[13px] font-semibold text-neutral-900 dark:text-white uppercase tracking-wider">
+              Salesman Analytics ({sortedData.length})
+            </h3>
+          </div>
           <ExportButton
             data={exportRows}
             columns={exportColumns}
             title={"Salesmen Report"}
             currencySymbol={getCurrencySymbol(currency)}
-            className="!min-h-0 !px-4 !py-2.5 !rounded-xl !text-[10px] !font-black !bg-gray-100 dark:!bg-white/5 !text-gray-600 dark:!text-gray-400 !border-gray-200 dark:!border-white/5 hover:!text-primary"
+            className="!min-h-0 !h-7 !px-2.5 !rounded !text-[11px] !bg-neutral-100 dark:!bg-white/[0.06] !text-neutral-700 dark:!text-neutral-300 !border-neutral-200 dark:!border-white/[0.08] hover:!bg-neutral-200 dark:hover:!bg-white/[0.1] shadow-none"
           />
         </div>
 
         {/* Desktop Table */}
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/5">
-              <tr>
-                <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-400">{"Salesman"}</th>
-                <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-400">{"Total Sales"}</th>
-                <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-400 hidden sm:table-cell">{"Transactions"}</th>
-                <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-400 hidden md:table-cell">{"Items Sold"}</th>
-                <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-400 hidden md:table-cell">{"Avg. Transaction"}</th>
+        <div className="hidden lg:block overflow-x-auto flex-1">
+          <table className="w-full text-left border-collapse text-[13px]">
+            <thead>
+              <tr className="bg-neutral-50 dark:bg-white/[0.02] border-b border-neutral-200 dark:border-white/[0.06] h-8">
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500">Salesman</th>
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 text-right">Total Sales</th>
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 text-center hidden sm:table-cell">Invoices</th>
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 text-center hidden md:table-cell">Items Sold</th>
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 text-right hidden md:table-cell">Avg. Ticket</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-              {sortedData.map(salesman => (
-                <tr key={salesman.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Avatar name={salesman.name} size="sm" shape="square" className="font-bold text-sm rounded-xl from-emerald-500 to-teal-600 mr-3 shadow-sm" />
-                        <span className="font-semibold text-gray-900 dark:text-white">{salesman.name}</span>
-                      </div>
+            <tbody className="divide-y divide-neutral-100 dark:divide-white/[0.04]">
+              {pageItems.map(salesman => (
+                <tr key={salesman.id} className="h-9 hover:bg-neutral-50 dark:hover:bg-white/[0.02] transition-colors">
+                  <td className="px-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <Avatar name={salesman.name} size="sm" shape="square" className="rounded" />
+                      <span className="font-medium text-neutral-900 dark:text-white text-[13px]">{salesman.name}</span>
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="font-black text-primary dark:text-emerald-400">
-                      {formatCurrency(salesman.totalSales, currency)}
+                  <td className="px-3 whitespace-nowrap text-right font-mono tabular-nums font-semibold text-neutral-900 dark:text-white text-[13px]">
+                    {formatCurrency(salesman.totalSales, currency)}
+                  </td>
+                  <td className="px-3 whitespace-nowrap text-center hidden sm:table-cell">
+                    <span className="font-mono tabular-nums text-[12px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-white/[0.06] text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/[0.06]">
+                      {salesman.totalTransactions}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap hidden sm:table-cell"><span className="px-2 py-1 rounded-lg bg-emerald-100 dark:bg-primary/10 text-primary text-[10px] font-black">{salesman.totalTransactions}</span></td>
-                  <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell"><span className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 text-[10px] font-black">{salesman.totalItems}</span></td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400 hidden md:table-cell font-bold">{formatCurrency(salesman.avgTransactionValue, currency)}</td>
+                  <td className="px-3 whitespace-nowrap text-center hidden md:table-cell font-mono tabular-nums text-[12px] text-neutral-600 dark:text-neutral-400">
+                    {salesman.totalItems}
+                  </td>
+                  <td className="px-3 whitespace-nowrap text-right text-neutral-600 dark:text-neutral-400 hidden md:table-cell font-mono tabular-nums">
+                    {formatCurrency(salesman.avgTransactionValue, currency)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -191,38 +207,41 @@ export function SalesmenReport({ salesmanData, currency, theme }: SalesmenReport
         </div>
 
         {/* Mobile Cards */}
-        <div className="lg:hidden divide-y divide-gray-100 dark:divide-white/[0.05]">
-          {sortedData.map(salesman => (
-            <div key={salesman.id} className="p-4 active:bg-gray-50 dark:active:bg-white/5 transition-colors">
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-3">
-                  <Avatar name={salesman.name} size="md" shape="square" className="text-sm from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20" />
-                  <div>
-                    <p className="text-sm font-black text-gray-900 dark:text-white leading-tight">{salesman.name}</p>
-                  </div>
+        <div className="lg:hidden divide-y divide-neutral-100 dark:divide-white/[0.04] flex-1">
+          {pageItems.map(salesman => (
+            <div key={salesman.id} className="p-3">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2">
+                  <Avatar name={salesman.name} size="sm" shape="square" className="rounded" />
+                  <p className="text-[13px] font-medium text-neutral-900 dark:text-white leading-tight">{salesman.name}</p>
                 </div>
-                <div className="flex flex-col items-end">
-                  <p className="text-base font-black text-primary dark:text-emerald-400">
+                <div className="text-right">
+                  <p className="text-[13px] font-mono tabular-nums font-bold text-neutral-900 dark:text-white">
                     {formatCurrency(salesman.totalSales, currency)}
                   </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 mt-2">
-                <div className="bg-gray-50 dark:bg-white/5 p-2 rounded-xl text-center">
-                  <p className="text-[8px] font-black text-gray-600 uppercase mb-0.5">{"Trans."}</p>
-                  <p className="text-xs font-black text-gray-900 dark:text-white">{salesman.totalTransactions}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-white/5 p-2 rounded-xl text-center">
-                  <p className="text-[8px] font-black text-gray-600 uppercase mb-0.5">{"Items"}</p>
-                  <p className="text-xs font-black text-gray-900 dark:text-white">{salesman.totalItems}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-white/5 p-2 rounded-xl text-center">
-                  <p className="text-[8px] font-black text-gray-600 uppercase mb-0.5">{"Average"}</p>
-                  <p className="text-xs font-black text-gray-900 dark:text-white">{formatCurrency(salesman.avgTransactionValue, currency)}</p>
+                  <p className="text-[10px] font-mono text-neutral-500">{salesman.totalTransactions} bills</p>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Pinned Pagination Footer */}
+        <div className="px-3 py-2 bg-neutral-50 dark:bg-white/[0.02] border-t border-neutral-200 dark:border-white/[0.08] flex items-center justify-between gap-4 mt-auto">
+          <p className="hidden sm:block text-[11px] text-neutral-500 font-mono">
+            Showing {sortedData.length > 0 ? ((page - 1) * pageSize) + 1 : 0}–{Math.min(page * pageSize, sortedData.length)} of {sortedData.length}
+          </p>
+          <div className="mx-auto sm:mx-0">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={goToPage}
+              totalItems={sortedData.length}
+              mode="numbered"
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
         </div>
       </div>
     </div>

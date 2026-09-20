@@ -37,24 +37,29 @@ export async function fetchAllPages(queryFn: () => any, limit = 1000): Promise<a
  * Prevents invoice number collisions between multiple offline devices.
  */
 export const getDeviceId = (): string => {
-  const existing = localStorage.getItem('deviceId');
-  if (existing) return existing;
+  if (typeof localStorage !== 'undefined') {
+    const existing = localStorage.getItem('deviceId');
+    if (existing) return existing;
 
-  const newId = Math.random().toString(36).substring(2, 6).toUpperCase();
-  localStorage.setItem('deviceId', newId);
-  return newId;
+    const newId = Math.random().toString(36).substring(2, 6).toUpperCase();
+    localStorage.setItem('deviceId', newId);
+    return newId;
+  }
+  return 'DEV1';
 };
 
-// Generate invoice number utility
+// Generate invoice number utility with device disambiguation
 export function getNextInvoiceNumber(settings: AppSettings): string {
   const nextCounter = settings.invoiceCounter + 1;
-  return `${settings.invoicePrefix}-${nextCounter.toString().padStart(6, '0')}`;
+  const deviceCode = getDeviceId();
+  return `${settings.invoicePrefix || 'INV'}-${deviceCode}-${nextCounter.toString().padStart(6, '0')}`;
 }
 
 // Generate next invoice number and return data for updating settings
 export function generateNextInvoiceNumber(settings: AppSettings): { invoiceNumber: string; newCounter: number } {
   const newCounter = settings.invoiceCounter + 1;
-  const invoiceNumber = `${settings.invoicePrefix}-${newCounter.toString().padStart(6, '0')}`;
+  const deviceCode = getDeviceId();
+  const invoiceNumber = `${settings.invoicePrefix || 'INV'}-${deviceCode}-${newCounter.toString().padStart(6, '0')}`;
   return { invoiceNumber, newCounter };
 }
 

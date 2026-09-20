@@ -25,125 +25,115 @@ export function InventoryReportMobileTable({
   const totalGrossProfit = allData.reduce((s, p) => s + p.grossProfit, 0);
 
   return (
-    <div className="lg:hidden space-y-4">
-      {data.map(item => (
-        <div key={item.id} onClick={() => onToggleRow(item.id)} className="bg-white dark:bg-zinc-900/60 p-4 rounded-3xl border border-gray-200/50 dark:border-white/5 shadow-sm active:scale-[0.98] transition-all">
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-primary/10 text-primary rounded-xl">
-                <Package className="w-5 h-5" />
-              </div>
+    <div className="lg:hidden min-h-[calc(100vh-340px)] flex flex-col justify-between space-y-3">
+      <div className="flex-1 space-y-3">
+        {data.map(item => (
+        <div key={item.id} onClick={() => onToggleRow(item.id)} className="bg-white dark:bg-surface p-3.5 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none active:scale-[0.99] transition-all">
+          <div className="flex justify-between items-start mb-2.5">
+            <div className="flex items-center gap-2.5">
+              <Package className="w-4 h-4 text-neutral-400 dark:text-neutral-500 shrink-0" />
               <div>
-                <h4 className="text-sm font-black text-gray-900 dark:text-white leading-tight">{item.name}</h4>
-                <p className="text-[10px] font-bold text-gray-600 uppercase tracking-tighter">{item.sku} • {item.category}</p>
+                <h4 className="text-[13px] font-medium text-neutral-900 dark:text-white leading-tight">{item.name}</h4>
+                <p className="text-[11px] text-neutral-500 font-mono mt-0.5">{item.sku} • {item.category}</p>
               </div>
             </div>
             <StatusBadge status={item.stockStatus} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 py-3 border-y border-gray-200 dark:border-white/5">
+          <div className="grid grid-cols-2 gap-3 py-2.5 border-y border-neutral-100 dark:border-white/[0.04]">
             <div>
-              <p className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-1">{"Stock Position"}</p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-base font-black text-gray-900 dark:text-white">{item.isInfinite ? '∞' : item.stock}</span>
-                {!item.isInfinite && <span className="text-[10px] text-gray-600">/ {"min"} {item.minStock}</span>}
+              <p className="text-[10px] font-medium text-neutral-500 uppercase tracking-wider mb-0.5">{"Stock Position"}</p>
+              <div className="flex items-baseline gap-1 font-mono">
+                <span className="text-sm font-semibold text-neutral-900 dark:text-white">{item.isInfinite ? '∞' : item.stock}</span>
+                {!item.isInfinite && <span className="text-[11px] text-neutral-400">/ min {item.minStock}</span>}
               </div>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1 font-mono">
               <div>
-                <p className="text-[8px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-0.5">{"Value (Cost)"}</p>
-                <p className="text-sm font-black text-gray-900 dark:text-white">{formatCurrency(item.stockValue, appSettings.currency)}</p>
+                <span className="text-[10px] text-neutral-500 uppercase mr-1.5">Cost:</span>
+                <span className="text-xs font-medium text-neutral-900 dark:text-white tabular-nums">{formatCurrency(item.stockValue, appSettings.currency)}</span>
               </div>
               <div>
-                <p className="text-[8px] font-black text-primary uppercase tracking-widest mb-0.5">{"Value (Sale)"}</p>
-                <p className="text-sm font-black text-primary dark:text-emerald-400">{formatCurrency(item.potentialRevenue, appSettings.currency)}</p>
+                <span className="text-[10px] text-neutral-500 uppercase mr-1.5">Sale:</span>
+                <span className="text-xs font-medium text-neutral-900 dark:text-white tabular-nums">{formatCurrency(item.potentialRevenue, appSettings.currency)}</span>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mt-3">
-            <div className="bg-gray-50 dark:bg-white/5 p-2 rounded-2xl">
-              <p className="text-[8px] font-black text-gray-600 uppercase mb-0.5">{"Sold"}</p>
-              <p className="text-xs font-black text-gray-900 dark:text-white">{item.soldQty.toFixed(1)}</p>
+          <div className="grid grid-cols-3 gap-2 mt-2.5 font-mono text-center">
+            <div className="bg-neutral-50 dark:bg-white/[0.02] border border-neutral-100 dark:border-white/[0.04] p-2 rounded">
+              <p className="text-[10px] text-neutral-500 uppercase mb-0.5">{"Sold"}</p>
+              <p className="text-xs font-medium text-neutral-900 dark:text-white">{item.soldQty.toFixed(1)}</p>
             </div>
-            <div className="bg-primary/5 dark:bg-primary/10 p-2 rounded-2xl">
-              <p className="text-[8px] font-black text-primary uppercase mb-0.5">{"Revenue"}</p>
-              <p className="text-xs font-black text-primary dark:text-emerald-400">{formatCurrency(item.revenue, appSettings.currency)}</p>
+            <div className="bg-neutral-50 dark:bg-white/[0.02] border border-neutral-100 dark:border-white/[0.04] p-2 rounded">
+              <p className="text-[10px] text-neutral-500 uppercase mb-0.5">{"Revenue"}</p>
+              <p className="text-xs font-medium text-neutral-900 dark:text-white tabular-nums">{formatCurrency(item.revenue, appSettings.currency)}</p>
             </div>
-            <div className="bg-blue-500/5 dark:bg-blue-500/10 p-2 rounded-2xl">
-              <p className="text-[8px] font-black text-blue-500 uppercase mb-0.5">{"Profit"}</p>
-              <p className="text-xs font-black text-blue-600 dark:text-blue-400">{formatCurrency(item.grossProfit, appSettings.currency)}</p>
+            <div className="bg-neutral-50 dark:bg-white/[0.02] border border-neutral-100 dark:border-white/[0.04] p-2 rounded">
+              <p className="text-[10px] text-neutral-500 uppercase mb-0.5">{"Profit"}</p>
+              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">{formatCurrency(item.grossProfit, appSettings.currency)}</p>
             </div>
           </div>
 
           {expandedRows.has(item.id) && item.recentSales && item.recentSales.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-white/10 space-y-4">
-              {item.recentSales && item.recentSales.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-3 h-3 text-blue-500" />
-                    <p className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Sales Ledger"}</p>
+            <div className="mt-3 pt-3 border-t border-dashed border-neutral-200 dark:border-white/10 space-y-2">
+              <div className="flex items-center gap-1.5 text-neutral-500 text-[11px] font-mono">
+                <TrendingUp className="w-3 h-3 text-neutral-400" />
+                <span>Sales Ledger</span>
+              </div>
+              {item.recentSales.map((sale: any, sIdx: number) => (
+                <div key={sIdx} className="bg-neutral-50 dark:bg-white/[0.02] p-2 rounded text-[11px] font-mono space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-neutral-500">{formatAppDate(new Date(sale.timestamp))}</span>
+                    <span className="font-semibold text-neutral-900 dark:text-white tabular-nums">{formatCurrency(sale.revenue, appSettings.currency)}</span>
                   </div>
-                  {item.recentSales.map((sale: any, sIdx: number) => (
-                    <div key={sIdx} className="bg-gray-50 dark:bg-black/20 p-3 rounded-xl space-y-1 text-[10px]">
-                      <div className="flex justify-between items-center mb-1 border-b border-gray-200 dark:border-white/5 pb-1">
-                        <span className="font-bold text-gray-600">{formatAppDate(new Date(sale.timestamp))}</span>
-                        <span className="font-black text-primary dark:text-emerald-400">{formatCurrency(sale.revenue, appSettings.currency)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-bold text-gray-500">INV #{sale.invoiceNumber}</span>
-                        <span className="font-black text-gray-900 dark:text-white">{"Qty"}: {sale.quantity}</span>
-                      </div>
-                      {(sale.selectedVariant || sale.serialNumber || (sale.selectedModifiers && sale.selectedModifiers.length > 0) || (sale.addonItems && sale.addonItems.length > 0) || (sale.toppings && sale.toppings.length > 0)) && (
-                        <div className="text-[9px] font-bold text-gray-500 pt-1 flex flex-col gap-0.5 normal-case tracking-normal">
-                          {sale.selectedVariant && <span>{sale.selectedVariant}</span>}
-                          {sale.serialNumber && <span className="text-amber-500">SN: {sale.serialNumber}</span>}
-                          {sale.selectedModifiers?.length > 0 && <span className="text-primary">+ {sale.selectedModifiers.map((m: any) => `${m.name} (${formatCurrency(m.price, appSettings.currency)})`).join(', ')}</span>}
-                          {sale.addonItems?.length > 0 && <span className="text-violet-500">+ Add-ons: {sale.addonItems.map((a: any) => `${a.addon?.name || a.name} ${a.quantity}x (${formatCurrency(a.subtotal, appSettings.currency)})`).join(', ')}</span>}
-                          {sale.toppings?.length > 0 && <span className="text-gray-500">+ {sale.toppings.map((t: any) => `${t.name} (${formatCurrency(t.price, appSettings.currency)})`).join(', ')}</span>}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                  <div className="flex justify-between text-neutral-400 text-[10px]">
+                    <span>INV #{sale.invoiceNumber}</span>
+                    <span>Qty: {sale.quantity}</span>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
           )}
         </div>
       ))}
-      <div className="bg-gray-900 text-white p-5 rounded-3xl shadow-xl">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50 mb-4">{"Inventory Grand Summary"}</p>
-        <div className="grid grid-cols-2 gap-y-4 gap-x-8">
-          <div>
-            <p className="text-[8px] font-bold text-emerald-400 uppercase mb-1">{"Total Stock"}</p>
-            <p className="text-lg font-black">{allData.reduce((s, p) => s + (p.isInfinite ? 0 : p.stock), 0)}</p>
-          </div>
-          <div>
-            <p className="text-[8px] font-bold text-emerald-400 uppercase mb-1">{"Stock (Cost)"}</p>
-            <p className="text-lg font-black">{formatCurrency(totalStockValue, appSettings.currency)}</p>
-          </div>
-          <div>
-            <p className="text-[8px] font-bold text-emerald-400 uppercase mb-1">{"Stock (Sale)"}</p>
-            <p className="text-lg font-black">{formatCurrency(totalPotentialRevenue, appSettings.currency)}</p>
-          </div>
-          <div>
-            <p className="text-[8px] font-bold text-blue-400 uppercase mb-1">{"Total Profit"}</p>
-            <p className="text-lg font-black text-blue-400">{formatCurrency(totalGrossProfit, appSettings.currency)}</p>
-          </div>
-        </div>
       </div>
 
-      <div className="flex justify-center pt-4">
-        <Pagination
-          page={page}
-          totalPages={totalPages}
-          onPageChange={onPageChange}
-          totalItems={allData.length}
-          mode="numbered"
+      <div className="mt-auto space-y-3">
+        <div className="bg-neutral-100 dark:bg-surface text-neutral-900 dark:text-white p-4 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
+          <p className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-3">{"Inventory Grand Summary"}</p>
+          <div className="grid grid-cols-2 gap-3 font-mono text-[12px]">
+            <div>
+              <span className="text-[10px] text-neutral-500 dark:text-neutral-400 block uppercase">Total Stock</span>
+              <span className="text-base font-semibold">{allData.reduce((s, p) => s + (p.isInfinite ? 0 : p.stock), 0)}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-neutral-500 dark:text-neutral-400 block uppercase">Stock (Cost)</span>
+              <span className="text-base font-semibold tabular-nums">{formatCurrency(totalStockValue, appSettings.currency)}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-neutral-500 dark:text-neutral-400 block uppercase">Stock (Sale)</span>
+              <span className="text-base font-semibold tabular-nums">{formatCurrency(totalPotentialRevenue, appSettings.currency)}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-neutral-500 dark:text-neutral-400 block uppercase">Total Profit</span>
+              <span className="text-base font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatCurrency(totalGrossProfit, appSettings.currency)}</span>
+            </div>
+          </div>
+        </div>
 
-          pageSize={pageSize}
-          onPageSizeChange={onPageSizeChange}
-        />
+        <div className="py-2 flex items-center justify-between text-[11px] text-neutral-500 font-mono">
+          <span>{allData.length} total items</span>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            totalItems={allData.length}
+            mode="numbered"
+            pageSize={pageSize}
+            onPageSizeChange={onPageSizeChange}
+          />
+        </div>
       </div>
     </div>
   );

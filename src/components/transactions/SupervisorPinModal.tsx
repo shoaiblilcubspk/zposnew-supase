@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { Modal } from '../../shared/ui/Modal';
-import { Button } from '../../shared/ui';
+import { Button, CapsLockIndicator } from '../../shared/ui';
 
-const inputCls = "w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm font-bold text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50";
+const inputCls = "w-full h-8 px-2.5 rounded-md border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface text-[13px] font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 disabled:opacity-50 transition-colors";
 
 interface SupervisorPinModalProps {
   isOpen: boolean;
@@ -41,26 +41,29 @@ export function SupervisorPinModal({ isOpen, title, description, isProcessing, o
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} showClose={!isProcessing} maxWidth="sm">
-      <div className="p-4 space-y-4">
-        <div className="flex items-start gap-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 p-3 rounded-xl">
-          <ShieldCheck className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="text-xs font-bold leading-relaxed">{description}</p>
+      <div className="p-4 space-y-3">
+        <div className="flex items-start gap-2.5 bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] text-neutral-700 dark:text-neutral-300 p-3 rounded-md">
+          <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5 text-neutral-500" />
+          <p className="text-[12px] leading-relaxed">{description}</p>
         </div>
-        <div className="space-y-2">
-          <label className="text-[9px] font-black uppercase tracking-widest text-gray-500">Admin Email</label>
+        <div className="space-y-1">
+          <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">Admin Email</label>
           <input className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@gmail.com" autoComplete="username" disabled={isProcessing} />
         </div>
-        <div className="space-y-2">
-          <label className="text-[9px] font-black uppercase tracking-widest text-gray-500">Admin Password</label>
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">Admin Password</label>
+            <CapsLockIndicator variant="inline" />
+          </div>
           <input className={inputCls} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••" autoComplete="current-password" disabled={isProcessing}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }} />
         </div>
         {error && (
-          <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-wide">{error}</p>
+          <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">{error}</p>
         )}
-        <div className="flex gap-2 pt-1">
-          <Button variant="secondary" onClick={onClose} disabled={isProcessing} className="flex-1">Cancel</Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={isProcessing} className="flex-1">
+        <div className="flex gap-2 pt-2">
+          <Button variant="secondary" onClick={onClose} disabled={isProcessing} className="flex-1 h-8 text-[13px] font-medium rounded-md">Cancel</Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={isProcessing} className="flex-1 h-8 text-[13px] font-medium rounded-md">
             {isProcessing ? 'Verifying…' : 'Approve & Continue'}
           </Button>
         </div>

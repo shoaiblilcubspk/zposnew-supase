@@ -12,8 +12,12 @@ export interface AppSettings {
   autoBackup: boolean;
   receiptPrinter: boolean;
   theme: 'light' | 'dark' | 'auto';
+  iconStyle?: '3d' | 'system';
   invoicePrefix: string;
   invoiceCounter: number;
+  invoicePadDigits?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
   // Receipt & Printer Settings
   receiptPaperSize: '58mm' | '80mm' | 'A4';
   receiptDensity: 'draft' | 'normal' | 'detailed';
@@ -111,16 +115,13 @@ export interface AppSettings {
   poPrefix?: string;
   /** Purchase Order counter */
   poCounter?: number;
-  /** Barcode bar width */
-  barcodeBarWidth?: number;
-  /** Show barcode on barcode label */
-  barcodeShowBarcode?: boolean;
-  /** Show QR code on barcode label */
-  barcodeShowQr?: boolean;
-  /** QR code size on barcode label */
-  barcodeQrSize?: number;
-  /** Show barcode on receipt */
-  receiptShowBarcode?: boolean;
+}
+
+export interface CardDetails {
+  cardType?: string;
+  lastFourDigits?: string;
+  transactionRef?: string;
+  approvalCode?: string;
 }
 
 export interface Expense {

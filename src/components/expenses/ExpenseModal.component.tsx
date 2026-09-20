@@ -115,34 +115,34 @@ export function ExpenseModal({ isOpen, onClose, onSave, expense }: ExpenseModalP
       maxWidth="lg"
       footer={footer}
     >
-      <form id="expense-form" onSubmit={handleSubmit} className="space-y-10">
+      <form id="expense-form" onSubmit={handleSubmit} className="space-y-6">
         {/* Core Information */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-            <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
+        <div className="space-y-4">
+          <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2.5">
+            <span className="w-4 h-0.5 bg-emerald-500 rounded"></span>
             Transaction Details
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">Description *</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1.5">Description *</label>
               <input
                 type="text"
                 required
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
+                className="w-full h-9 px-3 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                 placeholder="What was this expense for?"
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">Amount *</label>
+            <div>
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1.5">Amount *</label>
               <div className="relative">
                 <input
                   type="text"
                   inputMode="decimal"
                   required
-                  className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-black"
+                  className="w-full h-9 pl-3 pr-9 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] font-mono font-bold tabular-nums text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-neutral-400"
                   placeholder="0.00"
                   value={formData.amount}
                   onChange={e => {
@@ -152,15 +152,15 @@ export function ExpenseModal({ isOpen, onClose, onSave, expense }: ExpenseModalP
                     }
                   }}
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 font-bold text-[10px] uppercase tracking-widest">{appSettings.currency}</span>
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-600 dark:text-neutral-300 font-mono font-bold text-[12px]">{appSettings.currency}</span>
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">Expense Date *</label>
+            <div>
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1.5">Expense Date *</label>
               <input
                 type="date"
                 required
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
+                className="w-full h-9 px-3 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] font-mono text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors"
                 value={formData.date}
                 onChange={e => setFormData({ ...formData, date: e.target.value })}
               />
@@ -169,44 +169,44 @@ export function ExpenseModal({ isOpen, onClose, onSave, expense }: ExpenseModalP
         </div>
 
         {/* Classification */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-            <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
+        <div className="space-y-4">
+          <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2.5">
+            <span className="w-4 h-0.5 bg-emerald-500 rounded"></span>
             Classification
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">Category *</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1.5">Category *</label>
               <Select
                 required
-                className="!bg-[#f8f9fa] dark:!bg-black/75 !border-none !text-sm !rounded-xl !px-4 !text-gray-900 dark:!text-white"
+                className="!h-9 !text-[13px] !rounded !bg-white dark:!bg-surface !border-neutral-300 dark:!border-white/[0.12] text-neutral-900 dark:text-white"
                 value={formData.category}
                 onChange={e => setFormData({ ...formData, category: e.target.value })}
               >
                 {EXPENSE_CATEGORIES.map(cat => (
-                  <option key={cat} value={cat} className="dark:bg-surface">
+                  <option key={cat} value={cat} className="dark:bg-surface text-neutral-900 dark:text-white">
                     {cat}
                   </option>
                 ))}
               </Select>
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">Payment Method *</label>
+            <div>
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1.5">Payment Method *</label>
               <Select
                 required
-                className="!bg-[#f8f9fa] dark:!bg-black/75 !border-none !text-sm !rounded-xl !px-4 !text-gray-900 dark:!text-white"
+                className="!h-9 !text-[13px] !rounded !bg-white dark:!bg-surface !border-neutral-300 dark:!border-white/[0.12] text-neutral-900 dark:text-white"
                 value={formData.paymentMethod}
                 onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })}
               >
                 {walletModes.map(m => (
-                  <option key={m.id} value={m.id} className="dark:bg-surface">{m.name}</option>
+                  <option key={m.id} value={m.id} className="dark:bg-surface text-neutral-900 dark:text-white">{m.name}</option>
                 ))}
               </Select>
             </div>
             {formData.category === 'Supplies' && (
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">Supplier</label>
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1.5">Supplier</label>
                 <SearchableSelect
                   options={appSuppliers.map(s => ({ id: s.id, label: s.name }))}
                   value={selectedSupplierId}
@@ -214,53 +214,52 @@ export function ExpenseModal({ isOpen, onClose, onSave, expense }: ExpenseModalP
                   placeholder="Link to supplier (optional)"
                   icon={Building2}
                 />
-                <p className="text-[9px] text-gray-500 dark:text-gray-400">Links this expense to the supplier and raises their payable.</p>
+                <p className="text-[11px] text-neutral-600 dark:text-neutral-400">Links this expense to the supplier and raises their payable.</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Intelligence */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-            <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
+        <div className="space-y-4">
+          <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2.5">
+            <span className="w-4 h-0.5 bg-emerald-500 rounded"></span>
             Operational Intelligence
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+          <div className="space-y-4">
             {(appSettings.wholesaleEnabled) && (
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">Channel Selection</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1.5">Channel Selection</label>
+                <div className="grid grid-cols-3 gap-2">
                   {[
                     { id: undefined, label: "General", icon: ShoppingBag, enabled: true },
                     { id: 'retail', label: "Retail", icon: CreditCard, enabled: appSettings.retailEnabled },
                     { id: 'wholesale', label: "Wholesale", icon: ShoppingBag, enabled: appSettings.wholesaleEnabled }
                   ].filter(c => c.enabled !== false).map((c) => (
-                    <Button
+                    <button
                       key={c.id ?? 'general'}
-                      variant="ghost"
                       type="button"
                       onClick={() => setFormData({ ...formData, storeType: c.id as any })}
                       className={cn(
-                        "!min-h-0 !flex-col !gap-2 !p-4 !rounded-xl !border active:!scale-95 !normal-case !tracking-normal !font-normal",
+                        "h-9 flex items-center justify-center gap-1.5 px-3 rounded text-[12.5px] font-medium border transition-colors",
                         formData.storeType === c.id
-                          ? '!bg-primary !border-primary !text-white !shadow-lg !shadow-emerald-500/20'
-                          : '!bg-[#f8f9fa] dark:!bg-black/20 !border-gray-200 dark:!border-white/5 !text-gray-600'
+                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold'
+                          : 'border-neutral-300 dark:border-white/[0.12] bg-white dark:bg-surface text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white'
                       )}
                     >
-                      <c.icon className={cn("h-5 w-5", formData.storeType === c.id ? 'text-white' : 'text-gray-600')} />
-                      <span className={cn("text-[9px] font-black uppercase tracking-widest", formData.storeType === c.id ? 'text-white' : 'text-gray-600 dark:text-gray-400')}>{c.label}</span>
-                    </Button>
+                      <c.icon className="h-4 w-4" />
+                      <span>{c.label}</span>
+                    </button>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">Administrative Notes</label>
+            <div>
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1.5">Administrative Notes</label>
               <textarea
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl p-4 focus:ring-2 focus:ring-emerald-500 transition-all min-h-[100px] resize-none"
+                className="w-full px-3 py-2 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors min-h-[72px] resize-none placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                 placeholder="Any additional notes..."
                 value={formData.notes}
                 onChange={e => setFormData({ ...formData, notes: e.target.value })}
@@ -268,10 +267,10 @@ export function ExpenseModal({ isOpen, onClose, onSave, expense }: ExpenseModalP
             </div>
 
             {/* Manual Override Toggle */}
-            <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3.5 rounded-xl">
-              <div className="flex-1">
-                <p className="text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest">Manual Override</p>
-                <p className="text-[9px] text-amber-600/70 dark:text-amber-500/60 mt-0.5">Admin amount correction — logged</p>
+            <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-md">
+              <div>
+                <p className="text-[12.5px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">Manual Override</p>
+                <p className="text-[11.5px] text-amber-700 dark:text-amber-400 font-medium">Admin amount correction — logged</p>
               </div>
               <ToggleSwitch
                 checked={isManualOverride}

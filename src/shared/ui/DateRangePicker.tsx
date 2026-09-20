@@ -56,21 +56,21 @@ export function DateRangePicker({
       </div>
 
       {isCustom && (
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-center w-full p-2 bg-white/30 dark:bg-black/75 rounded-xl border border-gray-200/50 dark:border-white/5 animate-in slide-in-from-top-2 sm:slide-in-from-left-4 duration-300">
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center w-full p-1.5 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
           <input
             type="date"
             value={startDate}
             onChange={(e) => onStartDateChange(e.target.value)}
-            className="w-full sm:flex-1 px-3 py-2 text-[10px] font-black bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-lg text-gray-900 dark:text-white uppercase shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+            className="w-full sm:flex-1 h-8 px-2.5 text-[13px] font-mono bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded text-neutral-900 dark:text-neutral-100 focus:border-primary focus:outline-none transition-colors shadow-none"
           />
-          <span className="hidden sm:block text-gray-600 dark:text-gray-400 font-black text-[10px] uppercase tracking-tighter px-1">
+          <span className="hidden sm:block text-neutral-400 font-mono text-[11px] px-1">
             TO
           </span>
           <input
             type="date"
             value={endDate}
             onChange={(e) => onEndDateChange(e.target.value)}
-            className="w-full sm:flex-1 px-3 py-2 text-[10px] font-black bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-lg text-gray-900 dark:text-white uppercase shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+            className="w-full sm:flex-1 h-8 px-2.5 text-[13px] font-mono bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded text-neutral-900 dark:text-neutral-100 focus:border-primary focus:outline-none transition-colors shadow-none"
           />
         </div>
       )}

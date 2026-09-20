@@ -28,35 +28,39 @@ export function LogoUpload({ currentLogo, onLogoChange, disabled = false }: Logo
           <img
             src={currentLogo}
             alt="Store Logo"
-            className="h-24 w-24 object-contain border border-gray-200 dark:border-white/10 rounded-xl bg-white dark:bg-white/[0.03] p-2"
+            className="h-20 w-20 object-contain border border-neutral-200 dark:border-white/[0.08] rounded-md bg-white dark:bg-surface p-2 shadow-none"
           />
-          <Button
+          <button
+            type="button"
             onClick={removeLogo}
             disabled={disabled}
-            icon={<X className="h-4 w-4" />}
-            className={`absolute -top-2 -right-2 !min-h-0 !p-1 !rounded-full !shadow-none ${disabled
-              ? '!bg-gray-300 !text-gray-600 !cursor-not-allowed'
-              : '!bg-red-500 !text-white hover:!bg-red-600'
-              }`}
-          />
+            title="Remove logo"
+            className={`absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center transition-colors shadow-sm border border-white/20 ${
+              disabled
+                ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                : 'bg-neutral-900/80 hover:bg-rose-600 text-white'
+            }`}
+          >
+            <X className="w-3 h-3 stroke-[2.5]" />
+          </button>
         </div>
       ) : (
         <div
-          className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${disabled
-            ? 'border-gray-200 dark:border-white/5 bg-gray-100 dark:bg-white/5 cursor-not-allowed'
-            : 'border-gray-300 dark:border-white/10 hover:border-gray-400 dark:hover:border-white/20 cursor-pointer'
+          className={`border border-dashed rounded-md p-6 text-center transition-colors shadow-none ${disabled
+            ? 'border-neutral-200 dark:border-white/5 bg-neutral-100 dark:bg-white/5 cursor-not-allowed'
+            : 'border-neutral-300 dark:border-white/[0.08] hover:border-neutral-400 dark:hover:border-white/20 cursor-pointer'
             }`}
           onClick={() => !disabled && setShowMediaLibrary(true)}
         >
-          <div className="flex flex-col items-center space-y-3">
-            <div className="bg-gray-100 dark:bg-white/5 p-3 rounded-xl">
-              <ImageIcon className="h-8 w-8 text-gray-600 dark:text-gray-500" />
+          <div className="flex flex-col items-center space-y-2.5">
+            <div className="bg-neutral-100 dark:bg-neutral-800 p-2.5 rounded-md">
+              <ImageIcon className="h-6 w-6 text-neutral-500" />
             </div>
             <div>
-              <p className={`text-sm font-medium ${disabled ? 'text-gray-600' : 'text-gray-900 shadow-custom text-black dark:text-white'}`}>
+              <p className={`text-[13px] font-medium ${disabled ? 'text-neutral-400' : 'text-neutral-900 dark:text-white'}`}>
                 {disabled ? 'Upload disabled' : 'Click to choose or upload from Media Library'}
               </p>
-              <p className="text-xs text-gray-600">
+              <p className="text-[11px] text-neutral-500 mt-0.5">
                 Supports WebP, PNG, JPG · Compressed & Reusable
               </p>
             </div>

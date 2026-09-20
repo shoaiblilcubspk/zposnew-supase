@@ -48,7 +48,7 @@ export function useReportsData(subTab: string | undefined) {
 
   const salesStats = useSalesStats(filteredSales, appSettings);
   const expenseStats = useExpenseStats(filteredExpenses, validStartDate, validEndDate, dateRange, appSettings);
-  const peopleStats = usePeopleStats(filteredSales, appCustomers, appSalesmen);
+  const peopleStats = usePeopleStats(filteredSales, appCustomers, appSalesmen, appUsers);
   const financialStats = useFinancialStats(filteredSales, filteredExpenses, filteredPayments, appSettings);
   const inventoryStats = useInventoryStats(appProducts, filteredSales, reportType);
 
@@ -87,10 +87,12 @@ export function useReportsData(subTab: string | undefined) {
 
   const paymentMethods = useMemo(() => {
     const methods = new Set<string>(['cash', 'card', 'online']);
+    // Always include credit when globally enabled (don't wait for first credit sale)
+    if (appSettings?.enableCreditSales) methods.add('credit');
     reportSales.forEach(s => { if (s.paymentMethod) methods.add(s.paymentMethod); });
     reportExpenses.forEach(e => { if (e.paymentMethod) methods.add(e.paymentMethod); });
     return ['All', ...Array.from(methods).sort()];
-  }, [reportSales, reportExpenses]);
+  }, [reportSales, reportExpenses, appSettings]);
 
   const totalRevenue = filteredSales.reduce((sum, s) => {
     const eff = getEffectiveTotal(s); const tax = Number(s.taxAmount) || 0; return sum + (eff - tax);

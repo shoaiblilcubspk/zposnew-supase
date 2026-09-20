@@ -27,18 +27,18 @@ export function PurchaseHistoryTable({
   handleDeleteRecord,
 }: PurchaseHistoryTableProps) {
   return (
-    <div className="bg-white dark:bg-surface rounded-[2.5rem] border border-gray-200 dark:border-white/5 overflow-hidden shadow-2xl">
-      <div className="hidden lg:block overflow-x-auto">
+    <div className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] overflow-hidden shadow-none min-h-[calc(100vh-320px)] flex flex-col justify-between">
+      <div className="hidden lg:block overflow-x-auto flex-1">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-gray-50/50 dark:bg-white/[0.02]">
-              <th className="p-6 text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Date & Identity"}</th>
-              <th className="p-6 text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest text-center">{"Procurement Details"}</th>
-              <th className="p-6 text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest text-center">{"Financial Impact"}</th>
-              <th className="p-6 text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest text-right">{"Admin Control"}</th>
+            <tr className="h-8 bg-neutral-50 dark:bg-white/[0.02] border-b border-neutral-200 dark:border-white/[0.08]">
+              <th className="px-3.5 py-2 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{"Date & Identity"}</th>
+              <th className="px-3.5 py-2 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-center">{"Procurement Details"}</th>
+              <th className="px-3.5 py-2 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-center">{"Financial Impact"}</th>
+              <th className="px-3.5 py-2 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">{"Admin Control"}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+          <tbody className="divide-y divide-neutral-100 dark:divide-white/[0.04]">
             {paginatedRecords.length > 0 ? paginatedRecords.map((record) => (
               <PurchaseHistoryCard
                 key={record.id}
@@ -49,10 +49,10 @@ export function PurchaseHistoryTable({
               />
             )) : (
               <tr>
-                <td colSpan={4} className="p-20 text-center">
+                <td colSpan={4} className="py-16 text-center">
                   <EmptyState
-                    className="!p-0 opacity-30"
-                    icon={<Package className="h-full w-full" />}
+                    className="!p-0 opacity-40"
+                    icon={<Package className="h-8 w-8 text-neutral-400" />}
                     title={"No Procurement Records Found"}
                     subtext={"Adjust your filters or perform system actions"}
                   />
@@ -63,7 +63,7 @@ export function PurchaseHistoryTable({
         </table>
       </div>
 
-      <div className="lg:hidden p-4 space-y-3">
+      <div className="lg:hidden p-3 space-y-2 flex-1">
         {paginatedRecords.length > 0 ? paginatedRecords.map((record) => (
           <PurchaseHistoryMobileCard
             key={record.id}
@@ -72,16 +72,19 @@ export function PurchaseHistoryTable({
             currency={currency}
           />
         )) : (
-          <EmptyState compact className="!py-10 opacity-30" icon={<Package className="h-full w-full" />} title="No Records" />
+          <EmptyState compact className="!py-10 opacity-40" icon={<Package className="h-8 w-8 text-neutral-400" />} title="No Records" />
         )}
       </div>
 
-      <div className="p-6 bg-gray-50/50 dark:bg-white/[0.02] border-t border-gray-200 dark:border-white/5 flex items-center justify-between">
-        <div className="hidden sm:flex items-center gap-2">
-          <div className="flex h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-          <p className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest italic">Page {currentPage} of {totalPages}</p>
-        </div>
-        <Pagination mode="prevNext" page={currentPage} totalPages={totalPages} onPageChange={setCurrentPage}
+      <div className="px-3 py-2 bg-neutral-50 dark:bg-white/[0.02] border-t border-neutral-200 dark:border-white/[0.08] flex items-center justify-between mt-auto">
+        <p className="text-[11px] text-neutral-500 font-mono">
+          Page {currentPage} of {totalPages}
+        </p>
+        <Pagination
+          mode="prevNext"
+          page={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
           pageSize={itemsPerPage}
           onPageSizeChange={setPageSize}
         />

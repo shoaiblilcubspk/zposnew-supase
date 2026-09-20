@@ -37,63 +37,60 @@ const appSettings = useSettingsStore(s => s.settings);
             subtitle={"Suspended Protocol • {count} Sessions".replace('{count}', drafts.length.toString())}
             maxWidth="lg"
             footer={
-                <div className="flex items-center justify-end w-full">
+                <div className="flex items-center justify-end w-full font-mono text-[12px]">
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="w-full sm:w-auto sm:min-w-[240px] px-4 sm:px-8 py-2.5 sm:py-3.5 rounded-2xl text-[9px] sm:text-[11px] font-black uppercase tracking-widest bg-gray-200 dark:bg-white/5 text-gray-700 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95"
+                        className="h-8 px-3 rounded border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/[0.08] font-medium transition-colors"
                     >
-                        {"Close Archive"}
+                        {"Close"}
                     </button>
                 </div>
             }
         >
-            <div className="min-h-[300px]">
+            <div className="min-h-[260px] text-[13px] tracking-[-0.01em]">
                 {drafts.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 px-10 text-center gap-6">
-                        <div className="w-24 h-24 rounded-full bg-gray-100 dark:bg-black/20 flex items-center justify-center border border-gray-200 dark:border-white/5">
-                            <FileText className="h-12 w-12 text-gray-600 dark:text-gray-500" />
-                        </div>
-                        <div>
-                            <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">{"Vault Empty"}</h3>
-                            <p className="text-[10px] text-gray-600 dark:text-gray-400 max-w-sm mx-auto mt-2 font-black uppercase tracking-widest leading-relaxed">
-                                {"No suspended sales sessions registered."}
-                            </p>
-                        </div>
+                    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+                        <FileText className="h-10 w-10 text-neutral-400 mb-3 opacity-40" />
+                        <h3 className="text-[14px] font-semibold text-neutral-900 dark:text-white">{"No Drafts Saved"}</h3>
+                        <p className="text-[12px] text-neutral-500 font-mono mt-1">
+                            {"No suspended sales sessions registered."}
+                        </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-bottom-4 duration-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                         {drafts.map((draft) => (
                             <div
                                 key={draft.id}
                                 onClick={() => onLoadDraft(draft)}
-                                className="group relative p-5 rounded-[20px] border bg-[#f8f9fa] dark:bg-black/75 border-gray-200 dark:border-white/5 hover:border-emerald-200 dark:hover:border-primary/30 hover:bg-emerald-50 dark:hover:bg-primary/5 transition-all active:scale-[0.98] cursor-pointer"
+                                className="group p-3 rounded-md border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface hover:border-neutral-300 dark:hover:border-white/[0.15] transition-colors cursor-pointer space-y-2 shadow-none"
                             >
-                                <div className="flex items-start justify-between gap-4 mb-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 rounded-2xl bg-white dark:bg-white/5 group-hover:bg-primary text-primary group-hover:text-white shadow-sm border border-gray-200 dark:border-transparent transition-all">
-                                            <ShoppingCart className="w-4 h-4" />
-                                        </div>
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <ShoppingCart className="w-4 h-4 text-primary shrink-0" />
                                         <div className="min-w-0">
-                                            <p className="text-[11px] font-black uppercase tracking-widest text-gray-900 dark:text-white truncate">
-                                                {draft.customerName || "Walk-in Client"}
+                                            <p className="text-[13px] font-semibold text-neutral-900 dark:text-white truncate">
+                                                {draft.customerName || "Walk-in Customer"}
                                             </p>
-                                            <p className="text-[9px] text-gray-600 dark:text-gray-500 font-bold uppercase tracking-widest mt-1">
-                                                {new Date(draft.timestamp).toLocaleString()}
+                                            <p className="text-[11px] text-neutral-500 font-mono mt-0.5">
+                                                {new Date(draft.timestamp).toLocaleTimeString()}
                                             </p>
                                         </div>
                                     </div>
                                     <button
+                                        type="button"
                                         onClick={(e) => handleDelete(draft.id, e)}
-                                        className="p-2 text-gray-600 dark:text-gray-500 hover:text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/10 rounded-xl transition-all"
+                                        className="p-1 text-neutral-400 hover:text-rose-500 transition-colors"
+                                        title="Delete Draft"
                                     >
-                                        <Trash2 className="h-4 w-4" />
+                                        <Trash2 className="h-3.5 w-3.5" />
                                     </button>
                                 </div>
-                                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/5">
-                                    <span className="text-[9px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest">
-                                        {draft.items.length} {"Items Captured"}
+                                <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-white/[0.04]">
+                                    <span className="text-[11px] font-mono text-neutral-500">
+                                        {draft.items.length} {draft.items.length === 1 ? 'item' : 'items'}
                                     </span>
-                                    <span className="text-xl font-black text-primary dark:text-emerald-400">
+                                    <span className="text-[14px] font-mono tabular-nums font-bold text-neutral-900 dark:text-white">
                                         {formatCurrency(draft.total, appSettings.currency)}
                                     </span>
                                 </div>

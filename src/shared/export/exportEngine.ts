@@ -26,8 +26,13 @@ export type ExportColumnFormat =
 
 export interface ExportColumn {
   key: string;
-  label: string;
+  label?: string;
+  header?: string;
   format?: ExportColumnFormat;
+}
+
+export function getColumnLabel(col: ExportColumn): string {
+  return col.label || col.header || col.key || '';
 }
 
 export interface ReportExportConfig {
@@ -126,7 +131,7 @@ export function exportToCSV(config: ReportExportConfig) {
   if (config.filtersSummary) lines.push(csvEsc(config.filtersSummary));
   lines.push(csvEsc(`Generated: ${new Date().toLocaleString()}`));
 
-  lines.push(config.columns.map(c => csvEsc(c.label)).join(','));
+  lines.push(config.columns.map(c => csvEsc(getColumnLabel(c))).join(','));
   for (const row of config.rows) {
     lines.push(config.columns.map(c => csvEsc(formatValue(c, row, config.currencySymbol || ''))).join(','));
   }
@@ -145,13 +150,22 @@ export function exportToExcel(config: ReportExportConfig) {
   aoa.push([`Generated: ${new Date().toLocaleString()}`]);
   aoa.push([]);
 
-  aoa.push(config.columns.map(c => c.label));
+  aoa.push(config.columns.map(c => getColumnLabel(c)));
   for (const row of config.rows) {
     aoa.push(config.columns.map(c => excelValue(c, row)));
   }
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = config.columns.map(() => ({ wch: 18 }));
+  ws['!cols'] = config.columns.map(c => {
+    const headerLen = getColumnLabel(c).length;
+    let maxContentLen = headerLen;
+    const sample = config.rows.slice(0, 100);
+    for (const r of sample) {
+      const v = String(r[c.key] ?? '');
+      if (v.length > maxContentLen) maxContentLen = v.length;
+    }
+    return { wch: Math.min(Math.max(maxContentLen + 3, 14), 45) };
+  });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Report');
   XLSX.writeFile(wb, config.filename || defaultFilename(config.title, 'xlsx'));
@@ -160,12 +174,10 @@ export function exportToExcel(config: ReportExportConfig) {
 /* ─── PDF (jsPDF v4 — native table support) ─── */
 
 export async function exportToPDF(config: ReportExportConfig) {
-  const paperSize = config.paperSize || 'A4';
-  const isThermal = paperSize === '80mm' || paperSize === '58mm';
-  
-  const orientation = isThermal ? 'portrait' : 'landscape';
-  // Note: For thermal PDFs we use a fixed long height (e.g., 297mm or 400mm) as jsPDF needs a fixed page size
-  const format = paperSize === '58mm' ? [58, 400] : paperSize === '80mm' ? [80, 400] : 'a4';
+  const requestedPaper = config.paperSize || 'A4';
+  const isThermal = (requestedPaper === '80mm' || requestedPaper === '58mm') && config.columns.length <= 4;
+  const orientation = isThermal ? 'portrait' : (config.columns.length > 5 ? 'landscape' : 'portrait');
+  const format = isThermal ? (requestedPaper === '58mm' ? [58, 400] : [80, 400]) : 'a4';
 
   const doc = new jsPDF({ orientation, format });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -202,11 +214,11 @@ export async function exportToPDF(config: ReportExportConfig) {
   doc.line(margin, metaY + (isThermal ? 2 : 3), pageWidth - margin, metaY + (isThermal ? 2 : 3));
 
   // Table — keyed by header label (jsPDF v4 signature)
-  const headers = config.columns.map(c => c.label);
+  const headers = config.columns.map(c => getColumnLabel(c));
   const rowsForTable = config.rows.map(row => {
     const obj: Record<string, string> = {};
     config.columns.forEach(c => {
-      obj[c.label] = formatValue(c, row, config.currencySymbol || '');
+      obj[getColumnLabel(c)] = formatValue(c, row, config.currencySymbol || '');
     });
     return obj;
   });
@@ -232,91 +244,5 @@ export async function exportToPDF(config: ReportExportConfig) {
   doc.save(config.filename || defaultFilename(config.title, 'pdf'));
 }
 
-/* ─── Print (branded window with print stylesheet) ─── */
+export { printReport } from './printReport';
 
-export function printReport(config: ReportExportConfig) {
-  const brand = config.brand || DEFAULT_BRAND;
-  const currencySymbol = config.currencySymbol || '';
-  const paperSize = config.paperSize || 'A4';
-  const isThermal = paperSize === '80mm' || paperSize === '58mm';
-  const cssWidth = paperSize === '58mm' ? '58mm' : paperSize === '80mm' ? '80mm' : '100%';
-  
-  const headers = config.columns.map(c => c.label).map(l => `<th>${escapeHtml(l)}</th>`).join('');
-  const body = config.rows.map(row => {
-    const tds = config.columns.map(c => `<td>${escapeHtml(formatValue(c, row, currencySymbol))}</td>`).join('');
-    return `<tr>${tds}</tr>`;
-  }).join('');
-
-  const win = window.open('', '_blank', 'width=1024,height=768');
-  if (!win) return;
-
-  const thermalCss = isThermal ? `
-    body { width: ${cssWidth}; padding: 4px; font-size: ${paperSize === '58mm' ? '9px' : '11px'}; color: #000; }
-    .brand-header { flex-direction: column; text-align: center; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 8px; }
-    .brand-name { font-size: ${paperSize === '58mm' ? '12px' : '16px'}; color: #000; }
-    h1 { font-size: ${paperSize === '58mm' ? '10px' : '12px'}; color: #000; margin-top: 4px; }
-    .meta { font-size: ${paperSize === '58mm' ? '8px' : '9px'}; color: #000; }
-    table { font-size: ${paperSize === '58mm' ? '8px' : '9px'}; margin-top: 8px; }
-    th { background: transparent; color: #000; border-bottom: 1px solid #000; padding: 4px 2px; }
-    td { padding: 4px 2px; border-bottom: 1px dotted #ccc; color: #000; }
-    .footer { margin-top: 12px; font-size: ${paperSize === '58mm' ? '7px' : '8px'}; color: #000; }
-  ` : `
-    body { padding: 24px; color: #0f172a; }
-    .brand-header { flex-direction: row; align-items: center; gap: 12px; border-bottom: 3px solid #10b981; padding-bottom: 12px; margin-bottom: 16px; }
-    .brand-name { font-size: 18px; color: #10b981; }
-    h1 { font-size: 14px; }
-    .meta { font-size: 10px; color: #6b7280; }
-    table { margin-top: 14px; }
-    th { background: #10b981; color: #fff; font-size: 9px; padding: 7px 8px; }
-    td { font-size: 9.5px; padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
-    tr:nth-child(even) td { background: #f9fafb; }
-    .footer { margin-top: 18px; font-size: 8px; color: #9ca3af; }
-  `;
-
-  win.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <title>${escapeHtml(config.title)}</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; }
-    .brand-header { display: flex; }
-    .brand-header img { height: 36px; width: auto; }
-    .brand-name { font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; }
-    h1 { font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
-    .meta { margin-bottom: 2px; }
-    table { width: 100%; border-collapse: collapse; }
-    th { font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; text-align: left; }
-    .footer { text-align: center; }
-    ${thermalCss}
-    @media print { 
-      body { padding: 0; ${isThermal ? `width: ${cssWidth};` : ''} } 
-      ${isThermal ? `@page { margin: 0; size: ${cssWidth} auto; }` : ''}
-    }
-  </style>
-</head>
-<body>
-  <div class="brand-header">
-    <img src="${escapeHtml(brand.logo || '')}" alt="" onerror="this.style.display='none'" />
-    <div>
-      <div class="brand-name">${escapeHtml(brand.name)}</div>
-      <h1>${escapeHtml(config.title)}</h1>
-      <div class="meta">Generated: ${escapeHtml(new Date().toLocaleString())}</div>
-      ${config.filtersSummary ? `<div class="meta">${escapeHtml(config.filtersSummary)}</div>` : ''}
-      ${config.subtitle ? `<div class="meta">${escapeHtml(config.subtitle)}</div>` : ''}
-    </div>
-  </div>
-  <table>
-    <thead><tr>${headers}</tr></thead>
-    <tbody>${body}</tbody>
-  </table>
-  <div class="footer">${escapeHtml(brand.name)} — ${escapeHtml(config.title)} — Generated ${escapeHtml(new Date().toLocaleString())}</div>
-  <script>window.onload = function(){ window.print(); }</script>
-</body>
-</html>`);
-  win.document.close();
-}
-
-function escapeHtml(v: string) {
-  return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}

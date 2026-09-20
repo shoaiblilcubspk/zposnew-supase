@@ -4,9 +4,11 @@ let supabaseInstance: SupabaseClient | null = null
 
 export const getSupabase = (): SupabaseClient => {
   if (!supabaseInstance) {
+    const supabaseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || 'https://mock.supabase.co'
+    const supabaseKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || 'mock-key'
     supabaseInstance = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY,
+      supabaseUrl,
+      supabaseKey,
       {
         auth: {
           persistSession: true,

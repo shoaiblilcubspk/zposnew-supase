@@ -22,10 +22,14 @@ export interface User {
   canManagePO: boolean;
   canViewRecords: boolean;
   canEditSale: boolean;
+  canViewExpiry?: boolean;
+  requirePinOnSale?: boolean;
   active: boolean;
   lastLogin?: Date;
   avatar?: string;
   actionHash?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface LoginCredentials {

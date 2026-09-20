@@ -1,4 +1,4 @@
-import { generateId, purchaseRecordsService } from './services';
+import { purchaseRecordsService, productsService } from './services';
 import { localDb } from './localDb';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { useProductsStore } from '../stores/productsStore';
@@ -68,7 +68,6 @@ export async function commitStockInToInventory({
     }
 
     const newRecord = await purchaseRecordsService.create({
-      id: generateId(),
       productId: item.id,
       productName: item.name,
       sku: item.sku || '',
@@ -77,7 +76,7 @@ export async function commitStockInToInventory({
       quantity: item.quantity,
       costPrice: item.costPrice || 0,
       totalAmount: item.quantity * (item.costPrice || 0),
-      type: item.type || 'Stock IN',
+      type: (item.type as any) || 'Stock IN',
       supplier,
       date,
       addedBy: profile?.email || 'System',
@@ -86,8 +85,8 @@ export async function commitStockInToInventory({
 
     useInventoryStore.getState().addPurchaseRecord(newRecord);
 
-    // Read fresh product from localDb so we get the updated stock from within the service
-    const freshProduct = await localDb.products.get(item.id);
+    // Read fresh product from authoritative SQLite productsService (with localDb fallback)
+    const freshProduct = (await productsService.getById(item.id)) || (await localDb.products.get(item.id));
     if (freshProduct) {
       lastProduct = freshProduct;
       useProductsStore.getState().updateProduct(freshProduct);

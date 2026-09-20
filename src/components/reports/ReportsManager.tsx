@@ -54,14 +54,12 @@ export function ReportsManager() {
 
   if (!isRendered) {
     return (
-      <div className="main-content-scroll p-1 lg:p-6 space-y-6 bg-gray-50/50 dark:bg-app min-h-full max-w-[1400px] mx-auto">
-        <div className="flex flex-col gap-6 animate-pulse">
-          <div className="h-10 w-64 bg-gray-200 dark:bg-white/5 rounded-xl"></div>
-          <div className="flex gap-4">
-            <div className="h-12 w-full bg-gray-200 dark:bg-white/5 rounded-2xl"></div>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-gray-200 dark:bg-white/5 rounded-3xl"></div>)}
+      <div className="main-content-scroll p-3 sm:p-4 lg:p-6 space-y-4 bg-app min-h-full max-w-[1400px] mx-auto">
+        <div className="flex flex-col gap-4 animate-pulse">
+          <div className="h-8 w-64 bg-neutral-200 dark:bg-white/5 rounded"></div>
+          <div className="h-10 w-full bg-neutral-200 dark:bg-white/5 rounded-md"></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-neutral-200 dark:bg-white/5 rounded-md"></div>)}
           </div>
         </div>
       </div>
@@ -69,7 +67,7 @@ export function ReportsManager() {
   }
 
   return (
-    <div className="main-content-scroll p-1 lg:p-6 bg-gray-50/50 dark:bg-app space-y-4 lg:space-y-6 max-w-[1400px] mx-auto">
+    <div className="main-content-scroll p-3 sm:p-4 lg:p-6 bg-app space-y-3.5 max-w-[1400px] mx-auto">
       
       <ReportHeader
         validStartDate={validStartDate}
@@ -80,31 +78,33 @@ export function ReportsManager() {
         reportType={reportType}
       />
 
-      <div className="relative z-30 bg-white/50 dark:bg-black/20 p-2 lg:p-3 rounded-2xl border border-gray-200/50 dark:border-white/5 shadow-xl ring-1 ring-black/5 dark:ring-white/5">
-        <div className="flex flex-col xl:flex-row gap-4">
-          <DateRangePicker
-            preset={dateRange}
-            presets={[
-              { id: 'today', label: "TODAY" },
-              { id: 'yesterday', label: "YESTERDAY" },
-              { id: 'last7', label: "LAST 7 DAYS" },
-              { id: 'thisMonth', label: "THIS MONTH" },
-              { id: 'lastMonth', label: "PREVIOUS MONTH" },
-              { id: 'custom', label: "CUSTOM RANGE" },
-              { id: 'all', label: "ALL TIME" }
-            ]}
-            onPresetChange={setDateRange}
-            startDate={startDateInput}
-            endDate={endDateInput}
-            onStartDateChange={setStartDateInput}
-            onEndDateChange={setEndDateInput}
-            label={"RANGE"}
-            icon={TrendingUp}
-          />
+      <div className="relative z-30 bg-white dark:bg-surface p-2.5 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
+        <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-2.5">
+          <div className="w-full xl:w-auto shrink-0">
+            <DateRangePicker
+              preset={dateRange}
+              presets={[
+                { id: 'today', label: "TODAY" },
+                { id: 'yesterday', label: "YESTERDAY" },
+                { id: 'last7', label: "LAST 7 DAYS" },
+                { id: 'thisMonth', label: "THIS MONTH" },
+                { id: 'lastMonth', label: "PREVIOUS MONTH" },
+                { id: 'custom', label: "CUSTOM RANGE" },
+                { id: 'all', label: "ALL TIME" }
+              ]}
+              onPresetChange={setDateRange}
+              startDate={startDateInput}
+              endDate={endDateInput}
+              onStartDateChange={setStartDateInput}
+              onEndDateChange={setEndDateInput}
+              label={"RANGE"}
+              icon={TrendingUp}
+            />
+          </div>
 
-          <div className="hidden xl:block h-8 w-px bg-gray-200 dark:bg-white/10" />
+          <div className="hidden xl:block h-8 w-px bg-gray-200 dark:bg-white/10 shrink-0" />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:flex xl:items-center gap-1.5 lg:gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:flex xl:items-center gap-2 w-full">
             {reportType !== 'customers' && (
               <>
                 <SearchableSelect
@@ -113,6 +113,7 @@ export function ReportsManager() {
                   value={selectedSupplier}
                   onChange={setSelectedSupplier}
                   icon={Truck}
+                  iconColor="text-rose-500"
                 />
                 <SearchableSelect
                   label={"CATEGORY"}
@@ -120,6 +121,7 @@ export function ReportsManager() {
                   value={selectedCategory}
                   onChange={setSelectedCategory}
                   icon={LayoutGrid}
+                  iconColor="text-blue-500"
                 />
                 <SearchableSelect
                   label={"CASHIER"}
@@ -127,6 +129,7 @@ export function ReportsManager() {
                   value={selectedCashier}
                   onChange={setSelectedCashier}
                   icon={Users}
+                  iconColor="text-indigo-500"
                 />
                 <SearchableSelect
                   label={"SALESMAN"}
@@ -134,6 +137,7 @@ export function ReportsManager() {
                   value={selectedSalesman}
                   onChange={setSelectedSalesman}
                   icon={Briefcase}
+                  iconColor="text-amber-500"
                 />
                 <SearchableSelect
                   label={"PAYMENT"}
@@ -141,7 +145,7 @@ export function ReportsManager() {
                   value={selectedPayment}
                   onChange={setSelectedPayment}
                   icon={Wallet}
-                  align="right"
+                  iconColor="text-emerald-500"
                 />
                 <SearchableSelect
                   label={"STORE"}
@@ -153,7 +157,7 @@ export function ReportsManager() {
                   value={selectedSaleType}
                   onChange={setSelectedSaleType}
                   icon={Store}
-                  align="right"
+                  iconColor="text-purple-500"
                 />
               </>
             )}

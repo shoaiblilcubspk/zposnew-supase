@@ -9,24 +9,33 @@ export function ProductDetailHeader({ d }: { d: ProductDetailController }) {
   } = d;
 
   return (
-    <div className="bg-white dark:bg-surface border-b border-gray-200 dark:border-white/5 px-3 sm:px-6 py-6 rounded-t-[2.5rem] relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none" />
+    <div className="bg-white dark:bg-surface border-b border-neutral-200 dark:border-white/[0.08] px-4 sm:px-6 py-4 rounded-t-md relative overflow-hidden">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 relative">
+        <Button variant="secondary" onClick={onBack} className="absolute left-0 top-0 sm:relative h-8 w-8 !p-0 rounded-md z-20" icon={<ArrowLeft className="h-4 w-4 text-neutral-600 dark:text-neutral-300" />} />
 
-      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 relative">
-        <Button variant="ghost" onClick={onBack} className="absolute left-0 top-0 sm:relative !min-h-0 !p-3 !rounded-2xl !bg-gray-100 dark:!bg-white/5 hover:!bg-gray-200 dark:hover:!bg-white/10 hover:!scale-105 active:!scale-90 z-20" icon={<ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />} />
-
-        <div className="relative group/img mt-4 sm:mt-0">
-          <div className="w-24 h-24 sm:w-20 sm:h-20 rounded-[2rem] sm:rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 border-4 border-white dark:border-[#171717] ring-1 ring-gray-100 dark:ring-white/5 flex items-center justify-center shadow-xl overflow-hidden flex-shrink-0 transition-transform duration-500 group-hover/img:scale-105">
-            {formData.image ? <img src={formData.image} className="h-full w-full object-cover" /> : <Package className="h-8 w-8 sm:h-8 text-primary dark:text-emerald-400" />}
+        <div className="relative group/img mt-2 sm:mt-0">
+          <div className="w-16 h-16 rounded-md bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0">
+            {formData.image ? <img src={formData.image} className="h-full w-full object-cover" /> : <Package className="h-6 w-6 text-neutral-400" />}
           </div>
+
+          {isEditMode && formData.image && (
+            <button
+              type="button"
+              onClick={() => d.setFormData(prev => ({ ...prev, image: '' }))}
+              title="Remove image"
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center transition-colors shadow-sm border border-white/20 bg-neutral-900/80 hover:bg-rose-600 text-white z-10"
+            >
+              <X className="w-3 h-3 stroke-[2.5]" />
+            </button>
+          )}
 
           {isEditMode && (
             <div className="absolute -bottom-1 -right-1">
               <Button
-                variant="ghost"
+                variant="primary"
                 onClick={() => setShowMediaLibrary(true)}
-                className={`!min-h-0 !p-3 !rounded-2xl !shadow-lg !border-2 !border-white dark:!border-[#171717] active:!scale-95 !bg-primary !text-white scale-110`}
-                icon={<Camera className="w-5 h-5" />}
+                className="h-6 w-6 !p-0 rounded-md shadow-none"
+                icon={<Camera className="w-3.5 h-3.5" />}
               />
             </div>
           )}
@@ -34,22 +43,23 @@ export function ProductDetailHeader({ d }: { d: ProductDetailController }) {
 
         <div className="flex flex-col items-center sm:items-start text-center sm:text-left flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <Badge
-              variant="solid"
-              tone={isOut ? 'danger' : isLow ? 'warning' : 'success'}
-              className={`!px-3 !py-1 !text-[10px] !shadow-lg ${isOut ? '!bg-red-500 !shadow-red-500/20' : isLow ? '!bg-amber-500 !shadow-amber-500/20' : '!bg-primary !shadow-emerald-500/20'}`}
-            >
+            <span className={`px-2 py-0.5 text-[11px] font-mono rounded border ${
+              isOut
+                ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                : isLow
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+            }`}>
               {isInfinite ? 'Infinity Mode' : isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
-            </Badge>
+            </span>
 
-            
             {d.canEditProduct && (
               <Button
                 variant={isEditMode ? 'danger' : 'secondary'}
                 onClick={() => setIsEditMode(!isEditMode)}
-                className={`!p-1.5 !px-3 !rounded-xl !text-[10px] !font-black !shadow-sm ml-auto sm:ml-2 ${isEditMode ? '!bg-rose-500 !text-white !shadow-rose-500/20' : '!bg-white dark:!bg-white/5 !border-gray-200 dark:!border-white/10 !text-gray-700 dark:!text-gray-300'}`}
+                className="h-7 px-2.5 text-[12px] font-medium rounded-md ml-auto sm:ml-2"
               >
-                {isEditMode ? <><X className="h-3 w-3 mr-1" /> {"Cancel Edit"}</> : <><Edit3 className="h-3 w-3 mr-1" /> {"Edit"}</>}
+                {isEditMode ? <><X className="h-3 w-3 mr-1" /> {"Cancel"}</> : <><Edit3 className="h-3 w-3 mr-1" /> {"Edit"}</>}
               </Button>
             )}
           </div>
@@ -59,11 +69,11 @@ export function ProductDetailHeader({ d }: { d: ProductDetailController }) {
               <input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="bg-gray-50 dark:bg-white/5 border-none px-4 py-2 rounded-2xl text-xl font-black text-gray-900 dark:text-white uppercase outline-none text-center sm:text-left ring-1 ring-transparent focus:ring-emerald-500/50 transition-all"
+                className="bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08] px-3 py-1.5 rounded-md text-[16px] font-medium text-neutral-900 dark:text-white outline-none focus:border-primary text-center sm:text-left transition-colors"
                 placeholder={'Product Name *'.replace(' *', '')}
               />
             ) : (
-              <h2 className="text-2xl sm:text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight line-clamp-1">{product.name}</h2>
+              <h2 className="text-lg font-medium text-neutral-900 dark:text-white tracking-tight line-clamp-1">{product.name}</h2>
             )}
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-2">
               <div className="flex flex-col">

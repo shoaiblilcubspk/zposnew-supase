@@ -26,89 +26,88 @@ export function DashboardCards({
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
       {/* 1. Revenue Today */}
       <div
-        className="stat-card bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-800 group cursor-pointer !min-h-[85px] py-2.5 px-4 rounded-[1.5rem]"
+        className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3 shadow-none hover:border-neutral-400 dark:hover:border-white/20 transition-colors cursor-pointer flex flex-col justify-between min-h-[85px]"
         onClick={() => navigate('/reports')}
       >
-        <div className="stat-card-inner">
-          <div className="space-y-0.5">
-            <span className="stat-card-label text-[8.5px] tracking-widest">{"Revenue Today"}</span>
-            <span className="stat-card-value text-base sm:text-lg lg:text-xl font-black">{formatCurrency(todaySalesStats.revenue, currency)}</span>
-          </div>
-          <div className="mt-2">
-            <span className="text-[7.5px] font-black text-white/50 bg-white/15 px-1.5 py-0.5 rounded border border-white/5 uppercase tracking-wider">
-              {todaySalesStats.cash > 0 ? "CASH READY" : "NO CASH"}
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider">{"Revenue Today"}</span>
+          <Wallet className="w-3.5 h-3.5 text-neutral-400" />
+        </div>
+        <div>
+          <span className="text-lg font-bold font-mono tabular-nums text-neutral-900 dark:text-white">{formatCurrency(todaySalesStats.revenue, currency)}</span>
+          <div className="mt-1">
+            <span className="text-[10px] font-mono text-neutral-500 uppercase">
+              {todaySalesStats.cash > 0 ? "Cash: " + formatCurrency(todaySalesStats.cash, currency, false) : "No Cash"}
             </span>
           </div>
         </div>
-        <Wallet className="stat-card-icon !h-8 !w-8 -bottom-1 -right-1 !opacity-10 group-hover:!opacity-20" />
       </div>
 
       {/* 2. Flow Monitor */}
       <div
-        className="stat-card bg-gradient-to-br from-violet-600 via-purple-700 to-indigo-800 group cursor-pointer !min-h-[85px] py-2.5 px-4 rounded-[1.5rem]"
+        className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3 shadow-none hover:border-neutral-400 dark:hover:border-white/20 transition-colors cursor-pointer flex flex-col justify-between min-h-[85px]"
         onClick={() => navigate('/reports')}
       >
-        <div className="stat-card-inner">
-          <div className="space-y-0.5">
-            <span className="stat-card-label text-[8.5px] tracking-widest">{"Flow Monitor"}</span>
-            <div className="flex flex-col gap-1 mt-1">
-              <div className="flex items-center justify-between text-[8px] font-black text-white/60">
-                <span>{"INFLOW"}</span>
-                <span className="text-white">+{formatCurrency(todayStats.sales, currency, false)}</span>
-              </div>
-              <div className="w-full h-0.5 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-400" style={{ width: `${flowRatio}%` }} />
-              </div>
-            </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider">{"Flow Monitor"}</span>
+          <Activity className="w-3.5 h-3.5 text-neutral-400" />
+        </div>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-[11px] font-mono">
+            <span className="text-neutral-500">{"Inflow"}</span>
+            <span className="font-semibold text-neutral-900 dark:text-white tabular-nums">+{formatCurrency(todayStats.sales, currency, false)}</span>
+          </div>
+          <div className="w-full h-1 bg-neutral-100 dark:bg-white/[0.06] rounded-full overflow-hidden">
+            <div className="h-full bg-emerald-500" style={{ width: `${flowRatio}%` }} />
           </div>
         </div>
-        <Activity className="stat-card-icon !h-8 !w-8 -bottom-1 -right-1 !opacity-10 group-hover:!opacity-20" />
       </div>
 
       {/* 3. Payables */}
       <div
-        className="stat-card bg-gradient-to-br from-rose-500 via-red-600 to-red-800 group cursor-pointer shadow-red-500/10 !min-h-[85px] py-2.5 px-4 rounded-[1.5rem]"
+        className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3 shadow-none hover:border-neutral-400 dark:hover:border-white/20 transition-colors cursor-pointer flex flex-col justify-between min-h-[85px]"
         onClick={() => navigate('/suppliers')}
       >
-        <div className="stat-card-inner">
-          <div className="space-y-0.5">
-            <span className="stat-card-label text-[8.5px] tracking-widest">{"Payables"}</span>
-            <span className="stat-card-value text-base sm:text-lg lg:text-xl font-black">{formatCurrency(payableStats.toPay, currency)}</span>
-          </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider">{"Payables"}</span>
+          <Building2 className="w-3.5 h-3.5 text-neutral-400" />
         </div>
-        <Building2 className="stat-card-icon !h-8 !w-8 -bottom-1 -right-1 !opacity-10 group-hover:!opacity-20" />
+        <div>
+          <span className="text-lg font-bold font-mono tabular-nums text-neutral-900 dark:text-white">{formatCurrency(payableStats.toPay, currency)}</span>
+          <p className="text-[10px] font-mono text-neutral-500 uppercase mt-0.5">Supplier balance</p>
+        </div>
       </div>
 
       {/* 4. Orders */}
       <div
-        className="stat-card bg-gradient-to-br from-amber-500 via-orange-600 to-orange-800 group cursor-pointer shadow-orange-500/10 !min-h-[85px] py-2.5 px-4 rounded-[1.5rem]"
+        className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3 shadow-none hover:border-neutral-400 dark:hover:border-white/20 transition-colors cursor-pointer flex flex-col justify-between min-h-[85px]"
         onClick={() => navigate('/purchase-orders')}
       >
-        <div className="stat-card-inner">
-          <div className="space-y-0.5">
-            <span className="stat-card-label text-[8.5px] tracking-widest">{"Pending"}</span>
-            <span className="stat-card-value text-base sm:text-lg lg:text-xl font-black">{pendingPOsCount}</span>
-          </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider">{"Pending Orders"}</span>
+          <ShoppingBag className="w-3.5 h-3.5 text-neutral-400" />
         </div>
-        <ShoppingBag className="stat-card-icon !h-8 !w-8 -bottom-1 -right-1 !opacity-10 group-hover:!opacity-20" />
+        <div>
+          <span className="text-lg font-bold font-mono tabular-nums text-neutral-900 dark:text-white">{pendingPOsCount}</span>
+          <p className="text-[10px] font-mono text-neutral-500 uppercase mt-0.5">Awaiting fulfillment</p>
+        </div>
       </div>
 
       {/* 5. Inventory */}
       <div
-        className={`stat-card group cursor-pointer transition-all duration-500 !min-h-[85px] py-2.5 px-4 rounded-[1.5rem] ${lowStockCount > 0
-          ? 'bg-gradient-to-br from-pink-600 to-rose-700 shadow-rose-500/20 ring-1 ring-white/20'
-          : 'bg-gradient-to-br from-pink-500 to-fuchsia-700'
-          }`}
+        className={`bg-white dark:bg-surface border rounded-md p-3 shadow-none transition-colors cursor-pointer flex flex-col justify-between min-h-[85px] ${lowStockCount > 0 ? 'border-amber-500/30' : 'border-neutral-200 dark:border-white/[0.08] hover:border-neutral-400 dark:hover:border-white/20'}`}
         onClick={() => navigate('/inventory')}
       >
-        <div className="stat-card-inner">
-          <div className="space-y-0.5">
-            <span className="stat-card-label text-[8.5px] tracking-widest">{"Inventory"}</span>
-            <span className="stat-card-value text-base sm:text-lg lg:text-xl font-black">{lowStockCount}</span>
-            <p className="text-[7.5px] font-black text-white/50 uppercase tracking-wider">{lowStockCount > 0 ? "CRITICAL ALERT" : "OPTIMIZED"}</p>
-          </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider">{"Low Stock Items"}</span>
+          <Package className={`w-3.5 h-3.5 ${lowStockCount > 0 ? 'text-amber-500' : 'text-neutral-400'}`} />
         </div>
-        <Package className="stat-card-icon !h-8 !w-8 -bottom-1 -right-1 !opacity-10 group-hover:!opacity-20" />
+        <div>
+          <span className={`text-lg font-bold font-mono tabular-nums ${lowStockCount > 0 ? 'text-amber-500' : 'text-neutral-900 dark:text-white'}`}>{lowStockCount}</span>
+          <p className={`text-[10px] font-mono uppercase mt-0.5 ${lowStockCount > 0 ? 'text-amber-500' : 'text-neutral-500'}`}>
+            {lowStockCount > 0 ? "Requires restock" : "Optimal"}
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -112,7 +112,7 @@ export function ProductGrid({ onAddToCart, onOpenDrafts, onAddTab: _onAddTab, is
     checkScrollButtons();
     const categoriesElement = categoriesRef.current;
     if (categoriesElement) {
-      categoriesElement.addEventListener('scroll', checkScrollButtons);
+      categoriesElement.addEventListener('scroll', checkScrollButtons, { passive: true });
       return () => categoriesElement.removeEventListener('scroll', checkScrollButtons);
     }
   }, [categories]);
@@ -171,11 +171,10 @@ export function ProductGrid({ onAddToCart, onOpenDrafts, onAddTab: _onAddTab, is
           {selectedCategory === '__BUNDLES__' ? (
             <BundleGrid onAddToCart={onAddToCart} currency={getCurrencySymbol(appSettings.currency)} isTouchMode={isTouchMode} isReturnMode={isReturnMode} gridCols={gridCols} appBundles={appBundles} appProducts={appProducts} appCart={appCart} />
           ) : filteredProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64">
-              <div className="bg-gray-100 dark:bg-white/5 p-6 rounded-3xl mb-4">
-                <Package className="h-16 w-16 text-gray-400 dark:text-gray-600" />
-              </div>
-              <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">{"No products found"}</p>
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+              <Package className="h-10 w-10 text-neutral-400 mb-2 opacity-60" />
+              <p className="text-neutral-900 dark:text-white text-[13px] font-semibold">{"No products found"}</p>
+              <p className="text-[12px] text-neutral-500 font-mono mt-0.5">Try searching with a different term or category</p>
             </div>
           ) : (
             <div className={getGridClasses(gridCols)}>

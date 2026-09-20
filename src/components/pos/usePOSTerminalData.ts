@@ -76,10 +76,10 @@ const _appSelectedCustomer = useCartStore(s => s.selectedCustomer);
       checkTabsScroll();
       checkShortcutsScroll();
     });
-    
+
     if (tabsRef.current) resizeObserver.observe(tabsRef.current);
     if (shortcutsRef.current) resizeObserver.observe(shortcutsRef.current);
-    
+
     return () => resizeObserver.disconnect();
   }, [checkTabsScroll, checkShortcutsScroll]);
 

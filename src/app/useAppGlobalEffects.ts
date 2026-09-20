@@ -89,9 +89,10 @@ export function useAppGlobalEffects() {
   }, []);
 
   useEffect(() => {
+    const directTheme = localStorage.getItem('theme');
     const localPrefs = JSON.parse(localStorage.getItem('pos_local_prefs') || '{}');
-    const fallbackTheme = localPrefs.theme || localStorage.getItem('theme');
-    const theme = fallbackTheme || appSettings?.theme || 'dark';
+    const fallbackTheme = directTheme || localPrefs.theme;
+    const theme = appSettings?.theme || fallbackTheme || 'dark';
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
     const applyTheme = () => {
@@ -116,4 +117,17 @@ export function useAppGlobalEffects() {
     mediaQuery.addEventListener('change', applyTheme);
     return () => mediaQuery.removeEventListener('change', applyTheme);
   }, [appSettings?.theme]);
+
+  // Periodic check for automated cloud and local documents backups
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      import('../lib/backup/cloudBackupService')
+        .then(m => m.checkAndTriggerScheduledCloudBackup())
+        .catch(() => {});
+      import('../lib/backup/localBackupService')
+        .then(m => m.checkAndTriggerScheduledLocalBackup())
+        .catch(() => {});
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
 }

@@ -1,3 +1,0 @@
-{
-  "query": "INSERT INTO public.users (id,username,name,email,role,permissions,active,created_at,updated_at) VALUES ('5de7a6bf-ba9d-47db-9501-0c97e0341e18','shoaibzaynah@gmail.com','admin','shoaibzaynah@gmail.com','admin','{}',true,now(),now()) ON CONFLICT (id) DO UPDATE SET role='admin', active=true;"
-}

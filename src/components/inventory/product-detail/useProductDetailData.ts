@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Product } from '../../../types';
 import { localDb } from '../../../lib/localDb';
 import { productToppingsService } from '../../../lib/services';
+import { getProductStockHistory } from '../../../lib/services/inventory/inventoryLedgerRepository';
 
 export function useProductDetailData(
   product: Product,
@@ -28,7 +29,7 @@ export function useProductDetailData(
     recordAsSupplierBill: true
   });
   const [isCompressing, setIsCompressing] = useState(false);
-  const [filterType, setFilterType] = useState<'ALL' | 'IN' | 'OUT' | 'RETURN'>('ALL');
+  const [filterType, setFilterType] = useState<'ALL' | 'IN' | 'OUT' | 'ADJUST' | 'RETURN'>('ALL');
   const [historyPage, setHistoryPage] = useState(1);
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
   const [showBatchStockIn, setShowBatchStockIn] = useState(false);
@@ -116,10 +117,42 @@ export function useProductDetailData(
     ? !formData.trackInventory
     : (product.trackInventory === false || product.stock >= 990000);
 
-  const productStockHistory = useLiveQuery(
+  const [sqliteHistory, setSqliteHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    const fetchHistory = () => {
+      getProductStockHistory(product.id)
+        .then((records) => {
+          if (active) setSqliteHistory(records);
+        })
+        .catch((e) => console.error('Error fetching product stock history from sqlite:', e));
+    };
+
+    fetchHistory();
+
+    const handleTxCreated = (e: any) => {
+      if (!e.detail?.productId || e.detail.productId === product.id) {
+        fetchHistory();
+      }
+    };
+
+    window.addEventListener('inventory-tx-created', handleTxCreated);
+    window.addEventListener('sales-updated', fetchHistory);
+
+    return () => {
+      active = false;
+      window.removeEventListener('inventory-tx-created', handleTxCreated);
+      window.removeEventListener('sales-updated', fetchHistory);
+    };
+  }, [product.id, product.stock, isUpdating, showStockIn, showAdjustment, showRestock]);
+
+  const dexieHistory = useLiveQuery(
     () => localDb.stockHistory.where('productId').equals(product.id).toArray(),
     [product.id]
   ) || [];
+
+  const productStockHistory = sqliteHistory.length > 0 ? sqliteHistory : dexieHistory;
 
   return {
     isUpdating, setIsUpdating,

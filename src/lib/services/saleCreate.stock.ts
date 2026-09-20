@@ -1,4 +1,4 @@
-import { Sale } from '../../types';
+import { Sale, StockHistory, VariantStockHistory } from '../../types';
 import { localDb, generateId } from '../localDb';
 import { toRemoteVariantStockHistory, toRemoteStockHistory } from './mappers';
 
@@ -23,6 +23,8 @@ export async function collectSaleMovements(
      if (product && product.trackInventory) {
       // Fix: Preserve the original sign of quantity to support returns (which have negative qtys).
       const rawQty = Number(item.weight || item.quantity) || 0;
+      const changeQty = -rawQty; // A sale (qty > 0) means stock goes down (-). A return (qty < 0) means stock goes up (+).
+      const histType = rawQty < 0 ? 'return' : 'sale';
       // RULE: Allow negative stock — never block a sale on stock level
       const newStock = (product.stock || 0) - rawQty;
       if (newStock < 0) anyOversold = true;
@@ -66,8 +68,6 @@ export async function collectSaleMovements(
 
         // Log Stock History
         const histId = generateId();
-        const changeQty = -rawQty; // A sale (qty > 0) means stock goes down (-). A return (qty < 0) means stock goes up (+).
-        const histType = rawQty < 0 ? 'return' : 'sale';
         
         const histEntry: StockHistory = {
           id: histId,
@@ -96,7 +96,7 @@ export async function collectSaleMovements(
       }
 
       // --- VARIANT-LEVEL STOCK DEDUCTION ---
-      if (item.selectedVariantId && product.variantData) {
+      if (!skipStockEffects && item.selectedVariantId && product.variantData) {
         const variant = product.variantData.find(v => v.id === item.selectedVariantId);
         if (variant) {
           const newVariantStock = (variant.stock || 0) - rawQty;

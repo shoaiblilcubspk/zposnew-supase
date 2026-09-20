@@ -27,11 +27,15 @@ export interface PurchaseOrder {
 
 export interface PurchaseOrderItem {
   id: string;
-  poId: string;
+  poId?: string;
+  purchaseOrderId?: string;
   productId: string;
   quantity: number;
   receivedQty: number;
-  costPrice: number;
+  costPrice?: number;
+  unitPrice?: number;
+  isReceived?: boolean;
+  createdAt?: Date;
   created_at?: Date;
 }
 
@@ -47,7 +51,10 @@ export interface SupplierTransaction {
   balanceAfter?: number;
   isManualOverride?: boolean;
   overrideBy?: string;
+  paymentType?: string;
+  splitPayments?: any;
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 export interface Payment {
@@ -81,7 +88,7 @@ export interface StockHistory {
 
 export interface PurchaseRecord {
   id: string;
-  type: 'Opening' | 'Stock IN' | 'Sale' | 'Adjustment' | 'Transfer'; // New type field
+  type: 'Opening' | 'Stock IN' | 'Sale' | 'Adjustment' | 'Transfer' | 'AUDIT' | 'Damage' | 'Restock' | string;
   productId?: string;
   productName: string;
   sku?: string;
@@ -96,4 +103,6 @@ export interface PurchaseRecord {
   addedBy: string;
   notes?: string;
   qty_remaining?: number; // actual remaining stock after this stock-in (C5 — schema has the column)
+  createdAt?: Date;
+  updatedAt?: Date;
 }

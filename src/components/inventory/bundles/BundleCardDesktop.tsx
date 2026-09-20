@@ -20,27 +20,29 @@ interface BundleCardDesktopProps {
 
 export function BundleCardDesktop({ bundle, appSettings, isExpandedLocal, canManage, onToggleExpand, onEdit, onToggleActive, onDelete, itemCount, discAmt, totalPrice, finalAmt }: BundleCardDesktopProps) {
   return (
-    <div className="hidden sm:flex items-center gap-3 p-4">
-      <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${bundle.active ? 'bg-primary/10' : 'bg-gray-100 dark:bg-white/5'}`}>
-        <Gift className={`h-5 w-5 ${bundle.active ? 'text-primary' : 'text-gray-400'}`} />
+    <div className="hidden sm:flex items-center gap-3 p-3">
+      <div className="h-8 w-8 rounded flex items-center justify-center shrink-0 bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08]">
+        <Gift className="h-4 w-4 text-neutral-500 dark:text-neutral-400" />
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="font-black text-gray-900 dark:text-white uppercase text-sm truncate">{bundle.name}</p>
-          {!bundle.active && <Badge tone="neutral" className="!bg-gray-200 dark:!bg-white/10 !text-gray-500 !px-1.5 !py-0.5 !rounded !text-[8px]">{"Inactive"}</Badge>}
+          <p className="font-medium text-neutral-900 dark:text-white text-[13px] truncate tracking-[-0.01em]">{bundle.name}</p>
+          {!bundle.active && <Badge tone="neutral" size="sm">{"Inactive"}</Badge>}
           {(bundle.name?.length < 3 || (bundle.discountType === 'percentage' && bundle.discountValue > 100) || discAmt >= totalPrice) && (
-            <Badge tone="danger" variant="solid" className="!bg-red-500 !px-1.5 !py-0.5 !rounded !text-[8px]" title={"This bundle has invalid pricing — edit or delete it"}>{"Invalid"}</Badge>
+            <Badge tone="danger" size="sm" title={"This bundle has invalid pricing — edit or delete it"}>{"Invalid"}</Badge>
           )}
         </div>
-        <div className="flex items-center gap-3 mt-0.5">
-          <span className="text-[10px] text-gray-500">
+        <div className="flex items-center gap-3 mt-0.5 font-mono text-[11px]">
+          <span className="text-neutral-500">
             {"{count} products".replace('{count}', String(itemCount))}
           </span>
-          <span className="text-[10px] font-black text-red-500">
-            {bundle.discountType === 'percentage' && discAmt > 0 ? `-${bundle.discountValue}%` : discAmt > 0 ? `-${formatCurrency(discAmt, appSettings.currency)}` : ''}
-          </span>
-          <span className="text-[10px] font-black text-primary">{formatCurrency(finalAmt, appSettings.currency)}</span>
+          {discAmt > 0 && (
+            <span className="text-rose-500 font-semibold tabular-nums">
+              {bundle.discountType === 'percentage' ? `-${bundle.discountValue}%` : `-${formatCurrency(discAmt, appSettings.currency)}`}
+            </span>
+          )}
+          <span className="font-semibold text-neutral-900 dark:text-white tabular-nums">{formatCurrency(finalAmt, appSettings.currency)}</span>
         </div>
       </div>
 
@@ -48,15 +50,38 @@ export function BundleCardDesktop({ bundle, appSettings, isExpandedLocal, canMan
         <Button
           type="button"
           variant="ghost"
+          size="sm"
           onClick={onToggleExpand}
-          className="!min-h-0 !p-2 !rounded-lg !bg-transparent hover:!bg-gray-100 dark:hover:!bg-white/5"
-          icon={isExpandedLocal ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+          className="!h-7 !w-7 !p-0 text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+          icon={isExpandedLocal ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
         />
         {canManage && (
           <>
-            <Button type="button" variant="ghost" onClick={onToggleActive} className="!min-h-0 !p-2 !rounded-lg !bg-transparent hover:!bg-gray-100 dark:hover:!bg-white/5" title={bundle.active ? "Disable" : "Enable"} icon={bundle.active ? <ToggleRight className="h-4 w-4 text-primary" /> : <ToggleLeft className="h-4 w-4 text-gray-400" />} />
-            <Button type="button" variant="ghost" onClick={onEdit} className="!min-h-0 !p-2 !rounded-lg !bg-transparent !text-blue-500 hover:!bg-blue-50 dark:hover:!bg-blue-500/10" icon={<Edit className="h-4 w-4" />} />
-            <Button type="button" variant="ghost" onClick={onDelete} className="!min-h-0 !p-2 !rounded-lg !bg-transparent !text-red-500 hover:!bg-red-50 dark:hover:!bg-red-500/10" icon={<Trash2 className="h-4 w-4" />} />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onToggleActive}
+              className="!h-7 !w-7 !p-0 text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              title={bundle.active ? "Disable" : "Enable"}
+              icon={bundle.active ? <ToggleRight className="h-4 w-4 text-emerald-500" /> : <ToggleLeft className="h-4 w-4 text-neutral-400" />}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onEdit}
+              className="!h-7 !w-7 !p-0 text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              icon={<Edit className="h-3.5 w-3.5" />}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onDelete}
+              className="!h-7 !w-7 !p-0 text-neutral-500 hover:text-rose-600"
+              icon={<Trash2 className="h-3.5 w-3.5" />}
+            />
           </>
         )}
       </div>

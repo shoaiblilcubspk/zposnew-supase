@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
+import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useProductsStore, useSettingsStore, useUiStore } from '../../stores';
-import { Package, ChevronLeft, History, ClipboardList, Gift, Layers, Camera } from 'lucide-react';
+import { useProductsStore, useSettingsStore, useUiStore, useInventoryStore } from '../../stores';
 import { Product } from '../../types';
-import { Button } from '../../shared/ui';
+import { Button, RealIcon, ScrollableTabBar } from '../../shared/ui';
+import { INVENTORY_TABS } from '../../shared/navigation/tabRegistry';
 import { SkeletonLoader } from '../../shared/ui/SkeletonLoader';
 import { MediaLibrary } from '../../shared/MediaLibrary';
 import { ReceiptPrint } from '../pos/ReceiptPrint';
@@ -20,46 +21,33 @@ import { CategoriesList } from './tabs/CategoriesList';
 
 type TabType = 'inventory' | 'purchase_orders' | 'groups' | 'media' | 'purchases' | 'bundles' | 'store_sort' | 'suppliers';
 
+const SUB_TAB_SEGMENT_TO_INTERNAL: Record<string, TabType> = {
+  products: 'inventory', history: 'purchases', restock: 'purchase_orders',
+  bundles: 'bundles', groups: 'groups', media: 'media', 'store-sort': 'store_sort', suppliers: 'suppliers',
+};
+
+const INTERNAL_TO_SUB_TAB_SEGMENT: Record<string, string> = {
+  inventory: 'products', purchases: 'history', purchase_orders: 'restock',
+  bundles: 'bundles', groups: 'groups', media: 'media', store_sort: 'store-sort', suppliers: 'suppliers',
+};
+
 export function InventoryManager() {
   const navigate = useNavigate();
   const location = useLocation();
   const { subTab } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const appProducts = useProductsStore(s => s.products);
   const appPendingReturnTab = useUiStore(s => s.pendingReturnTab);
   const appSettings = useSettingsStore(s => s.settings);
-
   const { profile } = useAuth();
 
   const products = appProducts ?? [];
-  // RBAC matrix: product add/edit/delete + stock = admin|manager; cashier view-only
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'manager';
-  const canManageStock = isAdmin || profile?.canManageStock || profile?.canManagePO;
-  const canManagePO = isAdmin || profile?.canManagePO;
-  const canViewRecords = isAdmin || profile?.canViewRecords;
-  const canEditProduct = profile?.role === 'admin' || profile?.canEditProduct;
-
-  const SUB_TAB_SEGMENT_TO_INTERNAL: Record<string, TabType> = {
-    products: 'inventory',
-    history: 'purchases',
-    restock: 'purchase_orders',
-    bundles: 'bundles',
-    groups: 'groups',
-    media: 'media',
-    'store-sort': 'store_sort',
-    suppliers: 'suppliers',
-  };
-  
-  const INTERNAL_TO_SUB_TAB_SEGMENT: Record<string, string> = {
-    inventory: 'products',
-    purchases: 'history',
-    purchase_orders: 'restock',
-    bundles: 'bundles',
-    groups: 'groups',
-    media: 'media',
-    store_sort: 'store-sort',
-    suppliers: 'suppliers',
-  };
+  const isAdmin = Boolean(profile?.role === 'admin' || profile?.role === 'manager');
+  const canManageStock = Boolean(isAdmin || profile?.canManageStock || profile?.canManagePO);
+  const canManagePO = Boolean(isAdmin || profile?.canManagePO);
+  const canViewRecords = Boolean(isAdmin || profile?.canViewRecords);
+  const canEditProduct = Boolean(profile?.role === 'admin' || profile?.canEditProduct);
 
   const activeTab = (subTab ? SUB_TAB_SEGMENT_TO_INTERNAL[subTab] : 'inventory') as TabType;
 
@@ -69,6 +57,36 @@ export function InventoryManager() {
   const [showBarcodeGenerator, setShowBarcodeGenerator] = useState(() => localStorage.getItem('barcode_show_generator') === 'true');
   const [viewingSale, setViewingSale] = useState<any | null>(null);
 
+  const detailId = searchParams.get('detail');
+  const editId = searchParams.get('edit');
+  const isNew = searchParams.get('new') === '1' || searchParams.get('action') === 'new';
+
+  // Restore detail & edit view on mount or browser refresh
+  useEffect(() => {
+    if (detailId && products.length > 0) {
+      const found = products.find(p => p.id === detailId);
+      if (found) setDetailProduct(found);
+    } else if (!detailId) {
+      setDetailProduct(null);
+    }
+  }, [detailId, products]);
+
+  useEffect(() => {
+    if (editId && products.length > 0) {
+      const found = products.find(p => p.id === editId);
+      if (found) {
+        setEditingProduct(found);
+        setShowProductModal(true);
+      }
+    } else if (isNew) {
+      setEditingProduct(null);
+      setShowProductModal(true);
+    } else if (!editId && !isNew) {
+      setShowProductModal(false);
+      setEditingProduct(null);
+    }
+  }, [editId, isNew, products]);
+
   useEffect(() => {
     localStorage.setItem('barcode_show_generator', String(showBarcodeGenerator));
   }, [showBarcodeGenerator]);
@@ -76,26 +94,32 @@ export function InventoryManager() {
   useEffect(() => {
     const navState = location.state as { productId?: string; fromSale?: string } | null;
     if (navState?.productId) {
-      const product = products.find(p => p.id === navState.productId);
-      if (product) setDetailProduct(product);
+      setSearchParams({ detail: navState.productId });
       window.history.replaceState({}, document.title);
     }
-  }, [location.state, products]);
+  }, [location.state, setSearchParams]);
 
   useEffect(() => {
     if (appPendingReturnTab === 'purchases') navigate('/inventory/history');
-  }, [appPendingReturnTab]);
+  }, [appPendingReturnTab, navigate]);
 
   useEffect(() => {
     const handleOpenProduct = (e: any) => {
-      const product = products.find(p => p.id === e.detail);
-      if (product) setDetailProduct(product);
+      if (e.detail) setSearchParams({ detail: e.detail });
     };
     window.addEventListener('open-product-hub', handleOpenProduct);
     return () => window.removeEventListener('open-product-hub', handleOpenProduct);
-  }, [products]);
+  }, [setSearchParams]);
+
+  const appCategories = useInventoryStore(s => s.categories);
+  const appSuppliers = useInventoryStore(s => s.suppliers);
 
   const categories = useMemo(() => {
+    const fromCatTable = (appCategories || []).map(c => {
+      if (typeof c === 'object' && c !== null) return c.name;
+      if (typeof c === 'string') return c;
+      return '';
+    }).filter(Boolean);
     const rawCategories = products.map((p: Product) => {
       const cat = p.category;
       if (typeof cat === 'string' && cat.trim().startsWith('{')) {
@@ -103,18 +127,23 @@ export function InventoryManager() {
       }
       return cat;
     }).filter(Boolean);
-    return ['All', ...Array.from(new Set(rawCategories))];
-  }, [products]);
+    return ['All', ...Array.from(new Set([...fromCatTable, ...rawCategories])).sort()];
+  }, [appCategories, products]);
 
   const suppliers = useMemo(() => {
-    return ['All', ...Array.from(new Set(products.map(p => p.supplier).filter(Boolean) as string[]))];
-  }, [products]);
+    const fromSupTable = (appSuppliers || []).map(s => s?.name).filter(Boolean);
+    const fromProducts = products.map(p => p.supplier).filter(Boolean) as string[];
+    return ['All', ...Array.from(new Set([...fromSupTable, ...fromProducts])).sort()];
+  }, [appSuppliers, products]);
 
   if (!appSettings || !appProducts) {
     return <div className="p-6 bg-gray-50 dark:bg-transparent"><SkeletonLoader type="list" count={6} /></div>;
   }
 
-  const freshProduct = detailProduct ? (products.find(p => p.id === detailProduct.id) || detailProduct) : null;
+  const freshProduct = useMemo(() => {
+    if (!detailProduct) return null;
+    return (products || []).find(p => p && p.id === detailProduct.id) || detailProduct;
+  }, [detailProduct, products]);
 
   return (
     <>
@@ -124,6 +153,7 @@ export function InventoryManager() {
             product={freshProduct}
             onBack={() => {
               setDetailProduct(null);
+              setSearchParams({});
               const navState = location.state as { fromSale?: string } | null;
               if (navState?.fromSale) {
                 useUiStore.getState().setPendingReturnSaleId(navState.fromSale);
@@ -141,55 +171,95 @@ export function InventoryManager() {
 
       {showProductModal && (
         <div className="main-content-scroll p-1 sm:p-4 lg:p-6 bg-gray-50 dark:bg-app font-sans w-full max-w-[1400px] mx-auto">
-          <ProductModal product={editingProduct} isOpen={true} onClose={() => { setShowProductModal(false); setEditingProduct(null); }} />
+          <ProductModal
+            product={editingProduct}
+            isOpen={true}
+            onClose={() => {
+              setShowProductModal(false);
+              setEditingProduct(null);
+              setSearchParams({});
+            }}
+          />
         </div>
       )}
 
       {!detailProduct && !showProductModal && !showBarcodeGenerator && (
         <div className="main-content-scroll p-1 sm:p-4 lg:p-6 space-y-3 lg:space-y-6 bg-gray-50 dark:bg-app max-w-[1400px] mx-auto">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 pb-0 sm:pb-2">
-            <div className="flex flex-col md:flex-row md:items-center gap-4 sm:gap-6 xl:gap-10">
-              <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-                <Button variant="ghost" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'pos' }))} className="!min-h-0 !p-2 !rounded-xl !bg-transparent !text-gray-600 dark:!text-gray-400 hover:!bg-gray-100 dark:hover:!bg-white/5 mr-1">
-                  <ChevronLeft className="h-5 w-5" />
-                  <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">{"Back"}</span>
-                </Button>
-                <div className="h-8 w-px bg-gray-200 dark:bg-white/10 mx-1 hidden sm:block" />
-                <div className="h-10 w-10 sm:h-12 sm:w-12 bg-primary/10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-inner border border-primary/10">
-                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                </div>
-                <div className="shrink-0 flex flex-col">
-                  <h1 className="text-lg sm:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">{"Inventory"}</h1>
-                  <p className="hidden sm:block text-gray-600 dark:text-gray-400 text-[9px] font-black uppercase tracking-[0.2em] mt-1 opacity-60">{"Manage Stock"}</p>
-                </div>
-              </div>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-1 border-b border-neutral-200 dark:border-white/[0.08]">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'pos' }))}
+                icon={<ChevronLeft className="h-4 w-4" />}
+                className="h-8 px-2.5 rounded text-neutral-500 hover:text-neutral-900 dark:hover:text-white border border-transparent hover:border-neutral-200 dark:hover:border-white/[0.08]"
+              >
+                <span className="hidden sm:inline text-[12px] font-medium">POS</span>
+              </Button>
 
-              <div className="chip-nav-container overflow-x-auto flex-nowrap">
-                {[
-                  { id: 'inventory', label: "PRODUCTS", icon: Package, color: 'bg-primary', show: true },
-                  { id: 'purchases', label: "HISTORY", icon: History, color: 'bg-blue-600', show: canViewRecords },
-                  { id: 'purchase_orders', label: "RESTOCK", icon: ClipboardList, color: 'bg-rose-600', show: appSettings.enablePurchaseOrders !== false && canManagePO },
-                  { id: 'bundles', label: "BUNDLES & DEALS", icon: Gift, color: 'bg-violet-600', show: true },
-                  { id: 'groups', label: "GROUPS", icon: Layers, color: 'bg-indigo-600', show: true },
-                  { id: 'media', label: "MEDIA", icon: Camera, color: 'bg-amber-600', show: true },
-                ].filter(t => t.show).map(tab => {
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button key={tab.id} onClick={() => navigate('/inventory/' + INTERNAL_TO_SUB_TAB_SEGMENT[tab.id])} className={`chip-nav-item ${isActive ? `${tab.color} text-white shadow-lg` : 'text-gray-600'}`}>
-                      <tab.icon className="w-3.5 h-3.5" />
-                      {tab.label}
-                    </button>
-                  );
-                })}
+              <div className="h-4 w-px bg-neutral-200 dark:bg-white/[0.08] hidden sm:block" />
+
+              <div className="flex items-center gap-2.5">
+                <RealIcon name="inventory" size="sm" className="w-5 h-5" />
+                <div>
+                  <h1 className="text-base font-semibold text-neutral-900 dark:text-white tracking-[-0.01em] leading-tight">
+                    Inventory Management
+                  </h1>
+                  <p className="text-[12px] text-neutral-500 font-normal tracking-tight mt-0.5">
+                    Manage catalog, stock levels & barcodes
+                  </p>
+                </div>
               </div>
             </div>
+
+            <ScrollableTabBar>
+              {INVENTORY_TABS.filter(t => {
+                if (t.id === 'purchases') return canViewRecords;
+                if (t.id === 'purchase_orders') return appSettings.enablePurchaseOrders !== false && canManagePO;
+                return true;
+              }).map(tab => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => navigate('/inventory/' + INTERNAL_TO_SUB_TAB_SEGMENT[tab.id])}
+                    className={`group relative whitespace-nowrap transition-all duration-150 flex-shrink-0 flex items-center gap-2 px-3 h-8 rounded-full text-[12.5px] tracking-tight active:scale-95 border cursor-pointer select-none ${
+                      isActive
+                        ? 'bg-primary text-white font-bold border-primary shadow-xs'
+                        : 'bg-white dark:bg-white/[0.05] text-neutral-900 dark:text-neutral-100 font-semibold border-neutral-200/80 dark:border-white/[0.08] hover:border-neutral-300 dark:hover:border-white/20 hover:bg-neutral-50 dark:hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    <div className="shrink-0 flex items-center justify-center transition-transform duration-150 group-hover:scale-105">
+                      <RealIcon name={tab.realIcon} size={20} />
+                    </div>
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </ScrollableTabBar>
           </div>
 
           {activeTab === 'inventory' ? (
             <ProductsList 
-              appProducts={products} categories={categories} suppliers={suppliers} isAdmin={isAdmin} canManageStock={canManageStock} canEditProduct={canEditProduct} profile={profile}
-              setEditingProduct={setEditingProduct} setShowProductModal={setShowProductModal} handleEditProduct={(p) => setDetailProduct(p)}
-              setShowBarcodeGenerator={setShowBarcodeGenerator} showBarcodeGenerator={showBarcodeGenerator}
+              appProducts={products}
+              categories={categories}
+              suppliers={suppliers}
+              isAdmin={isAdmin}
+              canManageStock={canManageStock}
+              canEditProduct={canEditProduct}
+              profile={profile}
+              setEditingProduct={(p) => {
+                setEditingProduct(p);
+                if (p) setSearchParams({ edit: p.id });
+                else setSearchParams({ new: '1' });
+              }}
+              setShowProductModal={setShowProductModal}
+              handleEditProduct={(p) => {
+                setDetailProduct(p);
+                setSearchParams({ detail: p.id });
+              }}
+              setShowBarcodeGenerator={setShowBarcodeGenerator}
+              showBarcodeGenerator={showBarcodeGenerator}
             />
           ) : activeTab === 'purchase_orders' ? (
             canManagePO ? <PurchaseOrderSystem /> : <div className="p-20 text-center uppercase font-black text-gray-600">Access Denied</div>

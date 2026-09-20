@@ -46,121 +46,110 @@ export function PurchaseOrderSystem() {
   } = usePurchaseOrder();
 
   return (
-    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-
-      <div className="print-hide bg-white dark:bg-surface p-6 lg:p-8 rounded-[2.5rem] border border-gray-200 dark:border-white/5 shadow-2xl relative">
-        <div className="absolute inset-0 overflow-hidden rounded-[2.5rem] pointer-events-none">
-          <div className="absolute top-0 right-0 p-8 opacity-5">
-            <PackageOpen className="w-48 h-48 -mr-12 -mt-12" />
-          </div>
-        </div>
-
-        <div className="relative z-10 flex flex-col gap-8">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-gray-50 dark:border-white/5 pb-6">
-            <div className="flex items-center gap-5">
-              <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center shadow-inner border border-primary/10 shrink-0">
-                <PackageOpen className="h-7 w-7 text-primary" />
-              </div>
-              <div className="flex flex-col">
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">
-                  {"PO Generation"}
+    <div className="space-y-4">
+      <div className="print-hide bg-white dark:bg-surface p-4 sm:p-5 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-neutral-200 dark:border-white/[0.08] pb-3">
+            <div className="flex items-center gap-2.5">
+              <PackageOpen className="h-4 w-4 text-neutral-500 dark:text-neutral-400" />
+              <div>
+                <h2 className="text-[14px] font-semibold text-neutral-900 dark:text-white tracking-[-0.01em]">
+                  Purchase Order Generation
                 </h2>
-                <div className="flex gap-2 mt-2">
-                  <Badge tone="success" size="sm" className="!bg-primary/10 !text-[#10B981] !border-primary/20 !text-[10px] !px-2 !py-0.5 !rounded-md">{"System Center"}</Badge>
-                </div>
+                <p className="text-[11px] text-neutral-500 font-mono tracking-tight">
+                  Auto-reorder &amp; restock requirements based on minimum inventory thresholds
+                </p>
               </div>
             </div>
 
-            <div className="flex bg-gray-100/80 dark:bg-black/75 p-1.5 rounded-2xl border border-gray-200/50 dark:border-white/5 shadow-inner w-full sm:w-fit">
+            <div className="flex items-center gap-1 p-1 bg-neutral-100/80 dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md w-full sm:w-fit">
               {[
-                { id: 'auto', label: "Auto (Reorder)" },
-                { id: 'manual', label: "Manual (Custom)" }
+                { id: 'auto', label: "Auto (Reorder Levels)" },
+                { id: 'manual', label: "Manual Custom Order" }
               ].map(mode => {
                 const isActive = poMode === mode.id;
                 return (
                   <button
                     key={mode.id}
+                    type="button"
                     onClick={() => { setPoMode(mode.id as any); setIsGenerated(false); }}
-                    className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all duration-300 relative overflow-hidden z-10 active:scale-95 ${isActive
-                      ? 'text-primary'
-                      : 'text-gray-600 hover:text-gray-900 dark:hover:text-white'
-                      }`}
+                    className={`h-7 px-3 rounded text-[12px] font-medium transition-colors whitespace-nowrap ${
+                      isActive
+                        ? 'bg-white dark:bg-white/[0.1] text-neutral-900 dark:text-white shadow-none border border-neutral-200 dark:border-white/[0.1]'
+                        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white border border-transparent'
+                    }`}
                   >
-                    {isActive && (
-                      <div className="absolute inset-0 bg-white dark:bg-[#1f1f1f] border border-gray-200/50 dark:border-white/10 rounded-xl shadow-lg -z-10 animate-in zoom-in-95 duration-200" />
-                    )}
-                    <span className="relative z-10">{mode.label}</span>
+                    {mode.label}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-            <div className="flex items-center gap-3 bg-white dark:bg-black/20 px-5 py-2.5 rounded-2xl border border-gray-200 dark:border-white/5 shadow-sm transition-all h-[54px]">
-              <Building2 className="h-4 w-4 text-primary shrink-0" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <div className="flex items-center gap-2 bg-neutral-50/50 dark:bg-white/[0.02] px-2.5 py-1.5 rounded border border-neutral-200 dark:border-white/[0.08] h-8">
+              <Building2 className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
               <div className="flex-1 min-w-[140px]">
                 <SearchableSelect
                   label={"SUPPLIER"}
-                  options={[{ id: 'All', label: "All Suppliers" }, ...appSuppliers.map(s => ({ id: s.name, label: s.name }))]}
+                  options={[{ id: 'All', label: "All" }, ...appSuppliers.map(s => ({ id: s.name, label: s.name }))]}
                   value={selectedSupplier}
                   onChange={setSelectedSupplier}
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-3 bg-white dark:bg-black/20 px-5 py-2.5 rounded-2xl border border-gray-200 dark:border-white/5 shadow-sm transition-all h-[54px]">
-              <Filter className="h-4 w-4 text-primary shrink-0" />
+            <div className="flex items-center gap-2 bg-neutral-50/50 dark:bg-white/[0.02] px-2.5 py-1.5 rounded border border-neutral-200 dark:border-white/[0.08] h-8">
+              <Filter className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
               <div className="flex-1 min-w-[140px]">
                 <SearchableSelect
                   label={"CATEGORY"}
-                  options={[{ id: 'All', label: "All Categories" }, ...appCategories.map(c => ({ id: c.name, label: c.name }))]}
+                  options={[{ id: 'All', label: "All" }, ...appCategories.map(c => ({ id: c.name, label: c.name }))]}
                   value={selectedCategory}
                   onChange={setSelectedCategory}
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-2 h-[54px]">
-              <Button
-                onClick={handleReset}
-                variant="secondary"
-                className="flex-1 h-full !bg-gray-50 dark:!bg-black/20 !text-gray-600 hover:!text-rose-500 hover:!bg-gray-50 dark:hover:!bg-black/20 !border-gray-200 dark:!border-white/5 !rounded-2xl !px-4 !text-[10px] !font-black"
-                icon={<Trash2 className="h-3.5 w-3.5" />}
-              >
-                {"RESET"}
-              </Button>
-            </div>
+            <Button
+              onClick={handleReset}
+              variant="secondary"
+              size="sm"
+              className="h-8 text-[12px]"
+              icon={<Trash2 className="h-3.5 w-3.5" />}
+            >
+              Reset
+            </Button>
 
             <Button
               onClick={handleGenerate}
               variant="primary"
-              size="md"
-              className="h-[54px]"
-              icon={<TrendingDown className="h-4 w-4" />}
+              size="sm"
+              className="h-8 text-[12px]"
+              icon={<TrendingDown className="h-3.5 w-3.5" />}
             >
-              {"PREVIEW PO"}
+              Preview PO
             </Button>
           </div>
 
           {isGenerated && activeList.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-gray-200 dark:border-white/5 animate-in slide-in-from-top-2 duration-300">
+            <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-neutral-200 dark:border-white/[0.08]">
               <Button
                 onClick={handleBulkAdmit}
                 variant="primary"
-                className="!bg-blue-600 hover:!bg-blue-700 !px-6 !py-3 !rounded-2xl !font-black !text-[10px] !gap-3 !shadow-xl !shadow-blue-500/20"
-                icon={<CheckCircle2 className="h-4 w-4" />}
+                size="sm"
+                className="h-8 px-4 text-[12px]"
+                icon={<CheckCircle2 className="h-3.5 w-3.5" />}
               >
-                {"COMMIT & ADD TO STOCK"}
+                Commit &amp; Add to Stock
               </Button>
 
-              <div className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 px-4 py-2.5 rounded-2xl border border-gray-200 dark:border-white/5">
-                <span className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest whitespace-nowrap">{"Supplier Bill"}</span>
+              <div className="flex items-center gap-2 px-2.5 py-1 rounded border border-neutral-200 dark:border-white/[0.08] bg-neutral-50/50 dark:bg-white/[0.02]">
+                <span className="text-[11px] font-mono text-neutral-600 dark:text-neutral-400 whitespace-nowrap">Supplier Bill</span>
                 <ToggleSwitch
                   checked={recordAsSupplierBill}
                   onChange={setRecordAsSupplierBill}
                   size="sm"
-                  color="bg-primary"
                 />
               </div>
             </div>

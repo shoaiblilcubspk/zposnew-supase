@@ -12,6 +12,7 @@ export { Badge, type BadgeProps, type BadgeTone, type BadgeSize, type BadgeVaria
 export { SegmentedControl, type SegmentedControlProps, type SegmentedOption } from './SegmentedControl';
 export { ToggleSwitch, type ToggleSwitchProps } from './ToggleSwitch';
 export { SubTabBar, type SubTabBarProps, type SubTab } from './SubTabBar';
+export { ScrollableTabBar, type ScrollableTabBarProps } from './ScrollableTabBar';
 export { Avatar, type AvatarProps, type AvatarSize, type AvatarShape } from './Avatar';
 export {
   usePagination,
@@ -29,3 +30,8 @@ export { Select, type SelectProps } from './Select';
 export { Modal } from './Modal';
 export { SearchableSelect, type SearchableSelectProps } from './SearchableSelect';
 export { HelpTooltip } from './HelpTooltip';
+export { Input, type InputProps } from './Input';
+export { FormField, type FormFieldProps } from './FormField';
+export { CapsLockIndicator, type CapsLockIndicatorProps } from './CapsLockIndicator';
+export { TYPOGRAPHY, Text, type TypographyVariant, type TextProps } from './typography';
+export { RealIcon, REAL_ICONS, type RealIconName, type RealIconProps } from '../icons/realIcons';

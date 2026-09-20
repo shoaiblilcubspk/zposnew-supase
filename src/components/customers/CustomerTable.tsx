@@ -40,89 +40,91 @@ export function CustomerTable({
   return (
     <>
       {/* Desktop Table View */}
-      <div className="hidden lg:block overflow-x-auto scrollbar-hide">
+      <div className="hidden lg:block overflow-x-auto flex-1">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-gray-50/50 dark:bg-white/[0.02]">
-              <th className="p-4 text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest">{"Customer Info"}</th>
-              <th className="p-4 text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest">{"Contact"}</th>
-              <th className="p-4 text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest text-right">{"Total Purchases"}</th>
-              <th className="p-4 text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest text-center">{"Last Purchase"}</th>
-              <th className="p-4 text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest text-right">{"Actions"}</th>
+            <tr className="h-8 bg-neutral-50 dark:bg-white/[0.02] border-b border-neutral-200 dark:border-white/[0.08]">
+              <th className="px-3.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{"Customer"}</th>
+              <th className="px-3.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{"Contact"}</th>
+              <th className="px-3.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">{"Total Purchases"}</th>
+              <th className="px-3.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-center">{"Last Purchase"}</th>
+              <th className="px-3.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">{"Actions"}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+          <tbody className="divide-y divide-neutral-100 dark:divide-white/[0.04]">
             {filteredCustomers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-20 text-center">
+                <td colSpan={5} className="py-16 text-center">
                   <EmptyState
-                    icon={<User className="h-12 w-12 text-gray-600" />}
+                    icon={<User className="h-8 w-8 text-neutral-400" />}
                     title={"No customers found"}
-                    className="!p-0 !opacity-20"
+                    className="!p-0 opacity-60"
                   />
                 </td>
               </tr>
             ) : (
               paginatedCustomers.map((customer: Customer) => (
-                <tr key={customer.id} className="group hover:bg-gray-50 dark:hover:bg-white/[0.01] transition-colors">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/10">
-                        <User className="h-5 w-5 text-white" />
+                <tr key={customer.id} className="h-11 hover:bg-neutral-50 dark:hover:bg-white/[0.02] transition-colors">
+                  <td className="px-3.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-7 w-7 bg-neutral-100 dark:bg-white/[0.06] rounded flex items-center justify-center shrink-0">
+                        <User className="h-3.5 w-3.5 text-neutral-500" />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-[11px] font-black text-gray-900 dark:text-white uppercase leading-none">{customer.name}</p>
-                        </div>
-                        <p className="text-[9px] text-gray-600 dark:text-gray-400 font-bold mt-1 uppercase tracking-widest">ID: {customer.id.substring(0, 8)}</p>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-neutral-900 dark:text-white truncate leading-tight">{customer.name}</p>
+                        <p className="text-[11px] text-neutral-400 font-mono mt-0.5">#{customer.id.substring(0, 8)}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="p-4">
-                    <p className="text-xs font-black text-gray-900 dark:text-white truncate max-w-[200px]">{customer.phone || 'NO PHONE'}</p>
-                    <p className="text-[9px] text-gray-600 dark:text-gray-400 font-medium truncate max-w-[200px] mt-0.5 uppercase tracking-tighter">{customer.email || 'no-email@store.com'}</p>
+                  <td className="px-3.5">
+                    <p className="text-[12px] font-mono text-neutral-900 dark:text-white truncate max-w-[200px]">{customer.phone || 'No phone'}</p>
+                    <p className="text-[11px] text-neutral-400 font-mono truncate max-w-[200px]">{customer.email || '—'}</p>
                   </td>
-                  <td className="p-4 text-right font-black text-primary dark:text-emerald-400 text-sm">
+                  <td className="px-3.5 text-right font-mono font-semibold text-neutral-900 dark:text-white text-[13px] tabular-nums">
                     {formatCurrency(getCustomerTotalPurchases(customer.id, customer.totalPurchases), appSettings.currency)}
                   </td>
-                  <td className="p-4 text-center">
+                  <td className="px-3.5 text-center">
                     <Badge tone="neutral" size="sm">
                       {customer.lastPurchase ? formatAppDate(customer.lastPurchase, appSettings.country) : "NEVER"}
                     </Badge>
                   </td>
-                  <td className="p-4 text-right">
-                    <div className="flex justify-end items-center gap-2 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                  <td className="px-3.5 text-right">
+                    <div className="flex justify-end items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                       <Button
                         variant="ghost"
+                        size="sm"
                         onClick={() => handleViewCustomer(customer)}
                         aria-label="View customer"
-                        className="!min-h-0 !p-2 !rounded-xl !bg-blue-50 dark:!bg-blue-500/10 !text-blue-600 hover:!scale-110 active:!scale-95"
+                        className="!p-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
                       >
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
+                        size="sm"
                         onClick={() => customer.phone && handleWhatsAppRedirect(customer.phone)}
                         disabled={!customer.phone}
                         aria-label="Send WhatsApp message"
-                        className="!min-h-0 !p-2 !rounded-xl !bg-emerald-50 dark:!bg-primary/10 !text-primary hover:!scale-110 active:!scale-95 disabled:!opacity-30"
+                        className="!p-1 text-neutral-500 hover:text-emerald-600 disabled:opacity-30"
                       >
                         <MessageCircle className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
+                        size="sm"
                         onClick={() => handleEditCustomer(customer)}
                         aria-label="Edit customer"
-                        className="!min-h-0 !p-2 !rounded-xl !bg-amber-50 dark:!bg-amber-500/10 !text-amber-600 hover:!scale-110 active:!scale-95"
+                        className="!p-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
                       >
                         <Edit className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
+                        size="sm"
                         onClick={() => handleDeleteCustomer(customer.id)}
                         disabled={!canManageCustomers}
                         aria-label="Delete customer"
-                        className="!min-h-0 !p-2 !rounded-xl !bg-red-50 dark:!bg-red-500/10 !text-red-600 hover:!scale-110 active:!scale-95 disabled:!opacity-40"
+                        className="!p-1 text-neutral-500 hover:text-rose-600 disabled:opacity-30"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -135,71 +137,71 @@ export function CustomerTable({
         </table>
       </div>
 
-      {/* Mobile Card View (Expert Density) */}
-      <div className="lg:hidden p-3 sm:p-4">
+      {/* Mobile Card View */}
+      <div className="lg:hidden p-3 flex-1">
         {filteredCustomers.length === 0 ? (
           <EmptyState
-            icon={<User className="h-10 w-10 text-gray-600 opacity-10" />}
+            icon={<User className="h-8 w-8 text-neutral-400 opacity-40" />}
             title={"No customers found"}
             className="!py-10"
           />
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
             {paginatedCustomers.map((customer: Customer) => (
               <div
                 key={customer.id}
                 onClick={() => handleViewCustomer(customer)}
-                className="relative flex flex-col p-3 sm:p-4 rounded-[1.5rem] bg-white dark:bg-surface border border-gray-200 dark:border-white/5 shadow-sm active:scale-[0.98] transition-all"
+                className="flex flex-col p-3 rounded-md bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] shadow-none cursor-pointer hover:border-neutral-300 dark:hover:border-white/[0.15] transition-colors"
               >
-                <div className="flex flex-col h-full">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <User className="h-4 w-4 text-primary" />
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="h-6 w-6 bg-neutral-100 dark:bg-white/[0.06] rounded flex items-center justify-center shrink-0">
+                      <User className="h-3 w-3 text-neutral-500" />
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        onClick={(e) => { e.stopPropagation(); if (customer.phone) handleWhatsAppRedirect(customer.phone); }}
-                        aria-label="Send WhatsApp message"
-                        className="!min-h-0 !p-1.5 !rounded-lg !bg-emerald-50 dark:!bg-primary/10 !text-primary"
-                      >
-                        <MessageCircle className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={(e) => { e.stopPropagation(); handleEditCustomer(customer); }}
-                        aria-label="Edit customer"
-                        className="!min-h-0 !p-1.5 !rounded-lg !bg-amber-50 dark:!bg-amber-500/10 !text-amber-600"
-                      >
-                        <Edit className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer.id); }}
-                        disabled={!canManageCustomers}
-                        aria-label="Delete customer"
-                        className="!min-h-0 !p-1.5 !rounded-lg !bg-red-50 dark:!bg-red-500/10 !text-red-600 disabled:!opacity-40"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
+                    <h3 className="font-medium text-neutral-900 dark:text-white text-[13px] truncate">
+                      {customer.name}
+                    </h3>
                   </div>
-
-                  <h3 className="font-black text-gray-900 dark:text-white uppercase text-[10px] leading-tight truncate mb-1">
-                    {customer.name}
-                  </h3>
-                  <p className="text-[8px] text-gray-600 dark:text-gray-400 font-bold uppercase tracking-tight mb-3 truncate">
-                    {customer.phone || 'NO PHONE'}
-                  </p>
-
-                  <div className="mt-auto pt-2 border-t border-gray-200 dark:border-white/5 flex items-center justify-between">
-                    <p className="text-[11px] font-black text-primary dark:text-emerald-400">
-                      {formatCurrency(getCustomerTotalPurchases(customer.id, customer.totalPurchases), appSettings.currency)}
-                    </p>
-                    <span className="text-[7px] font-black text-gray-600 dark:text-gray-400 uppercase">
-                      {customer.lastPurchase ? formatAppDate(customer.lastPurchase, appSettings.country).substring(0, 6) : 'NEVER'}
-                    </span>
+                  <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                    {customer.phone && (
+                      <button
+                        onClick={() => handleWhatsAppRedirect(customer.phone!)}
+                        className="p-1 text-neutral-500 hover:text-emerald-600"
+                        title="WhatsApp"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleEditCustomer(customer)}
+                      className="p-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                      title="Edit"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    {canManageCustomers && (
+                      <button
+                        onClick={() => handleDeleteCustomer(customer.id)}
+                        className="p-1 text-neutral-500 hover:text-rose-600"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
+                </div>
+
+                <p className="text-[11px] text-neutral-500 font-mono mb-2">
+                  {customer.phone || 'No phone'}
+                </p>
+
+                <div className="mt-auto pt-2 border-t border-neutral-100 dark:border-white/[0.06] flex items-center justify-between text-[12px]">
+                  <span className="font-semibold font-mono tabular-nums text-neutral-900 dark:text-white">
+                    {formatCurrency(getCustomerTotalPurchases(customer.id, customer.totalPurchases), appSettings.currency)}
+                  </span>
+                  <span className="text-[10px] text-neutral-400 font-mono uppercase">
+                    {customer.lastPurchase ? formatAppDate(customer.lastPurchase, appSettings.country) : 'Never'}
+                  </span>
                 </div>
               </div>
             ))}
@@ -207,10 +209,11 @@ export function CustomerTable({
         )}
       </div>
 
-      {/* Premium Pagination Footer */}
-      
-      <div className="p-4 bg-gray-50/50 dark:bg-white/[0.02] border-t border-gray-200 dark:border-white/5 flex items-center justify-between gap-4">
-        <p className="hidden sm:block text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest italic truncate">{"Records"} {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredCustomers.length)} {"of"} {filteredCustomers.length}</p>
+      {/* Pinned Pagination Footer */}
+      <div className="px-3 py-2 bg-neutral-50 dark:bg-white/[0.02] border-t border-neutral-200 dark:border-white/[0.08] flex items-center justify-between gap-4 mt-auto">
+        <p className="hidden sm:block text-[11px] text-neutral-500 font-mono">
+          Showing {filteredCustomers.length === 0 ? '0 of 0' : `${((currentPage - 1) * ITEMS_PER_PAGE) + 1}–${Math.min(currentPage * ITEMS_PER_PAGE, filteredCustomers.length)} of ${filteredCustomers.length}`}
+        </p>
         <div className="mx-auto sm:mx-0">
           <Pagination
             page={currentPage}

@@ -1,7 +1,6 @@
 import { useUsersStore } from '../../stores';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AppIcons } from '../../lib/icons';
-import { Button } from '../../shared/ui';
+import { RealIcon } from '../../shared/icons';
 import { can } from '../../lib/permissions';
 
 interface MobileBottomNavProps {
@@ -11,60 +10,81 @@ interface MobileBottomNavProps {
 export function MobileBottomNav({ onShowMenu }: MobileBottomNavProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const appCurrentUser = useUsersStore(s => s.currentUser);
+  const appCurrentUser = useUsersStore((s) => s.currentUser);
   const role = appCurrentUser?.role;
 
   const navItems = [
-    { id: 'pos', label: "POS", icon: AppIcons.pos, perm: 'view_pos' as const },
-    { id: 'transactions', label: "Sales", icon: AppIcons.sales, perm: 'view_transactions' as const },
-    { id: 'inventory', label: "Stock", icon: AppIcons.inventory, perm: 'view_inventory' as const },
+    { id: 'pos', label: 'POS', realIcon: 'pos' as const, perm: 'view_pos' as const },
+    { id: 'transactions', label: 'Sales', realIcon: 'sales' as const, perm: 'view_transactions' as const },
+    { id: 'inventory', label: 'Stock', realIcon: 'inventory' as const, perm: 'view_inventory' as const },
+    { id: 'customers', label: 'Clients', realIcon: 'customers' as const, perm: 'view_customers' as const },
   ];
-
-  // Real RBAC (MASTER §2): only show items the role can access.
-  navItems.unshift({ id: 'dashboard', label: "Home", icon: AppIcons.dashboard, perm: 'view_dashboard' as const });
-  navItems.push({ id: 'customers', label: "Clients", icon: AppIcons.customers, perm: 'view_customers' as const });
 
   const visibleItems = navItems.filter((item) => can(role, item.perm));
 
   return (
-    <div className="md:hidden bg-white/95 dark:bg-zinc-950/95 border-t border-gray-200/50 dark:border-white/5 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_25px_rgba(0,0,0,0.06)] z-[40] flex-shrink-0 backdrop-blur-md">
-      <div className="flex items-center justify-around h-14 max-w-md mx-auto">
+    <nav
+      aria-label="Mobile Navigation"
+      className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom,0px)+8px)] left-3 right-3 max-w-md mx-auto z-50 select-none"
+    >
+      <div className="relative flex items-center justify-between h-[58px] px-1.5 rounded-[24px] bg-white/80 dark:bg-[#121214]/85 backdrop-blur-2xl backdrop-saturate-[180%] border border-black/[0.07] dark:border-white/[0.12] shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.85)] dark:shadow-[0_16px_40px_-6px_rgba(0,0,0,0.65),0_4px_16px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.12)]">
         {visibleItems.map((item) => {
           const active = location.pathname === '/' + item.id || location.pathname.startsWith('/' + item.id + '/');
           return (
-            <Button
+            <button
               key={item.id}
-              variant="ghost"
+              type="button"
               onClick={() => navigate('/' + item.id)}
-              className={`!flex-1 !flex !flex-col !items-center !justify-center !py-1 !gap-0.5 !min-h-[44px] ${
-                active 
-                  ? '!text-primary' 
-                  : '!text-gray-400 dark:!text-zinc-500 hover:!text-gray-600 dark:hover:!text-zinc-300'
+              className={`group relative flex-1 h-[48px] flex flex-col items-center justify-center rounded-[18px] transition-all duration-200 ease-out active:scale-90 cursor-pointer ${
+                active
+                  ? 'bg-black/[0.04] dark:bg-white/[0.08]'
+                  : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.03]'
               }`}
             >
-              <div className={`p-1.5 rounded-full transition-all ${active ? 'bg-primary/10' : ''}`}>
-                <item.icon className="w-5 h-5" strokeWidth={active ? 2.5 : 2} />
+              <div
+                className={`shrink-0 flex items-center justify-center transition-all duration-200 ease-out ${
+                  active ? 'scale-105 -translate-y-0.5' : 'scale-95 opacity-75 group-hover:opacity-100'
+                }`}
+              >
+                <RealIcon name={item.realIcon} size="sm" />
               </div>
-              <span className="text-[8px] font-black uppercase tracking-wider">{item.label}</span>
-              {active && (
-                <div className="w-1 h-1 rounded-full bg-primary mt-0.5" />
-              )}
-            </Button>
+              <span
+                className={`text-[10px] tracking-tight leading-none mt-0.5 transition-colors duration-150 ${
+                  active
+                    ? 'font-semibold text-neutral-900 dark:text-white'
+                    : 'font-medium text-neutral-500 dark:text-neutral-400'
+                }`}
+              >
+                {item.label}
+              </span>
+              <span
+                className={`w-1 h-1 rounded-full mt-0.5 transition-all duration-200 ${
+                  active
+                    ? 'bg-emerald-500 dark:bg-emerald-400 opacity-100 scale-100 shadow-[0_0_6px_rgba(16,185,129,0.8)]'
+                    : 'bg-transparent opacity-0 scale-0'
+                }`}
+              />
+            </button>
           );
         })}
-        
-        {/* Menu Toggle */}
-        <Button
-          variant="ghost"
+
+        {/* Menu Drawer Toggle */}
+        <button
+          type="button"
           onClick={onShowMenu}
-          className="!flex-1 !flex !flex-col !items-center !justify-center !py-1 !gap-0.5 !min-h-[44px] !text-gray-400 dark:!text-zinc-500 hover:!text-gray-600 dark:hover:!text-zinc-300"
+          aria-label="More Options"
+          className="group relative flex-1 h-[48px] flex flex-col items-center justify-center rounded-[18px] transition-all duration-200 ease-out active:scale-90 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] cursor-pointer"
         >
-          <div className="p-1.5 rounded-full">
-            <AppIcons.menu className="w-5 h-5" />
+          <div className="shrink-0 flex items-center justify-center transition-all duration-200 ease-out scale-95 opacity-75 group-hover:opacity-100">
+            <RealIcon name="more" size="sm" />
           </div>
-          <span className="text-[8px] font-black uppercase tracking-wider">{"More"}</span>
-        </Button>
+          <span className="text-[10px] font-medium tracking-tight leading-none mt-0.5 text-neutral-500 dark:text-neutral-400">
+            More
+          </span>
+          <span className="w-1 h-1 rounded-full mt-0.5 bg-transparent opacity-0 scale-0" />
+        </button>
       </div>
-    </div>
+    </nav>
   );
 }
+

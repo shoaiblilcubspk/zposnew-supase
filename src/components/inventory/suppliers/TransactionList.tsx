@@ -38,30 +38,30 @@ export function TransactionList({
 
   return (
     <>
-      <div className="hidden md:block overflow-x-auto scrollbar-hide">
-        <table className="w-full text-left border-collapse">
+      <div className="hidden md:block overflow-x-auto scrollbar-hide flex-1">
+        <table className="w-full text-left border-collapse text-[13px]">
           <thead>
-            <tr className="bg-gray-50 dark:bg-white/[0.02]">
-              <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest">{'Date'}</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest">{'Type'}</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest">{'Description'}</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest text-right">{'Paid'}</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest text-right">{'Bill'}</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest text-center">{'Actions'}</th>
+            <tr className="h-8 bg-neutral-50/50 dark:bg-white/[0.02] border-b border-neutral-200 dark:border-white/[0.08]">
+              <th className="px-3.5 text-[11px] font-medium uppercase text-neutral-500 dark:text-neutral-400 tracking-wider">{'Date & Time'}</th>
+              <th className="px-3.5 text-[11px] font-medium uppercase text-neutral-500 dark:text-neutral-400 tracking-wider text-center">{'Type'}</th>
+              <th className="px-3.5 text-[11px] font-medium uppercase text-neutral-500 dark:text-neutral-400 tracking-wider">{'Description'}</th>
+              <th className="px-3.5 text-[11px] font-medium uppercase text-neutral-500 dark:text-neutral-400 tracking-wider text-right">{'Paid (Dr)'}</th>
+              <th className="px-3.5 text-[11px] font-medium uppercase text-neutral-500 dark:text-neutral-400 tracking-wider text-right">{'Bill (Cr)'}</th>
+              <th className="px-3.5 text-[11px] font-medium uppercase text-neutral-500 dark:text-neutral-400 tracking-wider text-right">{'Actions'}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+          <tbody className="divide-y divide-neutral-100 dark:divide-white/[0.04]">
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-gray-600 font-bold italic animate-pulse">{'Loading ledger data...'}</td>
+                <td colSpan={6} className="px-3.5 py-12 text-center text-neutral-500 font-mono text-[12px] italic animate-pulse">{'Loading ledger data...'}</td>
               </tr>
             ) : filteredLedger.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center">
+                <td colSpan={6} className="px-3.5 py-12 text-center">
                   <EmptyState
-                    icon={<Clock className="h-10 w-10 text-gray-600 dark:text-gray-500" />}
+                    icon={<Clock className="h-8 w-8 text-neutral-400 opacity-60" />}
                     title={'No transactions yet'}
-                    className="py-6"
+                    className="!p-0"
                   />
                 </td>
               </tr>
@@ -69,36 +69,42 @@ export function TransactionList({
               pageItems.map((tx, idx) => {
                 const badge = getBadge(tx.type, tx.sourceType);
                 return (
-                  <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-white/[0.01] transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <p className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-tighter">{formatAppDate(tx.date, appSettings.country)}</p>
-                      <p className="text-[9px] uppercase font-bold tracking-widest text-gray-600 mt-0.5">{formatAppTime(tx.date, appSettings.country)}</p>
+                  <tr key={idx} className="h-10 hover:bg-neutral-50/50 dark:hover:bg-white/[0.02] transition-colors">
+                    <td className="px-3.5 whitespace-nowrap">
+                      <p className="text-[12px] font-mono font-medium text-neutral-900 dark:text-white leading-none">{formatAppDate(tx.date, appSettings.country)}</p>
+                      <p className="text-[11px] text-neutral-400 font-mono mt-0.5">{formatAppTime(tx.date, appSettings.country)}</p>
                     </td>
-                    <td className="px-6 py-4">
-                      <Badge tone={badge.tone} size="sm" className={`${badge.cls} !text-[8px] !px-2 !py-1 !rounded-md`}>
+                    <td className="px-3.5 text-center">
+                      <Badge tone={badge.tone} size="sm">
                         {badge.label}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="text-[11px] font-bold text-gray-900 dark:text-white truncate max-w-[200px]" title={tx.detail}>{tx.detail}</p>
+                    <td className="px-3.5">
+                      <p className="text-[13px] font-medium text-neutral-900 dark:text-white truncate max-w-[240px]" title={tx.detail}>{tx.detail}</p>
                     </td>
-                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <td className="px-3.5 text-right whitespace-nowrap font-mono tabular-nums text-[13px]">
                       {tx.type === 'payment' && tx.debit > 0 ? (
-                        <span className="text-xs font-black text-primary tracking-tighter">
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                           {formatCurrency(tx.debit, appSettings.currency)}
                         </span>
-                      ) : <span className="text-gray-600 dark:text-gray-500 opacity-20">—</span>}
+                      ) : <span className="text-neutral-400 opacity-50">—</span>}
                     </td>
-                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <td className="px-3.5 text-right whitespace-nowrap font-mono tabular-nums text-[13px]">
                       {tx.type !== 'payment' && tx.credit > 0 ? (
-                        <span className="text-xs font-black text-rose-500 tracking-tighter">
+                        <span className="font-semibold text-rose-500">
                           {formatCurrency(tx.credit, appSettings.currency)}
                         </span>
-                      ) : <span className="text-gray-600 dark:text-gray-500 opacity-20">—</span>}
+                      ) : <span className="text-neutral-400 opacity-50">—</span>}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <Button variant="ghost" onClick={() => handleDeleteTransaction(tx.id)} className="!min-h-0 !p-1.5 !rounded-lg !text-gray-600 hover:!text-red-500 active:scale-90">
-                        <Trash2 className="h-4 w-4" />
+                    <td className="px-3.5 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteTransaction(tx.id)}
+                        className="!h-7 !w-7 !p-0 text-neutral-500 hover:text-rose-600"
+                        title="Delete entry"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </td>
                   </tr>
@@ -109,61 +115,53 @@ export function TransactionList({
         </table>
       </div>
 
-      <div className="md:hidden divide-y divide-gray-50 dark:divide-white/5">
+      <div className="md:hidden divide-y divide-neutral-100 dark:divide-white/[0.04] flex-1">
         {loading ? (
-          <div className="p-8 text-center text-gray-600 font-bold animate-pulse uppercase text-[10px] tracking-widest">{'Loading transactions...'}</div>
+          <div className="p-8 text-center text-neutral-500 font-mono text-[12px] italic">{'Loading transactions...'}</div>
         ) : filteredLedger.length === 0 ? (
           <EmptyState
-            icon={<Clock className="h-8 w-8 text-gray-600 dark:text-gray-500" />}
+            icon={<Clock className="h-8 w-8 text-neutral-400 opacity-60" />}
             title={'No entries found'}
-            className="p-10"
+            className="p-8"
           />
         ) : (
           pageItems.map((tx, idx) => {
             const badge = getBadge(tx.type, tx.sourceType);
             return (
-              <div key={idx} className="p-4 flex flex-col gap-2 hover:bg-gray-50 dark:hover:bg-white/[0.01]">
+              <div key={idx} className="p-3 flex flex-col gap-2 hover:bg-neutral-50/50 dark:hover:bg-white/[0.02]">
                 <div className="flex justify-between items-start">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-tight">
+                  <div className="flex flex-col font-mono text-[11px]">
+                    <span className="font-medium text-neutral-900 dark:text-white">
                       {formatAppDate(tx.date, appSettings.country)}
                     </span>
-                    <span className="text-[9px] text-gray-600 font-bold uppercase">
+                    <span className="text-neutral-400">
                       {formatAppTime(tx.date, appSettings.country)}
                     </span>
                   </div>
-                  <Badge tone={badge.tone} size="sm" className={`${badge.cls} !text-[8px] !px-2 !py-0.5 !rounded-md`}>
+                  <Badge tone={badge.tone} size="sm">
                     {badge.label}
                   </Badge>
                 </div>
 
-                <div className="flex justify-between items-center bg-gray-50 dark:bg-white/5 p-2.5 rounded-xl border border-gray-200 dark:border-white/5">
-                  <div className="flex flex-col max-w-[60%]">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-0.5">{'Description'}</span>
-                    <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate">{tx.detail}</span>
-                  </div>
-                  <div className="text-right">
+                <div className="flex justify-between items-center text-[12px]">
+                  <span className="text-neutral-700 dark:text-neutral-300 truncate max-w-[60%]">{tx.detail}</span>
+                  <div className="font-mono tabular-nums text-right">
                     {tx.type === 'payment' ? (
-                      <div className="flex flex-col items-end">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-primary/50 mb-0.5">{'Paid'} (Dr)</span>
-                        <span className="text-xs font-black text-primary tracking-tighter">{formatCurrency(tx.debit, appSettings.currency)}</span>
-                      </div>
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">+{formatCurrency(tx.debit, appSettings.currency)}</span>
                     ) : (
-                      <div className="flex flex-col items-end">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-rose-500/50 mb-0.5">{'Bill'} (Cr)</span>
-                        <span className="text-xs font-black text-rose-500 tracking-tighter">{formatCurrency(tx.credit, appSettings.currency)}</span>
-                      </div>
+                      <span className="font-semibold text-rose-500">-{formatCurrency(tx.credit, appSettings.currency)}</span>
                     )}
                   </div>
                 </div>
 
                 <div className="flex justify-end pt-1">
                   <Button
-                    variant="danger"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleDeleteTransaction(tx.id)}
-                    className="!min-h-0 !bg-rose-500/10 !text-rose-500 hover:!bg-rose-500/10 !px-3 !py-1.5 !rounded-lg !text-[9px] !font-black"
+                    className="!h-6 !px-2 text-neutral-500 hover:text-rose-600 !text-[11px]"
                   >
-                    <Trash2 className="w-3 h-3" /> {'Delete Entry'}
+                    <Trash2 className="w-3 h-3 mr-1" /> {'Delete'}
                   </Button>
                 </div>
               </div>
@@ -172,16 +170,21 @@ export function TransactionList({
         )}
       </div>
 
-      <div className="p-4 sm:p-6 bg-gray-50/50 dark:bg-white/[0.02] border-t border-gray-200 dark:border-white/5 flex justify-center">
-        <Pagination
-          page={page}
-          totalPages={totalPages}
-          onPageChange={goToPage}
-          totalItems={filteredLedger.length}
-          mode="prevNext"
-          pageSize={pageSize}
-          onPageSizeChange={setPageSize}
-        />
+      <div className="px-3.5 py-2.5 bg-neutral-50/50 dark:bg-white/[0.01] border-t border-neutral-200 dark:border-white/[0.08] flex items-center justify-between text-[11px] text-neutral-500 font-mono mt-auto">
+        <span className="hidden sm:inline">
+          Showing {filteredLedger.length === 0 ? '0 of 0' : `${((page - 1) * pageSize) + 1}–${Math.min(page * pageSize, filteredLedger.length)} of ${filteredLedger.length}`}
+        </span>
+        <div className="mx-auto sm:mx-0">
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            totalItems={filteredLedger.length}
+            mode="numbered"
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
       </div>
     </>
   );

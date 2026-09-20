@@ -116,7 +116,7 @@ export function PurchaseOrderForm({
               emptyStateText={"NO ITEMS SELECTED YET"}
             />
           )}
-          <div className="bg-gray-100 dark:bg-black/75 p-4 rounded-[1.5rem] border border-gray-200 dark:border-white/5 focus-within:border-primary/50 transition-all shadow-inner">
+          <div className="bg-white dark:bg-surface p-2.5 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
             <SharedSearchBar
               value={searchQuery}
               onChange={setSearchQuery}
@@ -129,25 +129,40 @@ export function PurchaseOrderForm({
         </div>
       </div>
       {(isGenerated || (poMode === 'manual')) && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4">
           {activeList.length > 0 && (
-            <div className="print-hide grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-primary p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group">
-                <div className="absolute right-[-20px] top-[-20px] opacity-10 group-hover:scale-110 transition-transform duration-700">
-                  <PackageOpen className="h-40 w-40" />
+            <div className="print-hide grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                    {"Total Items to Order"}
+                  </span>
+                  <PackageOpen className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
                 </div>
-                <div className="z-10">
-                  <p className="text-[11px] font-black uppercase tracking-widest text-white/70 mb-2">{"Total Items to Order"}</p>
-                  <p className="text-4xl font-black">{totalItemsNeeded.toLocaleString()}</p>
+                <div className="mt-1.5 flex items-baseline justify-between">
+                  <span className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white font-mono tabular-nums">
+                    {totalItemsNeeded.toLocaleString()}
+                  </span>
+                  <span className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400">
+                    Units
+                  </span>
                 </div>
               </div>
-              <div className="bg-rose-500 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group">
-                <div className="absolute right-[-20px] top-[-20px] opacity-10 group-hover:scale-110 transition-transform duration-700">
-                  <TrendingDown className="h-40 w-40" />
+
+              <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                    {"Estimated Restock Cost"}
+                  </span>
+                  <TrendingDown className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
                 </div>
-                <div className="z-10">
-                  <p className="text-[11px] font-black uppercase tracking-widest text-white/70 mb-2">{"Estimated Restock Cost"}</p>
-                  <p className="text-4xl font-black">{formatCurrency(estimatedCost, appSettings.currency)}</p>
+                <div className="mt-1.5 flex items-baseline justify-between">
+                  <span className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white font-mono tabular-nums">
+                    {formatCurrency(estimatedCost, appSettings.currency)}
+                  </span>
+                  <span className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400">
+                    Estimated
+                  </span>
                 </div>
               </div>
             </div>

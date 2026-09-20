@@ -14,6 +14,7 @@ import {
   type ReportExportConfig,
 } from './exportEngine';
 import { useSettingsStore } from '../../stores';
+import { getCurrencySymbol } from '../../lib/currencies';
 
 /**
  * ExportButton — the single reusable export trigger for ALL business reports.
@@ -94,6 +95,13 @@ export function ExportButton({
       sonner.warning(`Large dataset — exporting first ${maxRows.toLocaleString()} rows`);
     }
 
+    const storeSettings = useSettingsStore.getState().settings;
+    const activeCurrencySymbol = currencySymbol || getCurrencySymbol(storeSettings.currency || 'PKR');
+    const activeBrand = brand && brand.name !== DEFAULT_BRAND.name ? brand : {
+      name: storeSettings.storeName || DEFAULT_BRAND.name,
+      logo: storeSettings.logoUrl || DEFAULT_BRAND.logo,
+    };
+
     const config: ReportExportConfig = {
       title,
       subtitle,
@@ -101,9 +109,9 @@ export function ExportButton({
       rows,
       filtersSummary,
       filename,
-      currencySymbol,
-      brand,
-      paperSize: useSettingsStore.getState().settings.receiptPaperSize || 'A4',
+      currencySymbol: activeCurrencySymbol,
+      brand: activeBrand,
+      paperSize: storeSettings.receiptPaperSize || 'A4',
     };
 
     setBusy(format);
@@ -131,8 +139,8 @@ export function ExportButton({
       icon={busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (icon ?? <AppIcons.download className="h-4 w-4" />)}
       className={
         compact
-          ? `!min-h-0 !p-3.5 !bg-gray-100 dark:!bg-white/5 !text-gray-600 !rounded-2xl hover:!text-primary !border-transparent hover:!border-primary/30 ${className || ''}`
-          : `!px-5 !shadow-sm ${className || ''}`
+          ? `!h-8 !w-8 !p-0 !rounded-md !bg-white dark:!bg-surface !border !border-neutral-200 dark:!border-white/[0.08] !text-neutral-600 dark:!text-neutral-300 hover:!text-primary ${className || ''}`
+          : `!h-8 !px-3 !rounded-md !text-[13px] ${className || ''}`
       }
     >
       {!compact && <span>Export</span>}
@@ -140,14 +148,14 @@ export function ExportButton({
   );
 
   const renderFormatList = (onPick: (f: ExportFormat) => void) => (
-    <div className="w-full space-y-1">
+    <div className="w-full space-y-0.5">
       {formats.map(f => (
         <button
           key={f}
           type="button"
           onClick={() => onPick(f)}
           disabled={!!busy}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 active:scale-[0.98] transition-all disabled:opacity-40 text-left"
+          className="w-full flex items-center gap-2 px-2.5 h-8 rounded text-[12px] font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5 transition-colors disabled:opacity-40 text-left"
         >
           <span className="text-primary">{FORMAT_META[f].icon}</span>
           <span>{FORMAT_META[f].label}</span>
@@ -163,7 +171,7 @@ export function ExportButton({
         {trigger}
 
         {isOpen && !isMobile && (
-          <div className="absolute right-0 top-full mt-2 z-[60] min-w-[220px] bg-white dark:bg-surface rounded-2xl border border-gray-200 dark:border-white/10 shadow-xl p-2 animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute right-0 top-full mt-1 z-[60] min-w-[200px] bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-lg p-1 animate-in fade-in zoom-in-95 duration-150">
             {renderFormatList(f => run(f))}
           </div>
         )}

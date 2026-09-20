@@ -18,11 +18,13 @@ interface InventoryToolbarProps {
   onSortChange: (by: 'name' | 'stock' | 'price', order: 'asc' | 'desc') => void;
   canManageStock: boolean;
   selectedCount: number;
+  _filteredCount?: number;
   handleBulkDelete: () => void;
   onBulkEdit: () => void;
   onPrintBarcodes: () => void;
   onAddProduct: () => void;
   onScanClick: () => void;
+  canViewExpiry?: boolean;
 }
 
 export function InventoryToolbar({
@@ -46,27 +48,40 @@ export function InventoryToolbar({
   onPrintBarcodes,
   onAddProduct,
   onScanClick,
+  canViewExpiry,
 }: InventoryToolbarProps) {
+  const typeFilterOptions = [
+    { id: 'All', label: "All Items" },
+    { id: 'standard', label: "Standard Products" },
+    { id: 'variable', label: "Variable Products" },
+    { id: 'services', label: "Service Items" },
+    { id: 'serialized', label: "IMEI / Serialized" },
+    ...(canViewExpiry ? [
+      { id: 'expiring_soon', label: "Expiring Soon" },
+      { id: 'expired', label: "Expired" }
+    ] : [])
+  ];
+
   return (
-    <div className="relative z-30 bg-white/50 dark:bg-black/20 p-2.5 lg:p-4 rounded-2xl lg:rounded-[1.75rem] border border-gray-200/50 dark:border-white/5 shadow-xl ring-1 ring-black/5 dark:ring-white/5">
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+    <div className="relative z-30 bg-white dark:bg-surface p-2.5 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
         {/* Contextual Actions Grid */}
         <div className="grid grid-cols-2 sm:flex items-center gap-2 order-2 lg:order-1">
           {canManageStock && (
             <>
               <Button
                 variant="primary"
-                size="md"
+                size="sm"
                 onClick={() => { onAddProduct(); }}
-                className="col-span-2 sm:col-auto !px-4 sm:!px-5 !py-2 sm:!py-2.5 !text-[9px] sm:!text-[10px] !shadow-lg !shadow-emerald-500/20 hover:!scale-[1.02]"
+                className="col-span-2 sm:col-auto"
                 icon={<Plus className="h-3.5 w-3.5" />}
               >
                 <span>{"Add Item"}</span>
               </Button>
-              <Button variant="secondary" size="md" onClick={handleImportJSON} className="!px-4 !py-2.5 !text-[9px] !font-black !bg-white dark:!bg-zinc-900 !border-gray-200 dark:!border-white/10 !text-gray-700 dark:!text-gray-300 hover:!bg-gray-100 dark:hover:!bg-white/10 !rounded-xl" icon={<Upload className="h-4 w-4" />}>
+              <Button variant="secondary" size="sm" onClick={handleImportJSON} icon={<Upload className="h-3.5 w-3.5" />}>
                 <span>{"Import"}</span>
               </Button>
-              <Button variant="primary" size="md" onClick={handleExportSelected} className="!px-4 !py-2.5 !text-[9px] !font-black !bg-emerald-50 dark:!bg-primary/10 !border-emerald-100 dark:!border-primary/20 !text-primary dark:!text-emerald-400 hover:!bg-emerald-50 dark:hover:!bg-primary/10 !rounded-xl !shadow-none" icon={<Download className="h-4 w-4" />}>
+              <Button variant="secondary" size="sm" onClick={handleExportSelected} icon={<Download className="h-3.5 w-3.5" />}>
                 <span>{"Export"}</span>
               </Button>
             </>
@@ -84,23 +99,20 @@ export function InventoryToolbar({
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-2 order-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:flex items-center gap-2 order-3 w-full xl:w-auto">
           <SearchableSelect
-            options={categories.map(c => ({ id: c, label: c === 'All' ? "Categories: All" : c }))}
+            options={categories.map(c => ({ id: c, label: c === 'All' ? "All" : c }))}
             value={selectedCategory}
             onChange={val => { onCategoryChange(val); }}
             placeholder={"Category"}
+            label={"Category"}
           />
           <SearchableSelect
-            options={[
-              { id: 'All', label: "Type: All Items" },
-              { id: 'standard', label: "Type: Standard Products" },
-              { id: 'services', label: "Type: Service Items" },
-              { id: 'serialized', label: "Type: IMEI / Serialized" }
-            ]}
+            options={typeFilterOptions}
             value={selectedType}
             onChange={val => { onTypeChange(val); }}
             placeholder={"Item Type"}
+            label={"Type"}
           />
           <SearchableSelect
             options={[
@@ -120,23 +132,23 @@ export function InventoryToolbar({
         </div>
       </div>
 
-      {/* Bulk Actions Bar (Visible when selected) */}
+      {/* Bulk Actions Bar (Theme-adaptive for Light and Dark modes) */}
       {canManageStock && selectedCount > 0 && (
-        <div className="flex items-center gap-2 mt-3 p-1 bg-gray-900 dark:bg-black border border-white/10 rounded-2xl animate-in slide-in-from-bottom-2 duration-300 overflow-x-auto scrollbar-hide shadow-2xl">
-          <div className="flex flex-col items-center justify-center px-4 py-1 border-r border-white/10 shrink-0">
-            <span className="text-[11px] font-black text-primary leading-none">{selectedCount}</span>
-            <span className="text-[7px] font-black text-primary/50 uppercase tracking-tighter">Selected</span>
+        <div className="flex items-center gap-2 mt-2.5 px-3 py-1.5 bg-neutral-100 dark:bg-surface border border-neutral-200 dark:border-white/[0.08] text-neutral-900 dark:text-white rounded-md overflow-x-auto scrollbar-hide shadow-none">
+          <div className="flex items-center gap-1.5 pr-3 border-r border-neutral-200 dark:border-white/10 shrink-0">
+            <span className="text-[12px] font-mono tabular-nums font-bold text-neutral-900 dark:text-white leading-none">{selectedCount}</span>
+            <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">Selected</span>
           </div>
 
-          <div className="flex items-center gap-1 p-1 pr-3">
-            <Button variant="ghost" onClick={onBulkEdit} className="!min-h-0 !px-4 !py-2 !rounded-xl !bg-transparent !text-[10px] !font-black !text-blue-400 hover:!bg-blue-500/10 whitespace-nowrap">
-              <Layers className="h-3.5 w-3.5" /> <span className="hidden sm:inline">BULK EDIT</span><span className="sm:hidden">EDIT</span>
+          <div className="flex items-center gap-1.5">
+            <Button variant="ghost" size="sm" onClick={onBulkEdit} className="!text-neutral-700 dark:!text-neutral-200 hover:!bg-neutral-200/60 dark:hover:!bg-white/10">
+              <Layers className="h-3.5 w-3.5" /> <span>Bulk Edit</span>
             </Button>
-            <Button variant="ghost" onClick={handleBulkDelete} className="!min-h-0 !px-4 !py-2 !rounded-xl !bg-transparent !text-[10px] !font-black !text-red-400 hover:!bg-red-500/10 whitespace-nowrap">
-              <Trash2 className="h-3.5 w-3.5" /> <span className="hidden sm:inline">DELETE</span><span className="sm:hidden">DEL</span>
+            <Button variant="ghost" size="sm" onClick={handleBulkDelete} className="!text-rose-600 dark:!text-rose-400 hover:!bg-rose-500/10">
+              <Trash2 className="h-3.5 w-3.5" /> <span>Delete</span>
             </Button>
-            <Button variant="ghost" onClick={onPrintBarcodes} className="!min-h-0 !px-4 !py-2 !rounded-xl !bg-transparent !text-[10px] !font-black !text-emerald-400 hover:!bg-primary/10 whitespace-nowrap">
-              <Printer className="h-3.5 w-3.5" /> <span className="hidden sm:inline">PRINT BARCODES</span><span className="sm:hidden">BARCODE</span>
+            <Button variant="ghost" size="sm" onClick={onPrintBarcodes} className="!text-emerald-600 dark:!text-emerald-400 hover:!bg-emerald-500/10">
+              <Printer className="h-3.5 w-3.5" /> <span>Print Barcodes</span>
             </Button>
           </div>
         </div>

@@ -60,6 +60,8 @@ export interface Product {
   isService?: boolean;
   requireSerial?: boolean;
   productAddons?: ProductAddon[]; // Inventory-tracked linked add-ons
+  expiryDate?: string; // ISO date string YYYY-MM-DD
+  expiryAlertDays?: number; // Days before expiry to trigger warning (default: 90)
 }
 
 export interface Category {
@@ -114,4 +116,7 @@ export interface ProductTopping {
   id: string;
   productId: string;
   toppingId: string;
+  isDefault?: boolean;
+  maxAllowed?: number;
+  createdAt?: Date;
 }

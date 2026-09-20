@@ -22,8 +22,9 @@ export function TwoCol(props: any) {
 
 export function renderLogo(ctx: ReceiptCtx, style: React.CSSProperties) {
   const { settings } = ctx;
-  if (settings.receiptShowLogo && settings.storeLogo) {
+  if (!settings.receiptShowLogo) return null;
+  if (settings.storeLogo) {
     return <img src={settings.storeLogo} alt="" style={{ ...style, objectFit: 'contain' }} />;
   }
-  return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900, ...style }}>LOGO</div>;
+  return null;
 }

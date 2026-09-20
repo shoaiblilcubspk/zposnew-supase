@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, DollarSign, Wallet, Banknote, CreditCard, Building2 } from 'lucide-react';
+import { Banknote, CreditCard, Building2, Wallet, TrendingUp, TrendingDown, DollarSign, BarChart2, Receipt, ShoppingCart, Package } from 'lucide-react';
 import { formatCurrency, getCurrencySymbol } from '../../../lib/currencies';
 import { ExportButton } from '../../../shared/export';
 import { useMemo } from 'react';
@@ -30,7 +30,18 @@ export function FinancialReport({
 }: FinancialReportProps) {
   const exportColumns = [
     { key: 'metric', label: "Metric" },
-    { key: 'value', label: "Value" },
+    {
+      key: 'value',
+      label: "Value",
+      format: (val: any, row: any) => {
+        if (row.metric === "Total Transactions") {
+          return Number(val || 0).toLocaleString();
+        }
+        const n = Number(val || 0);
+        const sym = currency ? `${getCurrencySymbol(currency)} ` : '';
+        return `${sym}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+    },
   ];
 
   const exportRows = useMemo(() => {
@@ -49,138 +60,164 @@ export function FinancialReport({
   }, [totalRevenue, totalTransactions, totalCostOfGoods, grossProfit, totalExpenseAmount, netProfit, walletStats]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-end">
         <ExportButton
           data={exportRows}
           columns={exportColumns}
           title={"Financial Report"}
+          filtersSummary={`${currency} • Revenue: ${formatCurrency(totalRevenue, currency)} • Net Profit: ${formatCurrency(netProfit, currency)}`}
           currencySymbol={getCurrencySymbol(currency)}
-          className="!min-h-0 !px-4 !py-2.5 !rounded-xl !text-[10px] !font-black !bg-gray-100 dark:!bg-white/5 !text-gray-600 dark:!text-gray-400 !border-gray-200 dark:!border-white/5 hover:!text-primary"
+          className="!min-h-0 !h-8 !px-3 !rounded !text-[12px] !bg-white dark:!bg-surface !text-neutral-800 dark:!text-neutral-200 !border-neutral-200 dark:border-white/[0.08] hover:!bg-neutral-50 dark:hover:!bg-surface-hover shadow-none"
         />
       </div>
-      {/* Main Profit Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div className="stat-card bg-gradient-to-br from-blue-600 to-indigo-700">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Total Revenue"}</span>
-            <span className="stat-card-value">{formatCurrency(totalRevenue, currency)}</span>
-            <p className="text-[7px] font-black text-white/40 uppercase tracking-widest mt-1">
-              {totalTransactions} {"Transactions"}
-            </p>
+
+      {/* Main Profit Cards - Asymmetric Hierarchy */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Hero 1: Revenue */}
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              Total Revenue
+            </span>
+            <TrendingUp className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <TrendingUp className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {formatCurrency(totalRevenue, currency)}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono tabular-nums">
+            {totalTransactions} Transactions
+          </p>
         </div>
-        <div className="stat-card bg-gradient-to-br from-rose-500 to-red-600">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Cost of Goods"}</span>
-            <span className="stat-card-value">{formatCurrency(totalCostOfGoods, currency)}</span>
-            <p className="text-[7px] font-black text-white/40 uppercase tracking-widest mt-1">
-              {"Est. Inventory Cost"}
-            </p>
+
+        {/* Hero 2: Net Profit */}
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              Net Profit
+            </span>
+            <DollarSign className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <TrendingDown className="stat-card-icon" />
+          <div className={`mt-2 text-xl font-bold font-mono tabular-nums ${netProfit >= 0 ? 'text-primary' : 'text-rose-500'}`}>
+            {formatCurrency(netProfit, currency)}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+            GP − Expenses
+          </p>
         </div>
-        <div className="stat-card bg-gradient-to-br from-orange-500 to-amber-600">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Total Expenses"}</span>
-            <span className="stat-card-value">{formatCurrency(totalExpenseAmount, currency)}</span>
-            <p className="text-[7px] font-black text-white/40 uppercase tracking-widest mt-1">
-              {filteredExpensesCount} {"Records"}
-            </p>
+
+        {/* Secondary: Cost of Goods */}
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              Cost of Goods (COGS)
+            </span>
+            <TrendingDown className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <Wallet className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {formatCurrency(totalCostOfGoods, currency)}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+            Est. Inventory Cost
+          </p>
         </div>
-        <div className="stat-card bg-gradient-to-br from-indigo-500 to-violet-700">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Net Profit"}</span>
-            <span className="stat-card-value">{formatCurrency(netProfit, currency)}</span>
-            <p className="text-[7px] font-black text-white/40 uppercase tracking-widest mt-1">
-              {"GP - Expenses"}
-            </p>
+
+        {/* Secondary: Expenses */}
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              Total Expenses
+            </span>
+            <Wallet className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <DollarSign className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {formatCurrency(totalExpenseAmount, currency)}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono tabular-nums">
+            {filteredExpensesCount} Records
+          </p>
         </div>
       </div>
 
       {/* Wallet-wise Financial Breakdown */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-600 flex items-center gap-2">
-          <span className="w-1.5 h-4 bg-violet-600 rounded-full inline-block shadow-lg shadow-violet-600/20"></span>
-          {"Wallet-wise Summary (Net Cash Movement)"}
+      <div className="space-y-2.5">
+        <h3 className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+          Wallet-wise Summary (Net Cash Movement)
         </h3>
-        <div className={`grid grid-cols-1 md:grid-cols-3 ${walletStats.length === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'} gap-6`}>
+        <div className={`grid grid-cols-1 md:grid-cols-3 ${walletStats.length === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'} gap-3`}>
           {[
-            { method: 'cash', label: "Cash Wallet", icon: <Banknote className="h-6 w-6" />, color: 'text-primary', accent: 'emerald', bg: 'bg-primary/10 dark:bg-primary/5', bar: 'bg-primary', stats: walletStats.find(w => w.method === 'cash') },
-            { method: 'card', label: "Card Wallet", icon: <CreditCard className="h-6 w-6" />, color: 'text-blue-500', accent: 'blue', bg: 'bg-blue-500/10 dark:bg-blue-500/5', bar: 'bg-blue-500', stats: walletStats.find(w => w.method === 'card') },
-            { method: 'online', label: "Online Wallet", icon: <Building2 className="h-6 w-6" />, color: 'text-cyan-500', accent: 'cyan', bg: 'bg-cyan-500/10 dark:bg-cyan-500/5', bar: 'bg-cyan-500', stats: walletStats.find(w => w.method === 'online') },
-            ...(walletStats.some(w => w.method === 'credit') ? [{ method: 'credit', label: "Credit Wallet", icon: <Wallet className="h-6 w-6" />, color: 'text-amber-500', accent: 'amber', bg: 'bg-amber-500/10 dark:bg-amber-500/5', bar: 'bg-amber-500', stats: walletStats.find(w => w.method === 'credit') }] : [])
+            { method: 'cash', label: "Cash", icon: <Banknote className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />, stats: walletStats.find(w => w.method === 'cash') },
+            { method: 'card', label: "Card", icon: <CreditCard className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />, stats: walletStats.find(w => w.method === 'card') },
+            { method: 'online', label: "Online", icon: <Building2 className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />, stats: walletStats.find(w => w.method === 'online') },
+            ...(walletStats.some(w => w.method === 'credit') ? [{ method: 'credit', label: "Credit", icon: <Wallet className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />, stats: walletStats.find(w => w.method === 'credit') }] : [])
           ].map((w, i) => (
-            <div key={i} className="group relative p-6 rounded-[1.5rem] border border-white/5 bg-gradient-to-br from-white to-gray-50 dark:from-[#171717] dark:to-[#111] shadow-xl hover:scale-[1.02] transition-all duration-300">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3.5 rounded-2xl ${w.bg} ${w.color} shadow-lg shadow-black/[0.02] group-hover:scale-110 transition-transform`}>{w.icon}</div>
-                  <div>
-                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-60 ${w.color}`}>{w.label}</span>
-                    <h4 className="text-lg font-black text-gray-900 dark:text-white leading-tight">{"Net Flow"}</h4>
-                  </div>
+            <div key={i} className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-white/[0.06]">
+                <div className="flex items-center gap-2">
+                  {w.icon}
+                  <span className="text-[12px] font-semibold uppercase tracking-wider text-neutral-900 dark:text-white">
+                    {w.label}
+                  </span>
                 </div>
+                <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-white/[0.06] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-white/[0.06]">
+                  Wallet
+                </span>
               </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center px-1">
-                  <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{w.method === 'credit' ? "Credit Given" : "Total Sales"}</span>
-                  <span className="text-sm font-black text-primary dark:text-emerald-400">+{formatCurrency(w.stats?.sales || 0, currency)}</span>
+
+              <div className="space-y-1.5 pt-2.5">
+                <div className="flex justify-between items-center text-[12px]">
+                  <span className="text-neutral-500 dark:text-neutral-400">{w.method === 'credit' ? "Credit Given" : "Total Sales"}</span>
+                  <span className="font-mono tabular-nums font-medium text-neutral-900 dark:text-white">+{formatCurrency(w.stats?.sales || 0, currency)}</span>
                 </div>
                 {w.method !== 'credit' && (
                   <>
-                    <div className="flex justify-between items-center px-1">
-                      <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Total Refunds"}</span>
-                      <span className="text-sm font-black text-rose-500">-{formatCurrency(w.stats?.refunds || 0, currency)}</span>
+                    <div className="flex justify-between items-center text-[12px]">
+                      <span className="text-neutral-500 dark:text-neutral-400">Total Refunds</span>
+                      <span className="font-mono tabular-nums font-medium text-rose-500">-{formatCurrency(w.stats?.refunds || 0, currency)}</span>
                     </div>
-                    <div className="flex justify-between items-center px-1">
-                      <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Total Expenses"}</span>
-                      <span className="text-sm font-black text-rose-500">-{formatCurrency(w.stats?.expenses || 0, currency)}</span>
+                    <div className="flex justify-between items-center text-[12px]">
+                      <span className="text-neutral-500 dark:text-neutral-400">Total Expenses</span>
+                      <span className="font-mono tabular-nums font-medium text-rose-500">-{formatCurrency(w.stats?.expenses || 0, currency)}</span>
                     </div>
                   </>
                 )}
                 {(w.stats?.customerPayments || 0) > 0 && (
-                  <div className="flex justify-between items-center px-1">
-                    <span className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{w.method === 'credit' ? "Credit Recovered" : "Credit Received"}</span>
-                    <span className={`text-sm font-black ${w.method === 'credit' ? 'text-rose-500' : 'text-blue-500'}`}>{w.method === 'credit' ? '-' : '+'}{formatCurrency(w.stats?.customerPayments || 0, currency)}</span>
+                  <div className="flex justify-between items-center text-[12px]">
+                    <span className="text-neutral-500 dark:text-neutral-400">{w.method === 'credit' ? "Credit Recovered" : "Credit Received"}</span>
+                    <span className={`font-mono tabular-nums font-medium ${w.method === 'credit' ? 'text-primary' : 'text-primary'}`}>{w.method === 'credit' ? '-' : '+'}{formatCurrency(w.stats?.customerPayments || 0, currency)}</span>
                   </div>
                 )}
-                <div className="relative pt-4 mt-4 border-t border-gray-200 dark:border-white/5">
-                  <div className={`absolute top-0 left-0 w-8 h-[2px] ${w.bar} -translate-y-[1px]`}></div>
-                  <div className="flex justify-between items-center px-1">
-                    <span className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-widest">{"Wallet Net"}</span>
-                    <span className={`text-xl font-black ${w.color}`}>{formatCurrency(w.stats?.net || 0, currency)}</span>
-                  </div>
+                <div className="pt-2.5 mt-2.5 border-t border-neutral-200 dark:border-white/[0.06] flex justify-between items-baseline">
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Wallet Net</span>
+                  <span className="text-base font-bold font-mono tabular-nums text-neutral-900 dark:text-white">{formatCurrency(w.stats?.net || 0, currency)}</span>
                 </div>
               </div>
-              <div className={`absolute -right-6 -bottom-6 w-24 h-24 rounded-full ${w.bg} opacity-50 transition-transform group-hover:scale-150`}></div>
             </div>
           ))}
         </div>
 
-        {/* Grand Total Consolidation */}
-        <div className="p-8 mt-4 bg-gradient-to-br from-gray-900 to-black dark:from-white/[0.08] dark:to-white/[0.02] rounded-[2.5rem] flex flex-col md:flex-row justify-between items-center gap-8 border border-white/5 shadow-2xl relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          <div className="flex items-center gap-6 relative z-10">
-            <div className="p-4 bg-white/10 rounded-3xl"><TrendingUp className="h-8 w-8 text-emerald-400" /></div>
+        {/* Grand Total Summary Card */}
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-4 mt-3 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-none">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded bg-neutral-100 dark:bg-white/[0.06] border border-neutral-200 dark:border-white/[0.08] text-primary">
+              <TrendingUp className="h-5 w-5" />
+            </div>
             <div>
-              <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.3em] mb-1">
-                {"Net Profit Summary"}
+              <p className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                Net Profit Summary
               </p>
-              <p className="text-xs text-white/30 font-bold max-w-[300px]">
-                {"Total Revenue remaining after deducting all business expenses for this period."}
+              <p className="text-[12px] text-neutral-600 dark:text-neutral-400">
+                Total Revenue remaining after deducting all business expenses for this period.
               </p>
             </div>
           </div>
-          <div className="text-center md:text-right relative z-10">
-              <p className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.4em] mb-2">
-                {"Net Profit (Final)"}
-              </p>
-              <p className="text-5xl font-black text-white tracking-tighter drop-shadow-2xl">{formatCurrency(netProfit, currency)}</p>
+          <div className="text-right sm:text-right w-full sm:w-auto">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400 block">
+              Net Profit (Final)
+            </span>
+            <span className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-primary tracking-tight">
+              {formatCurrency(netProfit, currency)}
+            </span>
           </div>
         </div>
       </div>

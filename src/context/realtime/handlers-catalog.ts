@@ -11,7 +11,7 @@ import { RealtimeCtx } from './types';
 
 export function attachCatalogHandlers(channel: any, _ctx: RealtimeCtx) {
   channel
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, async (payload: any) => {
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         if (await isPendingDelete('categories', payload.new.id)) return;
         await localDb.categories.put(payload.new);
@@ -23,7 +23,7 @@ export function attachCatalogHandlers(channel: any, _ctx: RealtimeCtx) {
         useInventoryStore.getState().setCategories(all);
       }
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, async (payload: any) => {
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         if (await isPendingDelete('suppliers', payload.new.id)) return;
         await localDb.suppliers.put(payload.new);
@@ -35,7 +35,7 @@ export function attachCatalogHandlers(channel: any, _ctx: RealtimeCtx) {
         useInventoryStore.getState().setSuppliers(all);
       }
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'discounts' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'discounts' }, async (payload: any) => {
       if (payload.eventType === 'INSERT') {
         if (await isPendingDelete('discounts', payload.new.id)) return;
         const mapped = mapDiscount(payload.new);
@@ -51,7 +51,7 @@ export function attachCatalogHandlers(channel: any, _ctx: RealtimeCtx) {
         useAppStore.getState().deleteDiscount(payload.old.id);
       }
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_records' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_records' }, async (payload: any) => {
       if (payload.eventType === 'INSERT') {
         if (await isPendingDelete('purchase_records', payload.new.id)) return;
         const mapped = mapPurchaseRecord(payload.new);
@@ -67,7 +67,7 @@ export function attachCatalogHandlers(channel: any, _ctx: RealtimeCtx) {
         useInventoryStore.getState().deletePurchaseRecord(payload.old.id);
       }
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_orders' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_orders' }, async (payload: any) => {
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         if (await isPendingDelete('purchase_orders', payload.new.id)) return;
         await localDb.purchaseOrders.put(payload.new);
@@ -79,7 +79,7 @@ export function attachCatalogHandlers(channel: any, _ctx: RealtimeCtx) {
         useInventoryStore.getState().setPurchaseOrders(all);
       }
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_transactions' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_transactions' }, async (payload: any) => {
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         if (await isPendingDelete('supplier_transactions', payload.new.id)) return;
         await localDb.supplierTransactions.put(payload.new);

@@ -1,242 +1,164 @@
-import { supabase } from '../supabase';
+/**
+ * Local SQLite Sales Queries & Reports
+ * Directly queries local SQLite database for sales history, search, and date-filtered report sets.
+ */
+
 import { Sale } from '../../types';
+import { getDatabase } from '../db';
 import { localDb } from '../localDb';
-import { cloudWrite } from '../cloudWrite';
-import { mapSale, toRemoteSale } from './mappers';
-import { fetchAllPages } from './utils';
+import { mapSqliteSale, batchHydrateSaleItems } from './sales/salesRepository';
 
 export async function getAllSales(): Promise<Sale[]> {
-  const sales = await localDb.sales.filter(s => s.status !== 'deleted').toArray();
-  return sales.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const db = await getDatabase();
+  const rows = await db.query(
+    `SELECT * FROM sales WHERE status NOT IN ('deleted', 'void') ORDER BY timestamp DESC;`
+  );
+  return batchHydrateSaleItems(rows);
 }
 
-export async function fetchRemoteSales(lastSyncTime?: Date): Promise<Sale[]> {
-  if (lastSyncTime) {
-    const queryFn = () => supabase
-      .from('sales')
-      .select('*')
-      .is('deleted_at', null)
-      .gte('updated_at', lastSyncTime.toISOString());
-    const data = await fetchAllPages(queryFn);
-    return data.map(mapSale);
-  } else {
-    // FULL pull. sales is the heavy table (45MB — items jsonb ~35KB/row), so
-    // paginate in SMALL pages (200): a 1000-row page = ~35MB single response
-    // → PostgREST statement timeout (57014 "canceling statement due to
-    // statement timeout", 8s Supabase default).
-    // Exclude soft-deleted sales (deleted_at set) — they are audit-only rows
-    // and must never re-surface locally (tombstones remove them too).
-    const queryFn = () => supabase
-      .from('sales')
-      .select('*')
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false });
-    const data = await fetchAllPages(queryFn, 200);
-    return (data || []).map(mapSale);
-  }
+export async function fetchRemoteSales(): Promise<Sale[]> {
+  return getAllSales();
 }
 
 export async function searchSales(filters: {
-  startDate?: Date,
-  endDate?: Date,
-  invoiceNumber?: string,
-  customerId?: string,
-  paymentMethod?: string,
-  status?: string,
-  cashier?: string,
-  salesman?: string,
-  saleType?: string
+  startDate?: Date;
+  endDate?: Date;
+  invoiceNumber?: string;
+  customerId?: string;
+  paymentMethod?: string;
+  status?: string;
+  cashier?: string;
+  salesman?: string;
+  saleType?: string;
 }): Promise<Sale[]> {
-  try {
-    let query = supabase
-      .from('sales')
-      .select('*')
-      .order('created_at', { ascending: false });
+  const db = await getDatabase();
+  const conditions: string[] = ["status NOT IN ('deleted', 'void')"];
+  const params: any[] = [];
 
-    if (filters.startDate) query = query.gte('created_at', filters.startDate.toISOString());
-    if (filters.endDate) query = query.lte('created_at', filters.endDate.toISOString());
-    if (filters.invoiceNumber) {
-      query = query.or(`invoice_number.ilike.%${filters.invoiceNumber}%,receipt_number.ilike.%${filters.invoiceNumber}%,customer_name.ilike.%${filters.invoiceNumber}%`);
-    }
-    if (filters.customerId) query = query.eq('customer_id', filters.customerId);
-    if (filters.paymentMethod) query = query.eq('payment_method', filters.paymentMethod);
-    if (filters.status) query = query.eq('status', filters.status);
-    if (filters.cashier) query = query.eq('cashier', filters.cashier);
-    if (filters.saleType) query = query.eq('sale_type', filters.saleType);
-    if (filters.salesman) query = query.eq('salesman_name', filters.salesman);
-
-    const data = await fetchAllPages(query);
-    return data.map(mapSale);
-  } catch (e) {
-    console.warn("Cloud search failed, falling back to localDb", e);
-    let sales = await localDb.sales.toArray();
-
-    if (filters.startDate) sales = sales.filter(s => new Date(s.timestamp).getTime() >= filters.startDate!.getTime());
-    if (filters.endDate) sales = sales.filter(s => new Date(s.timestamp).getTime() <= filters.endDate!.getTime());
-    if (filters.invoiceNumber) {
-      const query = filters.invoiceNumber.toLowerCase();
-      sales = sales.filter(s =>
-        (s.invoiceNumber || '').toLowerCase().includes(query) ||
-        (s.receiptNumber || '').toLowerCase().includes(query) ||
-        (s.customerName || '').toLowerCase().includes(query)
-      );
-    }
-    if (filters.customerId) sales = sales.filter(s => s.customerId === filters.customerId);
-    if (filters.paymentMethod) sales = sales.filter(s => s.paymentMethod === filters.paymentMethod);
-    if (filters.status) sales = sales.filter(s => s.status === filters.status);
-    if (filters.cashier) sales = sales.filter(s => s.cashier === filters.cashier);
-    if (filters.salesman) sales = sales.filter(s => s.salesmanName === filters.salesman);
-    if (filters.saleType) sales = sales.filter(s => s.saleType === filters.saleType);
-
-    return sales.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 200);
+  if (filters.startDate) {
+    conditions.push('timestamp >= ?');
+    params.push(filters.startDate.getTime());
   }
+  if (filters.endDate) {
+    conditions.push('timestamp <= ?');
+    params.push(filters.endDate.getTime());
+  }
+  if (filters.invoiceNumber) {
+    conditions.push('(invoice_number LIKE ? OR customer_name LIKE ?)');
+    params.push(`%${filters.invoiceNumber}%`, `%${filters.invoiceNumber}%`);
+  }
+  if (filters.customerId) {
+    conditions.push('customer_id = ?');
+    params.push(filters.customerId);
+  }
+  if (filters.paymentMethod) {
+    conditions.push('payment_method = ?');
+    params.push(filters.paymentMethod);
+  }
+  if (filters.status) {
+    conditions.push('status = ?');
+    params.push(filters.status);
+  }
+  if (filters.cashier) {
+    conditions.push('user_id = ?');
+    params.push(filters.cashier);
+  }
+
+  const sql = `SELECT * FROM sales WHERE ${conditions.join(' AND ')} ORDER BY timestamp DESC LIMIT 200;`;
+  const rows = await db.query(sql, params);
+  return batchHydrateSaleItems(rows);
 }
 
 export async function updateSale(id: string, updates: Partial<Sale>): Promise<Sale> {
+  const db = await getDatabase();
   const existing = await localDb.sales.get(id);
-  if (!existing) throw new Error('Sale not found');
+  const updated = { ...existing, ...updates, updatedAt: new Date() } as Sale;
 
-  const updated = { ...existing, ...updates, updatedAt: new Date() };
+  await db.execute(
+    `UPDATE sales SET notes = ?, status = ? WHERE id = ?;`,
+    [updated.notes || null, updated.status || 'completed', id]
+  );
 
-  // Cloud FIRST — authoritative. Throw on failure so the local cache never diverges.
-  await cloudWrite('sales', 'update', id, toRemoteSale(updated));
+  try {
+    await localDb.sales.put(updated);
+  } catch {}
 
-  await localDb.sales.put(updated);
   return updated;
 }
 
 export async function getReportSalesLocal(startDate: Date, endDate: Date): Promise<Sale[]> {
-  return await localDb.sales
-    .filter(s =>
-      s.status !== 'refunded' &&
-      s.status !== 'deleted' &&
-      s.status !== 'pending' &&
-      !s.notes?.includes('DRAFT_SALE') &&
-      new Date(s.timestamp) >= startDate &&
-      new Date(s.timestamp) <= endDate
-    )
-    .reverse()
-    .sortBy('timestamp');
+  const db = await getDatabase();
+  const rows = await db.query(
+    `SELECT * FROM sales
+     WHERE status NOT IN ('refunded', 'deleted', 'pending', 'void')
+       AND timestamp >= ? AND timestamp <= ?
+     ORDER BY timestamp DESC;`,
+    [startDate.getTime(), endDate.getTime()]
+  );
+
+  // Hydrate items from sale_items for reporting breakdowns
+  const sales = rows.map((r: any) => mapSqliteSale(r));
+  for (const s of sales) {
+    const itemRows = await db.query(
+      `SELECT * FROM sale_items WHERE sale_id = ?;`,
+      [s.id]
+    );
+    s.items = itemRows.map((r: any) => ({
+      id: r.id,
+      productId: r.product_id,
+      productName: r.name,
+      quantity: Number(r.quantity) || 0,
+      price: Number(r.unit_price) || 0,
+      cost: Number(r.unit_cost) || 0,
+      total: Number(r.total_price) || 0,
+      product: {
+        id: r.product_id,
+        name: r.name,
+        price: Number(r.unit_price) || 0,
+        cost: Number(r.unit_cost) || 0,
+      },
+    })) as any;
+  }
+
+  return sales;
 }
 
 export async function getReportSales(startDate: Date, endDate: Date): Promise<Sale[]> {
-  try {
-    const all = await fetchAllPages(() => supabase
-      .from('sales')
-      .select('*')
-      .neq('status', 'refunded')
-      .neq('status', 'deleted')
-      .neq('status', 'pending')
-      .gte('created_at', startDate.toISOString())
-      .lte('created_at', endDate.toISOString())
-      .order('created_at', { ascending: false }));
-
-    if (!all || all.length === 0) return [];
-    return (all as any[]).map(mapSale);
-  } catch (_e) {
-    console.warn('getReportSales: fallback to localDb'); // fallback to localDb
-    return await localDb.sales
-      .filter(s =>
-        s.status !== 'refunded' &&
-        s.status !== 'deleted' &&
-        s.status !== 'pending' &&
-        !s.notes?.includes('DRAFT_SALE') &&
-        new Date(s.timestamp) >= startDate &&
-        new Date(s.timestamp) <= endDate
-      )
-      .reverse()
-      .sortBy('timestamp');
-  }
+  return getReportSalesLocal(startDate, endDate);
 }
 
 export async function getReportRefundsLocal(startDate: Date, endDate: Date): Promise<Sale[]> {
-  return await localDb.sales
-    .filter(s =>
-      (s.status === 'refunded' || s.status === 'partially_refunded') &&
-      new Date(s.timestamp) >= startDate &&
-      new Date(s.timestamp) <= endDate
-    )
-    .toArray();
+  const db = await getDatabase();
+  const rows = await db.query(
+    `SELECT * FROM sales
+     WHERE status IN ('refunded', 'partially_refunded')
+       AND timestamp >= ? AND timestamp <= ?
+     ORDER BY timestamp DESC;`,
+    [startDate.getTime(), endDate.getTime()]
+  );
+  return rows.map((r: any) => mapSqliteSale(r));
 }
 
 export async function getReportRefunds(startDate: Date, endDate: Date): Promise<Sale[]> {
-  try {
-    const all = await fetchAllPages(() => supabase
-      .from('sales')
-      .select('*')
-      .in('status', ['refunded', 'partially_refunded'])
-      .gte('created_at', startDate.toISOString())
-      .lte('created_at', endDate.toISOString()));
-
-    if (!all || all.length === 0) return [];
-    return (all as any[]).map(mapSale);
-  } catch (_e) {
-    console.warn('getReportRefunds: fallback to localDb'); // fallback to localDb
-    return await localDb.sales
-      .filter(s =>
-        (s.status === 'refunded' || s.status === 'partially_refunded') &&
-        new Date(s.timestamp) >= startDate &&
-        new Date(s.timestamp) <= endDate
-      )
-      .toArray();
-  }
+  return getReportRefundsLocal(startDate, endDate);
 }
 
-export async function patchLegacySales(onProgress?: (percent: number) => void): Promise<number> {
-  const allSales = await localDb.sales.toArray();
-  const toUpdate: any[] = [];
+export async function patchLegacySales(): Promise<number> {
+  // Pure local audit
+  const db = await getDatabase();
+  const itemsWithoutCost = await db.query<any>(
+    `SELECT si.id, p.cost_price
+     FROM sale_items si
+     JOIN products p ON si.product_id = p.id
+     WHERE si.unit_cost IS NULL OR si.unit_cost = 0;`
+  );
 
-  for (let i = 0; i < allSales.length; i++) {
-    const sale = allSales[i];
-    let needsPatch = false;
-    const updatedItems = sale.items.map(item => {
-      if (!item.purchaseCost || item.purchaseCost <= 0) {
-        needsPatch = true;
-        // Fallback to current product cost for legacy records
-        const productCost = Number(item.product?.cost) || 0;
-        const qty = item.weight || item.quantity;
-        return {
-          ...item,
-          purchaseCost: productCost * qty
-        };
-      }
-      return item;
-    });
-
-    if (needsPatch) {
-      toUpdate.push({ ...sale, items: updatedItems, updatedAt: new Date() });
-    }
+  for (const item of itemsWithoutCost) {
+    await db.execute(
+      `UPDATE sale_items SET unit_cost = ? WHERE id = ?;`,
+      [Number(item.cost_price) || 0, item.id]
+    );
   }
 
-  if (toUpdate.length === 0) {
-    if (onProgress) onProgress(100);
-    return 0;
-  }
-
-  // Process in chunks to avoid overwhelming the database and UI
-  const CHUNK_SIZE = 50;
-  for (let i = 0; i < toUpdate.length; i += CHUNK_SIZE) {
-    const chunk = toUpdate.slice(i, i + CHUNK_SIZE);
-
-    const remoteChunk = chunk
-      .filter(sale => !sale.invoiceNumber?.startsWith('DRAFT-'))
-      .map(toRemoteSale);
-
-    // Cloud FIRST — authoritative repair. Throw on failure keeps the local cache untouched.
-    for (const s of remoteChunk) {
-      await cloudWrite('sales', 'update', (s as any).id, s);
-    }
-
-    await localDb.sales.bulkPut(chunk);
-
-    if (onProgress) {
-      onProgress(Math.floor(((i + chunk.length) / toUpdate.length) * 100));
-    }
-
-    // Add a small delay to allow UI to breathe
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
-
-  if (onProgress) onProgress(100);
-  return toUpdate.length;
+  return itemsWithoutCost.length;
 }

@@ -50,22 +50,23 @@ export const CURRENCIES: Currency[] = [
   { code: 'GHS', symbol: 'GH₵', name: 'Ghanaian Cedi', flag: '🇬🇭' }
 ];
 
-export const getCurrencySymbol = (code: string): string => {
-  const currency = CURRENCIES.find(c => c.code === code);
-  return currency ? currency.symbol : code;
+export const getCurrencySymbol = (code?: string): string => {
+  if (!code || typeof code !== 'string') return 'Rs';
+  const clean = code.trim().toUpperCase();
+  const currency = CURRENCIES.find(c => c.code.toUpperCase() === clean);
+  return currency ? currency.symbol : clean || 'Rs';
 };
 
 export const formatNumberWithPrecision = (amount: number): string => {
   const safe = Number(amount) || 0;
-  // Use toLocaleString to handle decimals cleanly: hide .00 but show .5 or .99
   return safe.toLocaleString(undefined, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-    useGrouping: false // Keeping it simple without commas as per previous logic, but cleaner decimals
+    useGrouping: false
   });
 };
 
-export const formatCurrency = (amount: number, code: string): string => {
+export const formatCurrency = (amount: number, code?: string): string => {
   const symbol = getCurrencySymbol(code);
   const safe = Number(amount) || 0;
   return `${symbol} ${formatNumberWithPrecision(safe)}`;

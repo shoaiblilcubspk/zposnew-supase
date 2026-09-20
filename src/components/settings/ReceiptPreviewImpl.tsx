@@ -121,7 +121,7 @@ export function ReceiptPreview({ settings }: ReceiptPreviewProps) {
   }
 
   return (
-    <div ref={containerRef} className="bg-gray-100 dark:bg-app p-4 rounded-2xl border border-gray-200 dark:border-white/5 flex flex-col items-center overflow-auto min-h-[500px] w-full">
+    <div ref={containerRef} className="bg-neutral-100 dark:bg-app p-4 rounded-md border border-neutral-200 dark:border-white/[0.08] flex flex-col items-center overflow-auto min-h-[500px] w-full">
       <div className="shadow-lg transition-all duration-300" style={{ width: paperWidthPx, backgroundColor: '#fff', color: '#000', transform: `scale(${fitScale})`, transformOrigin: 'top center', position: 'relative', left: `${settings.receiptOffsetX || 0}mm`, paddingTop: `${Math.max(0, padTop)}mm`, paddingBottom: `${Math.max(0, padBottom)}mm`, marginTop: padTop < 0 ? `${padTop}mm` : '0', marginBottom: `calc(-100% * (1 - ${fitScale}) + ${padBottom < 0 ? padBottom : 0}mm)`, fontFamily, fontSize: `${fs.body}px`, fontWeight: baseWeight, lineHeight: settings.receiptDensity === 'compact' ? '1.1' : settings.receiptDensity === 'comfortable' ? '1.6' : '1.3', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
         {template !== 'minimal' && <div style={dividerStyle} />}
         <div style={{ textAlign: 'center', margin: '8px 0', color: 'black', position: 'relative', left: `${settings.receiptHeaderOffsetX || 0}mm`, width: '100%', display: 'block' }}>

@@ -36,7 +36,8 @@ export function SegmentedControl({
     <div
       role="tablist"
       className={cn(
-        'flex bg-[#f8f9fa] dark:bg-black/75 p-1 rounded-xl items-stretch',
+        size === 'sm' ? 'h-8 text-[12px]' : 'h-9.5 text-[13.5px] sm:text-[14px]',
+        'p-0.5 sm:p-1 bg-neutral-100 dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-lg sm:rounded-xl inline-flex items-center gap-0.5 sm:gap-1 shadow-none',
         fullWidth && 'w-full',
         className
       )}
@@ -51,11 +52,11 @@ export function SegmentedControl({
             aria-selected={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              'flex-1 flex flex-col items-center justify-center text-center font-black uppercase tracking-wider rounded-lg transition-all leading-tight',
-              size === 'md' ? 'py-2 px-1.5 text-[9px] sm:text-[10px]' : 'py-1.5 px-1 text-[8px] sm:text-[9px]',
+              'flex-1 flex items-center justify-center text-center font-bold tracking-tight rounded-md sm:rounded-lg transition-all duration-150 whitespace-nowrap active:scale-95',
+              size === 'sm' ? 'h-7 px-1.5 sm:px-2.5 text-[12px]' : 'h-7.5 sm:h-8 px-3 text-[13px] sm:text-[13.5px]',
               active
-                ? 'bg-white dark:bg-surface text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                ? 'bg-primary text-white font-bold border border-primary shadow-none'
+                : 'text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white border border-transparent hover:bg-neutral-200/50 dark:hover:bg-white/[0.04]'
             )}
           >
             {opt.label}

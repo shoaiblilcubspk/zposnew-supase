@@ -1,4 +1,5 @@
 import { ReceiptLayoutTemplateSection } from './ReceiptLayoutTemplateSection';
+import { ReceiptInvoicingSection } from './ReceiptInvoicingSection';
 import { ReceiptTextAreasSection } from './ReceiptTextAreasSection';
 import { ReceiptMarginCalibrationSection } from './ReceiptMarginCalibrationSection';
 import { ReceiptVisibilitySection } from './ReceiptVisibilitySection';
@@ -9,6 +10,7 @@ export function ReceiptSettingsForm(props: ReceiptSettingsFormProps) {
     <>
       <div className="lg:col-span-5 space-y-6">
         <ReceiptLayoutTemplateSection {...props} />
+        <ReceiptInvoicingSection {...props} />
         <ReceiptTextAreasSection {...props} />
       </div>
       <div className="lg:col-span-4 space-y-6">

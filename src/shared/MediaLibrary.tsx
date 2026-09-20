@@ -16,9 +16,9 @@ interface MediaLibraryProps {
 }
 
 export function MediaLibrary({ isOpen, onClose, onSelect, standalone }: MediaLibraryProps) {
-  const appSettings = useSettingsStore(s => s.settings);
-const appProducts = useProductsStore(s => s.products);
-const appBundles = useAppStore(s => s.bundles);
+  const appSettings = useSettingsStore((s: any) => s.settings);
+  const appProducts = useProductsStore((s: any) => s.products);
+  const appBundles = useAppStore((s: any) => s.bundles);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -142,24 +142,24 @@ const appBundles = useAppStore(s => s.bundles);
   const content = (
     <div className={cn("p-0 custom-scrollbar", standalone ? "h-full" : "")}>
       {standalone && (
-        <div className="p-10 border-b border-white/5 bg-gradient-to-r from-emerald-500/5 to-transparent text-center">
-          <h3 className="text-sm font-black text-primary uppercase tracking-[0.4em] mb-2">Global Media Repository</h3>
-          <p className="text-gray-600 text-xs font-bold max-w-xl mx-auto">Showing every product image stored in your high-performance database.</p>
+        <div className="p-4 border-b border-neutral-200 dark:border-white/[0.08] bg-neutral-50 dark:bg-white/[0.02]">
+          <h3 className="text-[13px] font-medium text-neutral-900 dark:text-white mb-0.5">Media Repository</h3>
+          <p className="text-[12px] text-neutral-500">All product and bundle images stored in your database.</p>
         </div>
       )}
 
-      <div className={cn("p-6", !standalone && "min-h-[400px]")}>
+      <div className={cn("p-4", !standalone && "min-h-[400px]")}>
         {productAssets.length > 0 || !standalone ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {/* Upload New Card (only in selection modal mode) */}
             {!standalone && (
               <div
                 onClick={handleUploadClick}
-                className="group flex flex-col gap-3 animate-in fade-in duration-300"
+                className="group flex flex-col gap-1.5 cursor-pointer"
               >
-                <div className="relative aspect-square bg-gray-50 dark:bg-black/40 rounded-[2rem] border-2 border-dashed border-gray-350 dark:border-white/10 hover:border-primary flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-[1.03] shadow-sm hover:shadow-emerald-500/5">
-                  <Plus className="h-8 w-8 text-gray-400 group-hover:text-primary group-hover:scale-110 transition-all mb-2" />
-                  <span className="text-[10px] font-black text-gray-500 group-hover:text-primary uppercase tracking-widest text-center px-4">Upload New</span>
+                <div className="relative aspect-square bg-neutral-50 dark:bg-white/[0.02] rounded-md border border-dashed border-neutral-300 dark:border-white/[0.12] hover:border-primary flex flex-col items-center justify-center transition-colors">
+                  <Plus className="h-6 w-6 text-neutral-400 group-hover:text-primary transition-colors mb-1" />
+                  <span className="text-[11px] font-medium text-neutral-500 group-hover:text-primary">Upload New</span>
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -167,9 +167,6 @@ const appBundles = useAppStore(s => s.bundles);
                     accept="image/*"
                     className="hidden"
                   />
-                </div>
-                <div className="px-2 text-center opacity-0 select-none">
-                  <p className="text-[10px] font-black">Upload New</p>
                 </div>
               </div>
             )}
@@ -181,37 +178,39 @@ const appBundles = useAppStore(s => s.bundles);
                   if (asset.image) onSelect(asset.image);
                   if (!standalone) onClose();
                 }}
-                className="group flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500"
-                style={{ animationDelay: `${index * 50}ms` }}
+                className="group flex flex-col gap-1.5 cursor-pointer"
               >
-                <div className="relative aspect-square bg-gray-50 dark:bg-black/75 rounded-[2rem] overflow-hidden border border-gray-200 dark:border-white/5 hover:border-primary/50 cursor-pointer transition-all hover:scale-[1.05] shadow-xl group-hover:shadow-emerald-500/10">
+                <div className="relative aspect-square bg-neutral-100 dark:bg-surface rounded-md overflow-hidden border border-neutral-200 dark:border-white/[0.08] hover:border-primary/50 transition-colors">
                   <img
                     src={asset.image}
                     alt={asset.name}
-                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-125"
+                    className="w-full h-full object-cover"
                     loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/20 flex flex-col items-center justify-center transition-all">
-                    <MousePointer2 className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <MousePointer2 className="h-5 w-5 text-white" />
                     {!asset.isSystem && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={(e) => handleDeleteImage(e, asset.image)}
-                        className="absolute top-3 right-3 !min-h-0 !p-2 !bg-red-500 opacity-0 group-hover:opacity-100 hover:!opacity-100 hover:!scale-110 z-10"
-                        icon={<Trash2 className="h-4 w-4" />}
-                      />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteImage(e, asset.image);
+                        }}
+                        className="absolute top-2 right-2 h-7 w-7 rounded bg-rose-600 text-white flex items-center justify-center hover:bg-rose-700 transition-colors"
+                        title="Delete Image"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     )}
                   </div>
                   {asset.isSystem && (
-                    <div className="absolute top-3 left-3 bg-blue-500/90 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase shadow-lg">
-                      System Asset
+                    <div className="absolute top-1.5 left-1.5 bg-neutral-900/80 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">
+                      System
                     </div>
                   )}
                 </div>
-                <div className="px-2 text-center">
-                  <p className="text-[10px] font-black text-gray-900 dark:text-white uppercase truncate tracking-tight group-hover:text-primary transition-colors">{asset.name}</p>
-                  <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{asset.sku}</p>
+                <div className="px-0.5">
+                  <p className="text-[12px] font-medium text-neutral-900 dark:text-neutral-200 truncate group-hover:text-primary transition-colors">{asset.name}</p>
+                  <p className="text-[11px] text-neutral-400 font-mono">{asset.sku}</p>
                 </div>
               </div>
             ))}

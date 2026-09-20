@@ -11,7 +11,9 @@ import { normalizeBarcodeValue } from '../../../utils/barcode';
 import { formatCurrency } from '../../../lib/currencies';
 import { Package, AlertTriangle, TrendingUp, TrendingDown, ChevronLeft } from 'lucide-react';
 import { Button } from '../../../shared/ui';
+import { ProductImportExportModal } from '../ProductImportExportModal';
 import { useProductsListHandlers } from '../useProductsListHandlers';
+import { getExpiryStatus } from '../../../utils/expiryUtils';
 
 interface Props {
   appProducts: Product[];
@@ -35,6 +37,8 @@ export function ProductsList({
 }: Props) {
   const appSettings = useSettingsStore(s => s.settings);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const canViewExpiry = isAdmin || Boolean(profile?.canViewExpiry);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -89,7 +93,10 @@ export function ProductsList({
         const matchesType = selectedType === 'All' ||
           (selectedType === 'services' && product.isService) ||
           (selectedType === 'serialized' && product.requireSerial) ||
-          (selectedType === 'standard' && !product.isService && !product.requireSerial);
+          (selectedType === 'variable' && product.productType === 'variable') ||
+          (selectedType === 'standard' && !product.isService && !product.requireSerial && product.productType !== 'variable') ||
+          (selectedType === 'expiring_soon' && getExpiryStatus(product.expiryDate, product.expiryAlertDays).status === 'expiring_soon') ||
+          (selectedType === 'expired' && getExpiryStatus(product.expiryDate, product.expiryAlertDays).status === 'expired');
         const matchesVariation = product.productType !== 'variation';
         return matchesSearch && matchesCategory && matchesSupplier && matchesType && matchesVariation;
       })
@@ -138,13 +145,13 @@ export function ProductsList({
     handleBulkDelete,
     handleExportSelected,
     handleImportJSON,
-    handleFileChange
+    showImportExportModal,
+    setShowImportExportModal
   } = useProductsListHandlers({
     appProducts,
     selectedProductIds,
     setSelectedProductIds,
     filteredProducts,
-    fileInputRef,
     setShowBarcodeGenerator,
     setBarcodeProducts
   });
@@ -165,12 +172,12 @@ export function ProductsList({
             localStorage.removeItem('barcode_selected_product_ids');
             localStorage.removeItem('barcode_selected_quantities');
             localStorage.removeItem('barcode_show_generator');
-          }} className="!min-h-0 !p-2 !rounded-xl !bg-transparent !text-gray-600 dark:!text-gray-400 hover:!bg-gray-100 dark:hover:!bg-white/5">
-            <ChevronLeft className="h-5 w-5" />
-            <span className="text-[10px] font-black uppercase tracking-widest">{"Back"}</span>
+          }} className="!min-h-0 !h-8 !px-2.5 !rounded !bg-transparent !text-neutral-600 dark:!text-neutral-400 hover:!bg-neutral-100 dark:hover:!bg-surface-hover">
+            <ChevronLeft className="h-4 w-4" />
+            <span className="text-[13px] font-medium">Back</span>
           </Button>
-          <div className="h-6 w-px bg-gray-200 dark:bg-white/10 mx-1" />
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-60">Management / Barcode Print Engine</p>
+          <div className="h-4 w-px bg-neutral-200 dark:border-white/[0.08] mx-1" />
+          <p className="text-[12px] text-neutral-400">Management / Barcode Print Engine</p>
         </div>
         <div className="flex-1 min-h-0">
           <BarcodeGenerator
@@ -190,21 +197,28 @@ export function ProductsList({
 
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mt-2">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
         {[
-          { label: "Active Items", value: appProducts.filter(p => p.active !== false && p.productType !== 'variation').length, icon: Package, color: 'from-blue-600 to-indigo-700' },
-          { label: "Low Stock", value: lowStockProducts.length, icon: AlertTriangle, color: 'from-amber-500 to-orange-700' },
-          { label: "Stock Value", value: formatCurrency(totalValue, appSettings.currency), icon: TrendingUp, color: 'from-emerald-500 to-teal-700' },
-          { label: "Out of Stock", value: outOfStockProducts.length, icon: TrendingDown, color: 'from-rose-500 to-red-700' },
-        ].map((stat, i) => (
-          <div key={i} className={`stat-card bg-gradient-to-br ${stat.color} shadow-lg shadow-black/5`}>
-            <div className="stat-card-inner">
-              <span className="stat-card-label">{stat.label}</span>
-              <span className="stat-card-value">{stat.value}</span>
+          { label: "Active Items", value: appProducts.filter(p => p.active !== false && p.productType !== 'variation').length, icon: Package, isWarning: false },
+          { label: "Low Stock", value: lowStockProducts.length, icon: AlertTriangle, isWarning: lowStockProducts.length > 0 },
+          { label: "Stock Value", value: formatCurrency(totalValue, appSettings.currency), icon: TrendingUp, isWarning: false },
+          { label: "Out of Stock", value: outOfStockProducts.length, icon: TrendingDown, isWarning: outOfStockProducts.length > 0 },
+        ].map((stat, i) => {
+          const Icon = stat.icon;
+          return (
+            <div key={i} className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  {stat.label}
+                </span>
+                <Icon className={`w-4 h-4 ${stat.isWarning ? 'text-amber-500' : 'text-neutral-400 dark:text-neutral-500'}`} />
+              </div>
+              <div className="mt-1.5 text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white font-mono tabular-nums">
+                {stat.value}
+              </div>
             </div>
-            <stat.icon className="stat-card-icon h-12 w-12 text-white" />
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <InventoryToolbar
@@ -227,6 +241,7 @@ export function ProductsList({
         onPrintBarcodes={() => { setBarcodeProducts(appProducts.filter(p => selectedProductIds.includes(p.id))); setShowBarcodeGenerator(true); }}
         onAddProduct={() => { setEditingProduct(null); setShowProductModal(true); }}
         onScanClick={() => setShowScannerInInventory(true)}
+        canViewExpiry={canViewExpiry}
       />
 
       <InventoryTable
@@ -246,10 +261,15 @@ export function ProductsList({
         profile={profile}
         canManageStock={canManageStock}
         canEditProduct={canEditProduct}
+        canViewExpiry={canViewExpiry}
       />
 
       <BulkEditModal selectedIds={selectedProductIds} isOpen={showBulkEditModal} onClose={() => setShowBulkEditModal(false)} categories={categories} suppliers={suppliers} />
-      <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} />
+      <ProductImportExportModal
+        open={showImportExportModal}
+        onClose={() => setShowImportExportModal(false)}
+        selectedProductIds={selectedProductIds}
+      />
     </>
   );
 }

@@ -36,23 +36,23 @@ export const TouchKeyboard = React.memo(function TouchKeyboard(props: TouchKeybo
         <div className="flex gap-2">
           <button
             onPointerDown={(e) => handlePointerDown(e, 'drag')}
-            className="w-14 h-14 bg-black/80 dark:bg-white/90 backdrop-blur-xl rounded-full shadow-2xl flex items-center justify-center text-white dark:text-black hover:scale-105 active:scale-95 transition-all cursor-move"
+            className="w-10 h-10 bg-neutral-900 dark:bg-neutral-800 rounded-md border border-neutral-700 shadow-md flex items-center justify-center text-white hover:bg-neutral-800 transition-all cursor-move"
           >
-            <GripHorizontal className="w-6 h-6 opacity-50" />
+            <GripHorizontal className="w-4 h-4 opacity-70" />
           </button>
            
           <button
             onClick={toggleFold}
-            className="w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
+            className="w-10 h-10 bg-emerald-600 text-white rounded-md shadow-md flex items-center justify-center hover:bg-emerald-500 transition-all"
           >
-            <KeyboardIcon className="w-6 h-6" />
+            <KeyboardIcon className="w-4 h-4" />
           </button>
 
           <button
             onClick={props.onClose}
-            className="w-14 h-14 bg-red-500 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
+            className="w-10 h-10 bg-rose-600 text-white rounded-md shadow-md flex items-center justify-center hover:bg-rose-500 transition-all"
           >
-            <X className="w-6 h-6" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -70,7 +70,7 @@ export const TouchKeyboard = React.memo(function TouchKeyboard(props: TouchKeybo
     >
       <div 
         ref={innerRef}
-        className="relative bg-gray-100/90 dark:bg-black/80 backdrop-blur-2xl rounded-t-3xl shadow-2xl border border-white/20 overflow-hidden flex flex-col"
+        className="relative bg-neutral-50 dark:bg-neutral-950 rounded-t-lg shadow-xl border border-neutral-200 dark:border-white/[0.08] overflow-hidden flex flex-col"
         style={{
           transformOrigin: 'bottom center',
           transform: `scale(${scale})`,
@@ -80,46 +80,46 @@ export const TouchKeyboard = React.memo(function TouchKeyboard(props: TouchKeybo
         }}
       >
         <div 
-          className="h-10 bg-gray-200/50 dark:bg-white/10 flex items-center justify-between px-4 cursor-move rounded-t-3xl active:bg-gray-300/50 dark:active:bg-white/20 transition-colors"
+          className="h-9 bg-neutral-100 dark:bg-neutral-900 border-b border-neutral-200 dark:border-white/[0.08] flex items-center justify-between px-3 cursor-move rounded-t-lg active:bg-neutral-200/50 dark:active:bg-neutral-800 transition-colors"
           onPointerDown={(e) => handlePointerDown(e, 'drag')}
         >
-          <div className="flex items-center gap-2 pointer-events-none opacity-50">
-            <GripHorizontal className="w-4 h-4" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">
+          <div className="flex items-center gap-2 pointer-events-none opacity-60">
+            <GripHorizontal className="w-3.5 h-3.5" />
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-600 dark:text-neutral-400">
               {layout === 'calculator' ? 'Calculator' : 'Virtual Keyboard'}
             </span>
           </div>
            
-          <div className="flex items-center gap-2 pointer-events-auto">
+          <div className="flex items-center gap-1.5 pointer-events-auto">
             <button
               onClick={() => setForceOpen(!forceOpen)}
-              className={`p-1.5 rounded-lg transition-colors ${forceOpen ? 'bg-primary/20 text-primary' : 'hover:bg-white/10 text-gray-400'}`}
+              className={`p-1.5 rounded transition-colors ${forceOpen ? 'bg-emerald-500/10 text-emerald-500' : 'hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-400'}`}
               title="Pin Keyboard"
             >
-              <Globe className="w-4 h-4" />
+              <Globe className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={toggleFold}
-              className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 transition-colors"
+              className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-400 transition-colors"
               title="Fold Keyboard"
             >
-              <Minimize2 className="w-4 h-4" />
+              <Minimize2 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={props.onClose}
-              className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-500 transition-colors"
+              className="p-1.5 rounded hover:bg-rose-500/10 text-rose-500 transition-colors"
               title="Close Keyboard"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        <div className="p-2 sm:p-4 pb-6 sm:pb-8 flex-1 flex flex-col justify-end">
+        <div className="p-2 sm:p-4 pb-4 sm:pb-6 flex-1 flex flex-col justify-end">
           {layout === 'calculator' ? (
-            <div className="flex flex-col gap-3">
-              <div className="bg-white dark:bg-black/50 p-4 rounded-2xl shadow-inner border border-gray-200 dark:border-white/5 space-y-2">
-                <div className="text-xs text-gray-500 font-mono text-right min-h-[16px]">
+            <div className="flex flex-col gap-2.5">
+              <div className="bg-white dark:bg-neutral-900 p-3 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none space-y-1.5">
+                <div className="text-xs text-neutral-500 font-mono text-right min-h-[16px]">
                   {calcHistoryExpr || '\u00A0'}
                 </div>
                 
@@ -129,13 +129,13 @@ export const TouchKeyboard = React.memo(function TouchKeyboard(props: TouchKeybo
                   value={calcExpr}
                   onChange={handleCalcInputChange}
                   onKeyDown={handleCalcInputKeyDown}
-                  className={`w-full text-right bg-transparent border-none outline-none font-mono ${calcResult ? 'text-xl text-gray-400' : 'text-3xl font-bold text-gray-900 dark:text-white'}`}
+                  className={`w-full text-right bg-transparent border-none outline-none font-mono ${calcResult ? 'text-xl text-neutral-400' : 'text-2xl font-bold text-neutral-900 dark:text-white'}`}
                   placeholder="0"
                 />
 
                 {calcResult && (
                   <div 
-                    className="text-right text-3xl font-bold text-primary font-mono cursor-pointer active:scale-95 transition-transform"
+                    className="text-right text-2xl font-bold text-emerald-500 font-mono cursor-pointer active:scale-98 transition-transform"
                     onClick={handleCalcInputClick}
                   >
                     = {calcResult}

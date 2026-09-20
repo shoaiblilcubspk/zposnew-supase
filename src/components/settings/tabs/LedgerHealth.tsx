@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useUsersStore } from '../../../stores';
 import { runReconciliation } from '../../../lib/services/reconciliationService';
-import { Activity, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Activity, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { Button } from '../../../shared/ui';
 
 export const LedgerHealth: React.FC = () => {
   const currentUser = useUsersStore(s => s.currentUser);
@@ -24,10 +25,10 @@ export const LedgerHealth: React.FC = () => {
 
   const score = result?.healthScore ?? null;
   const badge = score == null
-    ? 'bg-gray-500'
+    ? 'bg-neutral-500'
     : score >= 100 ? 'bg-emerald-600'
     : score >= 80 ? 'bg-amber-600'
-    : 'bg-red-600';
+    : 'bg-rose-600';
 
   const sections = [
     { label: 'Stock Drift', rows: result?.stockDrift },
@@ -37,46 +38,56 @@ export const LedgerHealth: React.FC = () => {
   ];
 
   return (
-    <div className="bg-white dark:bg-black/30 rounded-2xl p-5 border border-gray-200 dark:border-white/10">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Activity size={18} className="text-primary" />
-          <h3 className="text-sm font-black uppercase tracking-widest text-gray-700 dark:text-gray-200">Ledger Health</h3>
+    <div className="bg-white dark:bg-surface rounded-md p-4 sm:p-5 border border-neutral-200 dark:border-white/[0.08] shadow-none space-y-4 text-[13px] tracking-[-0.01em]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 dark:border-white/[0.08] pb-3">
+        <div className="flex items-center gap-2.5">
+          <Activity size={18} className="text-emerald-500 shrink-0" />
+          <div>
+            <h3 className="font-semibold text-neutral-900 dark:text-white text-[14px] leading-tight">
+              Ledger Integrity &amp; Reconciliation
+            </h3>
+            <p className="text-neutral-500 dark:text-neutral-400 text-[11px] font-mono mt-0.5">
+              Audits append-only sales, inventory transactions, and payment wallet balances
+            </p>
+          </div>
         </div>
-        <button
+        <Button
           onClick={run}
           disabled={loading}
-          className="text-xs font-bold bg-primary text-white px-4 py-2 rounded-xl disabled:opacity-50"
+          variant="primary"
+          size="sm"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          icon={loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Activity className="w-3.5 h-3.5" />}
         >
-          {loading ? 'Running…' : 'Run Check'}
-        </button>
+          {loading ? 'Verifying…' : 'Run Verification'}
+        </Button>
       </div>
 
       {score != null && (
-        <div className={`inline-flex items-center gap-2 text-white text-sm font-black px-3 py-1.5 rounded-xl ${badge}`}>
-          {result?.isClean ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+        <div className={`inline-flex items-center gap-2 text-white text-[12px] font-medium px-2.5 py-1 rounded ${badge}`}>
+          {result?.isClean ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
           Health Score: {score}/100
         </div>
       )}
 
-      {result?.error && <p className="text-xs text-red-500 mt-3">{result.error}</p>}
+      {result?.error && <p className="text-[12px] text-danger mt-3 font-mono">{result.error}</p>}
 
       {result && !result.error && (
         <div className="mt-4 space-y-3">
           {sections.map(sec => (
             <div key={sec.label}>
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 font-mono">
                 {sec.label} — {(sec.rows || []).length} issue(s)
               </p>
               {(sec.rows || []).length > 0 && (
-                <pre className="text-[10px] bg-black/5 dark:bg-white/5 rounded-lg p-2 mt-1 overflow-auto max-h-40">
+                <pre className="text-[11px] font-mono bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08] rounded p-2 mt-1 overflow-auto max-h-40">
                   {JSON.stringify(sec.rows, null, 2)}
                 </pre>
               )}
             </div>
           ))}
-          <p className="text-[10px] text-gray-500 pt-2 border-t border-gray-200 dark:border-white/10">
-            Run these in Supabase SQL Editor to verify zero rows:
+          <p className="text-[11px] text-neutral-500 font-mono pt-2 border-t border-neutral-200 dark:border-white/[0.08]">
+            Local SQLite Ledger Verification:
             <br />SELECT * FROM stock_drift; SELECT * FROM wallet_drift; SELECT * FROM over_refunds; SELECT * FROM orphan_sales;
           </p>
         </div>

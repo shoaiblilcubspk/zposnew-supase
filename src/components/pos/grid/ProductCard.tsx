@@ -24,8 +24,9 @@ export const ProductCard = memo(function ProductCard({ product, onAddToCart, onU
       onClick={() => {
         onAddToCart(product);
       }}
-      className={`group relative bg-white dark:bg-[#1C1C1C] rounded-xl border border-gray-100 dark:border-white/5 overflow-hidden transition-shadow duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer ${cartQuantity !== 0 ? 'ring-2 ring-emerald-500 shadow-md shadow-emerald-500/10' : ''
-        }`}
+      className={`group relative bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] overflow-hidden transition-colors hover:border-neutral-300 dark:hover:border-white/20 cursor-pointer shadow-none ${
+        cartQuantity !== 0 ? 'border-emerald-500/50 ring-1 ring-emerald-500/50 bg-emerald-500/[0.02]' : ''
+      }`}
       style={{
         minHeight: (typeof window !== 'undefined' && window.innerWidth >= 1024)
           ? (gridCols === 0 || gridCols >= 4 ? (isTouchMode ? '120px' : '140px') :
@@ -34,31 +35,32 @@ export const ProductCard = memo(function ProductCard({ product, onAddToCart, onU
           : (isTouchMode ? '120px' : '140px')
       }}
     >
-      <div className={`relative overflow-hidden bg-gray-50 dark:bg-[#262626] ${isTouchMode ? 'aspect-square' : 'aspect-[4/3]'}`}>
+      <div className={`relative overflow-hidden bg-neutral-100 dark:bg-neutral-900 ${isTouchMode ? 'aspect-square' : 'aspect-[4/3]'}`}>
         {product.image ? (
           <img
             src={product.image}
             alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            className="w-full h-full object-cover"
+            loading="lazy"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package className={`${isTouchMode ? 'h-8 w-8' : 'h-6 w-6'} text-gray-300`} />
+            <Package className={`${isTouchMode ? 'h-7 w-7' : 'h-5 w-5'} text-neutral-400`} />
           </div>
         )}
 
         {cartQuantity !== 0 && (
-          <div className="absolute inset-x-0.5 bottom-0.5 flex items-center justify-between bg-white/95 dark:bg-black/95 rounded-lg p-0.5 shadow-lg animate-in fade-in slide-in-from-bottom-1 duration-300 z-20">
+          <div className="absolute inset-x-1 bottom-1 flex items-center justify-between bg-white dark:bg-surface rounded border border-neutral-200 dark:border-white/[0.08] p-0.5 shadow-none z-20">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onUpdateQuantity?.(product, -1);
               }}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-white/10 rounded-md transition-colors text-gray-600 dark:text-gray-400"
+              className="p-1 hover:bg-neutral-100 dark:hover:bg-surface-hover rounded transition-colors text-neutral-500"
             >
               <Minus className="h-2.5 w-2.5" />
             </button>
-            <span className="font-black text-[9px] sm:text-xs text-gray-900 dark:text-white px-0.5">
+            <span className="font-mono font-medium text-[11px] tabular-nums text-neutral-900 dark:text-white px-0.5">
               {cartQuantity}
             </span>
             <button
@@ -66,7 +68,7 @@ export const ProductCard = memo(function ProductCard({ product, onAddToCart, onU
                 e.stopPropagation();
                 onUpdateQuantity?.(product, 1);
               }}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-white/10 rounded-md transition-colors text-primary"
+              className="p-1 hover:bg-neutral-100 dark:hover:bg-surface-hover rounded transition-colors text-emerald-600 dark:text-emerald-400"
             >
               <Plus className="h-2.5 w-2.5" />
             </button>
@@ -74,29 +76,29 @@ export const ProductCard = memo(function ProductCard({ product, onAddToCart, onU
         )}
 
         {cartQuantity === 0 && (
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
-            <div className="opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-              <div className="bg-primary text-white p-1.5 rounded-lg shadow-xl">
-                <Plus className="h-4 w-4" />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors flex items-center justify-center">
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 p-1.5 rounded shadow-sm">
+                <Plus className="h-3.5 w-3.5" />
               </div>
             </div>
           </div>
         )}
 
-        <div className={`absolute top-1 right-1 px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider shadow-md z-10 ${isInfinite
-          ? 'bg-violet-500 text-white'
+        <div className={`absolute top-1.5 right-1.5 px-2 py-0.5 rounded text-[10px] font-semibold border shadow-sm z-10 ${isInfinite
+          ? 'bg-neutral-900/95 dark:bg-neutral-100/95 text-white dark:text-neutral-900 border-neutral-700 dark:border-neutral-200 font-mono'
           : isNegativeStock
-            ? 'bg-red-500 text-white'
+            ? 'bg-rose-600 text-white border-rose-600 font-mono tabular-nums'
             : isNoStock
-              ? 'bg-orange-500 text-white'
+              ? 'bg-rose-600 text-white border-rose-600 font-sans tracking-wide uppercase'
               : isLowStock
-                ? 'bg-amber-500 text-white'
-                : 'bg-primary text-white'
+                ? 'bg-amber-500 text-white border-amber-500 font-mono tabular-nums'
+                : 'bg-white/95 dark:bg-neutral-900/95 text-neutral-900 dark:text-white border-neutral-200 dark:border-neutral-700 font-mono tabular-nums'
           }`}>
           {isInfinite
             ? <InfinityIcon className="h-3 w-3" />
             : isNegativeStock
-              ? "NO STOCK"
+              ? product.stock
               : isNoStock
                 ? "NO STOCK"
                 : product.stock
@@ -104,13 +106,12 @@ export const ProductCard = memo(function ProductCard({ product, onAddToCart, onU
         </div>
       </div>
 
-      <div className="p-1.5 sm:p-2 space-y-0.5">
-        <h3 className={`font-black text-gray-900 dark:text-white uppercase tracking-tight leading-[1.1] mb-0.5 break-words line-clamp-2 ${isTouchMode ? 'text-[9px] sm:text-[10px]' : 'text-[10px] sm:text-xs'
-          }`}>
+      <div className="p-2 space-y-0.5">
+        <h3 className={`font-semibold text-neutral-900 dark:text-white tracking-[-0.01em] leading-snug break-words line-clamp-2 ${isTouchMode ? 'text-[12px]' : 'text-[13px]'}`}>
           {product.name}
         </h3>
-        <div className="flex items-center justify-between">
-          <div className="text-primary dark:text-emerald-400 font-black text-[10px] sm:text-xs">
+        <div className="flex items-center justify-between pt-0.5">
+          <div className="text-emerald-600 dark:text-emerald-400 font-mono font-bold tabular-nums text-[13px]">
             {currency}{product.price.toLocaleString()}
           </div>
         </div>

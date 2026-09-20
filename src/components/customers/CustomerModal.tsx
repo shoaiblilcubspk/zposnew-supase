@@ -138,47 +138,47 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
       maxWidth="lg"
       footer={footer}
     >
-      <div className="space-y-10">
+      <div className="space-y-8">
         {/* Identity Hub */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-            <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
-            {"Basic Info"}
+        <div className="space-y-3">
+          <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-3.5 h-0.5 bg-emerald-500 rounded-full"></span>
+            {"Basic Information"}
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"Client Name *"}</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            <div>
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1">{"Client Name *"}</label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
+                className="w-full h-8 px-2.5 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-neutral-400"
                 placeholder={"John Doe"}
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"Mobile Number *"}</label>
+            <div>
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1">{"Mobile Number *"}</label>
               <input
                 type="text"
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
                 required
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
+                className="w-full h-8 px-2.5 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] font-mono tabular-nums text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-neutral-400"
                 placeholder={"+92 3xx xxxxxxx"}
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"E-Mail Address"}</label>
+            <div>
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1">{"Email Address"}</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
+                className="w-full h-8 px-2.5 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-neutral-400"
                 placeholder={"client@account.com"}
               />
             </div>
@@ -186,20 +186,20 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
         </div>
 
         {/* Commercials */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-            <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
+        <div className="space-y-3">
+          <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-3.5 h-0.5 bg-emerald-500 rounded-full"></span>
             {"Billing Details"}
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"Pricing Tier *"}</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div>
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1">{"Pricing Tier *"}</label>
               <Select
                 name="priceTier"
                 value={formData.priceTier}
                 onChange={handleChange}
-                className="!bg-[#f8f9fa] dark:!bg-black/75 !border-none !text-sm !rounded-xl !px-4 !text-gray-900 dark:!text-white !font-medium"
+                className="!h-8 !text-[13px] !rounded !bg-white dark:!bg-surface !border-neutral-300 dark:!border-white/[0.12] text-neutral-900 dark:text-white"
               >
                 <option value="retail" className="dark:bg-surface">{"Standard Retail"}</option>
                 <option value="wholesale" className="dark:bg-surface">{"Wholesale Logic"}</option>
@@ -209,17 +209,17 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
         </div>
 
         {/* Preferences */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-            <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
-            {"Preferences"}
+        <div className="space-y-3">
+          <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-3.5 h-0.5 bg-emerald-500 rounded-full"></span>
+            {"Category Preferences"}
           </h3>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"Preferred Categories"}</label>
-            <div className="flex flex-wrap gap-2">
+          <div>
+            <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1.5">{"Preferred Categories"}</label>
+            <div className="flex flex-wrap gap-1.5">
               {appCategories.length === 0 ? (
-                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400">{"No categories available"}</p>
+                <p className="text-[12px] text-neutral-500 dark:text-neutral-400">{"No categories available"}</p>
               ) : (
                 appCategories.map(category => {
                   const isSelected = formData.preferredCategories.includes(category.name);
@@ -229,10 +229,10 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
                       type="button"
                       onClick={() => togglePreferredCategory(category.name)}
                       className={cn(
-                        "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all border",
+                        "px-3 py-1 rounded text-[12px] font-medium transition-colors border",
                         isSelected
-                          ? "bg-emerald-500 text-white border-emerald-500 shadow-sm active:scale-95"
-                          : "bg-[#f8f9fa] dark:bg-black/75 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:border-emerald-300 active:scale-95"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 font-semibold shadow-sm"
+                          : "bg-white dark:bg-surface text-neutral-700 dark:text-neutral-300 border-neutral-300 dark:border-white/[0.12] hover:border-neutral-400"
                       )}
                     >
                       {category.name}
@@ -245,30 +245,30 @@ export function CustomerModal({ isOpen, onClose, customer }: CustomerModalProps)
         </div>
 
         {/* Location & Insights */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-            <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
+        <div className="space-y-3">
+          <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-3.5 h-0.5 bg-emerald-500 rounded-full"></span>
             {"Address & Notes"}
           </h3>
           
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"Physical Address"}</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div>
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1">{"Physical Address"}</label>
               <textarea
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-emerald-500 transition-all min-h-[80px] resize-none font-medium"
+                className="w-full px-2.5 py-2 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors min-h-[72px] resize-none placeholder:text-neutral-400"
                 placeholder={"Complete location details..."}
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{"Notes"}</label>
+            <div>
+              <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1">{"Administrative Notes"}</label>
               <textarea
                 name="notes"
                 value={formData.notes}
                 onChange={handleChange}
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-emerald-500 transition-all min-h-[80px] resize-none font-medium"
+                className="w-full px-2.5 py-2 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors min-h-[72px] resize-none placeholder:text-neutral-400"
                 placeholder={"Additional notes about the customer..."}
               />
             </div>

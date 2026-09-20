@@ -3,33 +3,47 @@ import { useState, useEffect } from 'react';
 import { User as UserType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { usersService } from '../../lib/services';
-import { supabase, adminUserAction } from '../../lib/supabase';
 import { sonner } from '../../lib/sonner';
-import { hashPasswordString } from '../../context/AuthContext';
 
-export function useUserModalData(user: UserType | null | undefined, onClose: () => void) {
+export type UserRole = 'admin' | 'manager' | 'cashier' | 'salesman';
+
+interface UseUserModalDataOptions {
+  user?: UserType | null;
+  currentUser?: UserType | null;
+  onSuccess?: () => void;
+  onClose: () => void;
+  defaultRole?: UserRole;
+}
+
+export function useUserModalData(options: UseUserModalDataOptions) {
+  const { user, onClose, onSuccess, defaultRole = 'cashier' } = options;
   const appCurrentUser = useUsersStore(s => s.currentUser);
-const appUsers = useUsersStore(s => s.users);
-
+  const appUsers = useUsersStore(s => s.users);
   const { refreshProfile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+
+  const initialRole = defaultRole || 'cashier';
   const [formData, setFormData] = useState({
     username: '',
     name: '',
     email: '',
-    password: '',
-    role: 'cashier' as const,
+    pin: '',
+    confirmPin: '',
+    role: initialRole as UserRole,
     active: true,
     avatar: '',
-    canEditPrice: false,
-    canGiveDiscount: false,
-    canDeleteSale: false,
-    canViewProfit: false,
-    canManageStock: false,
-    canManagePO: false,
-    canViewRecords: false,
-    canEditSale: false,
-    canEditProduct: false,
+    canEditPrice: initialRole === 'admin' || initialRole === 'manager',
+    canGiveDiscount: initialRole !== 'salesman',
+    canDeleteSale: initialRole === 'admin',
+    canViewProfit: initialRole === 'admin' || initialRole === 'manager',
+    canManageStock: initialRole === 'admin' || initialRole === 'manager',
+    canManagePO: initialRole === 'admin' || initialRole === 'manager',
+    canViewRecords: initialRole !== 'salesman',
+    canEditSale: initialRole === 'admin' || initialRole === 'manager',
+    canEditProduct: initialRole === 'admin' || initialRole === 'manager',
+    canViewExpiry: true,
+    requirePinOnSale: false,
   });
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
 
@@ -38,66 +52,53 @@ const appUsers = useUsersStore(s => s.users);
       setFormData({
         username: user.username,
         name: user.name,
-        email: user.email,
-        password: '', // Don't pre-fill password for existing users
-        role: user.role,
+        email: user.email || '',
+        pin: '',
+        confirmPin: '',
+        role: user.role as UserRole,
         active: user.active,
         avatar: user.avatar || '',
-        canEditPrice: user.canEditPrice,
-        canGiveDiscount: user.canGiveDiscount,
-        canDeleteSale: user.canDeleteSale,
-        canViewProfit: user.canViewProfit,
-        canManageStock: user.canManageStock,
-        canManagePO: user.canManagePO,
-        canViewRecords: user.canViewRecords,
+        canEditPrice: user.canEditPrice ?? false,
+        canGiveDiscount: user.canGiveDiscount ?? false,
+        canDeleteSale: user.canDeleteSale ?? false,
+        canViewProfit: user.canViewProfit ?? false,
+        canManageStock: user.canManageStock ?? false,
+        canManagePO: user.canManagePO ?? false,
+        canViewRecords: user.canViewRecords ?? false,
         canEditSale: user.canEditSale ?? false,
         canEditProduct: user.canEditProduct ?? false,
+        canViewExpiry: user.canViewExpiry ?? true,
+        requirePinOnSale: user.requirePinOnSale ?? false,
       });
     } else {
+      const initRole = defaultRole || 'cashier';
       setFormData({
         username: '',
         name: '',
         email: '',
-        password: '',
-        role: 'cashier',
+        pin: '',
+        confirmPin: '',
+        role: initRole,
         active: true,
         avatar: '',
-        canEditPrice: false,
-        canGiveDiscount: false,
-        canDeleteSale: false,
-        canViewProfit: false,
-        canManageStock: false,
-        canManagePO: false,
-        canViewRecords: false,
-        canEditSale: false,
-        canEditProduct: false,
+        canEditPrice: initRole === 'admin' || initRole === 'manager',
+        canGiveDiscount: initRole !== 'salesman',
+        canDeleteSale: initRole === 'admin',
+        canViewProfit: initRole === 'admin' || initRole === 'manager',
+        canManageStock: initRole === 'admin' || initRole === 'manager',
+        canManagePO: initRole === 'admin' || initRole === 'manager',
+        canViewRecords: initRole !== 'salesman',
+        canEditSale: initRole === 'admin' || initRole === 'manager',
+        canEditProduct: initRole === 'admin' || initRole === 'manager',
+        canViewExpiry: true,
+        requirePinOnSale: false,
       });
     }
-  }, [user]);
+  }, [user, defaultRole]);
 
-  const handleRoleChange = (newRole: 'admin' | 'manager' | 'cashier') => {
+  const handleRoleChange = (newRole: UserRole) => {
     setFormData(prev => {
-      const defaults = {
-        manager: {
-          canEditPrice: true,
-          canGiveDiscount: true,
-          canDeleteSale: false,
-          canViewProfit: true,
-          canManageStock: true,
-          canManagePO: true,
-          canViewRecords: true,
-          canEditSale: true,
-        },
-        cashier: {
-          canEditPrice: false,
-          canGiveDiscount: false,
-          canDeleteSale: false,
-          canViewProfit: false,
-          canManageStock: false,
-          canManagePO: false,
-          canViewRecords: false,
-          canEditSale: false,
-        },
+      const defaults: Record<UserRole, Record<string, boolean>> = {
         admin: {
           canEditPrice: true,
           canGiveDiscount: true,
@@ -107,53 +108,94 @@ const appUsers = useUsersStore(s => s.users);
           canManagePO: true,
           canViewRecords: true,
           canEditSale: true,
-        }
+          canEditProduct: true,
+          canViewExpiry: true,
+        },
+        manager: {
+          canEditPrice: true,
+          canGiveDiscount: true,
+          canDeleteSale: false,
+          canViewProfit: true,
+          canManageStock: true,
+          canManagePO: true,
+          canViewRecords: true,
+          canEditSale: true,
+          canEditProduct: true,
+          canViewExpiry: true,
+        },
+        cashier: {
+          canEditPrice: false,
+          canGiveDiscount: true,
+          canDeleteSale: false,
+          canViewProfit: false,
+          canManageStock: false,
+          canManagePO: false,
+          canViewRecords: true,
+          canEditSale: false,
+          canEditProduct: false,
+          canViewExpiry: true,
+        },
+        salesman: {
+          canEditPrice: false,
+          canGiveDiscount: false,
+          canDeleteSale: false,
+          canViewProfit: false,
+          canManageStock: false,
+          canManagePO: false,
+          canViewRecords: false,
+          canEditSale: false,
+          canEditProduct: false,
+          canViewExpiry: false,
+        },
       };
-      
+
       return { ...prev, role: newRole, ...defaults[newRole] };
     });
   };
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      if (!formData.username.trim()) {
+      const cleanUsername = formData.username.trim().toLowerCase();
+      if (!cleanUsername) {
         sonner.error('Username is required');
+        setLoading(false);
+        return;
+      }
+      if (!formData.name.trim()) {
+        sonner.error('Full Name is required');
         setLoading(false);
         return;
       }
 
       if (user) {
-        // Update logic remains same
-
-        if (formData.password && formData.password.length >= 6) {
-          try {
-            // Server-side: admin-users edge function enforces admin-only access.
-            const { error: authError } = await adminUserAction('updateUser', {
-              id: user.id,
-              updates: { password: formData.password },
-            });
-            if (authError) throw new Error(authError);
-          } catch (adminErr) {
-            console.warn('[UserModal] Admin password update failed:', adminErr);
+        // Update existing user
+        const isOtherAdmin = user?.role === 'admin' && user?.id !== appCurrentUser?.id;
+        if (formData.pin) {
+          if (isOtherAdmin) {
+            sonner.error('Security rule: You cannot modify the security PIN of another Administrator.');
+            setLoading(false);
+            return;
           }
-
-          try {
-            const hash = await hashPasswordString(formData.password);
-            await supabase.from('users').update({ action_hash: hash }).eq('id', user.id);
-          } catch (hashErr) {
-            console.warn('Failed to commit password hash update:', hashErr);
+          if (formData.pin.length < 4 || formData.pin.length > 12) {
+            sonner.error('PIN must be between 4 and 12 digits');
+            setLoading(false);
+            return;
           }
+          if (formData.pin !== formData.confirmPin) {
+            sonner.error('PIN and Confirm PIN do not match');
+            setLoading(false);
+            return;
+          }
+          await usersService.changeUserPassword(user.id, formData.pin);
         }
 
         const updatePayload: Partial<UserType> = {
-          username: formData.username,
-          name: formData.name,
-          email: formData.email,
-          role: formData.role as 'cashier',
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          role: formData.role,
           active: formData.active,
           avatar: formData.avatar || undefined,
           canEditPrice: formData.canEditPrice,
@@ -165,92 +207,41 @@ const appUsers = useUsersStore(s => s.users);
           canViewRecords: formData.canViewRecords,
           canEditSale: formData.canEditSale,
           canEditProduct: formData.canEditProduct,
+          canViewExpiry: formData.canViewExpiry,
+          requirePinOnSale: isOtherAdmin ? (user.requirePinOnSale ?? false) : formData.requirePinOnSale,
         };
 
         const updatedUser = await usersService.update(user.id, updatePayload);
-        
-        // Refresh current user's profile if they are the one being edited
-        if (user.id === appCurrentUser?.id) {
+
+        const currentActiveId = appCurrentUser?.id || localStorage.getItem('pos_active_user_id');
+        if (user.id === currentActiveId) {
+          useUsersStore.getState().setCurrentUser(updatedUser);
           await refreshProfile();
         }
 
-        useUsersStore.getState().setUsers(appUsers.map(u => u.id === user.id ? updatedUser : u));
+        useUsersStore.getState().setUsers(appUsers.map(u => (u.id === user.id ? updatedUser : u)));
+        sonner.success('User updated successfully');
       } else {
-        // Create logic remains same
-        if (!formData.password || formData.password.length < 6) {
-          sonner.error('Password must be at least 6 characters long');
+        // Create new user
+        if (!formData.pin || formData.pin.length < 4 || formData.pin.length > 12) {
+          sonner.error('PIN must be between 4 and 12 digits');
+          setLoading(false);
+          return;
+        }
+        if (formData.pin !== formData.confirmPin) {
+          sonner.error('PIN and Confirm PIN do not match');
           setLoading(false);
           return;
         }
 
-        // Server-side: admin-users edge function enforces admin-only access.
-
-        const normalizedUsername = formData.username.trim().toLowerCase();
-        const resolvedEmail = formData.email.trim()
-          ? formData.email.trim().toLowerCase()
-          : `${normalizedUsername}.${Date.now().toString(36)}@pos.local`;
-
-        const hash = await hashPasswordString(formData.password);
-        const authResp = await adminUserAction('createUser', {
-          email: resolvedEmail,
-          password: formData.password,
-          email_confirm: true,
-          user_metadata: {
-            username: formData.username,
-            full_name: formData.name,
-            role: formData.role,
-          },
-        });
-
-        // Deployed edge-fn versions differ in shape — the auth user may come back as
-        // { user }, { data: { user } }, { user: { user } }, or the user object itself.
-        const authUser =
-          authResp?.user?.id ? authResp.user
-          : authResp?.data?.user?.id ? authResp.data.user
-          : authResp?.user?.user?.id ? authResp.user.user
-          : authResp?.data?.id ? authResp.data
-          : authResp?.id ? authResp
-          : null;
-        if (!authUser?.id) {
-          console.error('[UserModal] Unexpected createUser response shape:', authResp);
-          throw new Error('User creation failed — unexpected response: ' + JSON.stringify(authResp)?.slice(0, 180));
-        }
-
-        const { error: upsertError } = await supabase.from('users').upsert({
-          id: authUser.id,
-          name: formData.name,
-          email: resolvedEmail,
+        const newUser = await usersService.create({
+          username: cleanUsername,
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          pin: formData.pin,
           role: formData.role,
           active: formData.active,
-          username: formData.username,
-          can_edit_price: formData.canEditPrice,
-          can_give_discount: formData.canGiveDiscount,
-          can_delete_sale: formData.canDeleteSale,
-          can_view_profit: formData.canViewProfit,
-          can_manage_stock: formData.canManageStock,
-          can_manage_po: formData.canManagePO,
-          can_view_records: formData.canViewRecords,
-          can_edit_sale: formData.canEditSale,
-          can_edit_product: formData.canEditProduct,
-          avatar: formData.avatar || null,
-          action_hash: hash
-        }, { onConflict: 'id' });
-
-        if (upsertError) {
-          try {
-            await adminUserAction('deleteUser', { id: authUser.id });
-          } catch (deleteErr) {
-            console.warn('[UserModal] Failed to clean up auth user after upsert error:', deleteErr);
-          }
-          throw new Error(`Failed to create user record: ${upsertError.message}`);
-        }
-
-        const newUser: UserType = {
-          id: authUser.id,
-          username: formData.username,
-          name: formData.name,
-          email: resolvedEmail,
-          role: formData.role as 'cashier',
+          avatar: formData.avatar || undefined,
           canEditPrice: formData.canEditPrice,
           canGiveDiscount: formData.canGiveDiscount,
           canDeleteSale: formData.canDeleteSale,
@@ -259,19 +250,19 @@ const appUsers = useUsersStore(s => s.users);
           canManagePO: formData.canManagePO,
           canViewRecords: formData.canViewRecords,
           canEditSale: formData.canEditSale,
-          active: formData.active,
-          avatar: formData.avatar || undefined
-        };
+          canEditProduct: formData.canEditProduct,
+          canViewExpiry: formData.canViewExpiry,
+          requirePinOnSale: formData.requirePinOnSale,
+        });
 
         useUsersStore.getState().setUsers([...appUsers, newUser]);
+        sonner.success('New operator created successfully');
       }
 
+      onSuccess?.();
       onClose();
-    } catch (error) {
-      let msg = error instanceof Error ? error.message : 'Unknown error';
-      if (msg.includes('users_username_key') || msg.includes('duplicate key')) {
-        msg = 'This username is already taken. Please choose another one.';
-      }
+    } catch (error: any) {
+      const msg = error?.message || 'Failed to save user';
       sonner.error(`Error saving user: ${msg}`);
     } finally {
       setLoading(false);
@@ -282,10 +273,9 @@ const appUsers = useUsersStore(s => s.users);
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     }));
   };
-
 
   return {
     appCurrentUser,
@@ -293,6 +283,12 @@ const appUsers = useUsersStore(s => s.users);
     loading,
     formData,
     setFormData,
+    showPin,
+    setShowPin,
+    pin: formData.pin,
+    setPin: (val: string) => setFormData(prev => ({ ...prev, pin: val })),
+    confirmPin: formData.confirmPin,
+    setConfirmPin: (val: string) => setFormData(prev => ({ ...prev, confirmPin: val })),
     showMediaLibrary,
     setShowMediaLibrary,
     handleSubmit,

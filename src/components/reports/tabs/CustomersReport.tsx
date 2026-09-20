@@ -2,7 +2,7 @@ import { TrendingUp, Users, DollarSign, ShoppingBag, Star } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line, ResponsiveContainer } from 'recharts';
 import { formatCurrency, getCurrencySymbol } from '../../../lib/currencies';
 import { formatAppDate } from '../../../lib/dateUtils';
-import { EmptyState, Avatar } from '../../../shared/ui';
+import { EmptyState, Avatar, Pagination, usePagination } from '../../../shared/ui';
 import { ExportButton } from '../../../shared/export';
 import { useMemo } from 'react';
 
@@ -26,6 +26,7 @@ interface CustomersReportProps {
 }
 
 export function CustomersReport({ customerData, currency, theme, country }: CustomersReportProps) {
+  const { page, totalPages, pageItems, goToPage, pageSize, setPageSize } = usePagination(customerData, 20);
   const tooltipStyle = {
     backgroundColor: theme === 'dark' ? '#171717' : 'white',
     border: theme === 'dark' ? '1px solid #444' : '1px solid #e5e7eb',
@@ -59,136 +60,154 @@ export function CustomersReport({ customerData, currency, theme, country }: Cust
   if (!customerData || customerData.length === 0) {
     return (
       <EmptyState
-        icon={<Users className="h-10 w-10" />}
-        title={"No Insights Found"}
-        subtext={"We couldn't find any customer records for the selected period."}
-        className="min-h-[400px] bg-white/50 dark:bg-white/5 rounded-[2.5rem] border border-dashed border-gray-200 dark:border-white/10 p-12"
+        icon={<Users className="h-8 w-8 text-neutral-400" />}
+        title="No Insights Found"
+        subtext="We couldn't find any customer records for the selected period."
+        className="min-h-[300px] bg-white dark:bg-surface rounded-md border border-dashed border-neutral-200 dark:border-white/[0.08] p-8 shadow-none"
       />
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Stat Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="space-y-3">
+      {/* Stat Cards Grid - Flat Linear Hierarchy */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* Total Customers */}
-        <div className="stat-card bg-gradient-to-br from-indigo-500 to-blue-600 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Total Customers"}</span>
-            <span className="stat-card-value">{totalCustomers}</span>
-            <div className="flex items-center gap-1 mt-2">
-              <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[8px] font-black text-white uppercase tracking-tighter">{"Lifetime"}</span>
-            </div>
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Total Customers</span>
+            <Users className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <Users className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {totalCustomers}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono">Lifetime database</p>
         </div>
 
         {/* Total Spending */}
-        <div className="stat-card bg-gradient-to-br from-emerald-500 to-teal-600 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Period Revenue"}</span>
-            <span className="stat-card-value">{formatCurrency(totalSpending, currency)}</span>
-            <div className="flex items-center gap-1 mt-2">
-              <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[8px] font-black text-white uppercase tracking-tighter">{"Current Range"}</span>
-            </div>
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Period Revenue</span>
+            <DollarSign className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <DollarSign className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {formatCurrency(totalSpending, currency)}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono">Current range</p>
         </div>
 
         {/* Total Orders */}
-        <div className="stat-card bg-gradient-to-br from-amber-500 to-orange-600 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Repeat Visits"}</span>
-            <span className="stat-card-value">{totalOrders}</span>
-            <div className="flex items-center gap-1 mt-2">
-              <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[8px] font-black text-white uppercase tracking-tighter">{"Total Invoices"}</span>
-            </div>
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Total Invoices</span>
+            <ShoppingBag className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <ShoppingBag className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {totalOrders}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono">Transactions</p>
         </div>
 
         {/* Avg Value */}
-        <div className="stat-card bg-gradient-to-br from-rose-500 to-pink-600 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Avg. Retention"}</span>
-            <span className="stat-card-value">{formatCurrency(avgOrderValue, currency)}</span>
-            <div className="flex items-center gap-1 mt-2">
-              <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[8px] font-black text-white uppercase tracking-tighter">{"Per Transaction"}</span>
-            </div>
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Avg. Ticket</span>
+            <Star className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
           </div>
-          <Star className="stat-card-icon" />
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums text-neutral-900 dark:text-white">
+            {formatCurrency(avgOrderValue, currency)}
+          </div>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-mono">Per transaction</p>
         </div>
       </div>
+
       {/* Customer Spending Chart */}
-      <div className="bg-white dark:bg-surface rounded-[2.5rem] border border-gray-200 dark:border-white/5 p-6 shadow-sm">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-          <TrendingUp className="h-5 w-5 mr-2 text-primary" />{"Top Customer Spending"}
-        </h3>
-        <ResponsiveContainer width="100%" height={window.innerWidth < 768 ? 240 : 300}>
+      <div className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] p-4 shadow-none">
+        <div className="flex items-center justify-between pb-3 mb-3 border-b border-neutral-200 dark:border-white/[0.06]">
+          <span className="text-[12px] font-semibold text-neutral-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+            Top Customer Spending
+          </span>
+          <span className="text-[11px] text-neutral-500 font-mono">Top 10 Volume</span>
+        </div>
+        <ResponsiveContainer width="100%" height={240}>
           <LineChart data={customerData.slice(0, 10).map(c => ({ name: c.name.length > 15 ? c.name.substring(0, 15) + '...' : c.name, spending: c.totalSpent, transactions: c.totalTransactions }))}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="name" stroke={theme === 'dark' ? '#9ca3af' : '#6b7280'} fontSize={12} />
-            <YAxis stroke={theme === 'dark' ? '#9ca3af' : '#6b7280'} fontSize={12} />
+            <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#262626' : '#f0f0f0'} />
+            <XAxis dataKey="name" stroke={theme === 'dark' ? '#737373' : '#a3a3a3'} fontSize={11} tickLine={false} />
+            <YAxis stroke={theme === 'dark' ? '#737373' : '#a3a3a3'} fontSize={11} tickLine={false} />
             <Tooltip formatter={(value: any, name: string) => [name === 'spending' ? formatCurrency(Number(value), currency) : value, name === 'spending' ? "Total Spent" : "Transactions"]} contentStyle={tooltipStyle} itemStyle={{ color: theme === 'dark' ? '#e5e7eb' : '#4b5563' }} />
-            <Legend />
-            <Line type="monotone" dataKey="spending" stroke="#10b981" strokeWidth={3} name={"Total Spent"} dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }} activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2 }} />
+            <Legend wrapperStyle={{ fontSize: '11px' }} />
+            <Line type="monotone" dataKey="spending" stroke="#10b981" strokeWidth={2} name={"Total Spent"} dot={false} activeDot={{ r: 4 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
       {/* Customer Analytics Table */}
-      <div className="bg-white dark:bg-surface rounded-[2.5rem] border border-gray-200 dark:border-white/5 overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
-            <Users className="h-5 w-5 mr-2 text-primary" />{"Customer Analytics"}
-          </h3>
+      <div className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] overflow-hidden shadow-none min-h-[calc(100vh-360px)] flex flex-col justify-between">
+        <div className="px-3.5 py-2.5 border-b border-neutral-200 dark:border-white/[0.06] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+            <h3 className="text-[13px] font-semibold text-neutral-900 dark:text-white uppercase tracking-wider">
+              Customer Analytics ({customerData.length})
+            </h3>
+          </div>
           <ExportButton
             data={exportRows}
             columns={exportColumns}
             title={"Customers Report"}
             currencySymbol={getCurrencySymbol(currency)}
-            className="!min-h-0 !px-4 !py-2.5 !rounded-xl !text-[10px] !font-black !bg-gray-100 dark:!bg-white/5 !text-gray-600 dark:!text-gray-400 !border-gray-200 dark:!border-white/5 hover:!text-primary"
+            className="!min-h-0 !h-7 !px-2.5 !rounded !text-[11px] !bg-neutral-100 dark:!bg-white/[0.06] !text-neutral-700 dark:!text-neutral-300 !border-neutral-200 dark:border-white/[0.08] hover:!bg-neutral-200 dark:hover:!bg-white/[0.1] shadow-none"
           />
         </div>
 
         {/* Desktop Table */}
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/5">
-              <tr>
-                <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-400">{"Customer"}</th>
-                <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-400">{"Total Spent"}</th>
-                <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-400 hidden sm:table-cell">{"Transactions"}</th>
-                <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-400 hidden md:table-cell">{"Items Purchased"}</th>
-                <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-400 hidden md:table-cell">{"Avg. Transaction"}</th>
-                <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-gray-700 dark:text-gray-400 hidden lg:table-cell">{"Last Purchase"}</th>
+        <div className="hidden lg:block overflow-x-auto flex-1">
+          <table className="w-full text-left border-collapse text-[13px]">
+            <thead>
+              <tr className="bg-neutral-50 dark:bg-white/[0.02] border-b border-neutral-200 dark:border-white/[0.06] h-8">
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500">Customer</th>
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500">Period Spent</th>
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 text-center hidden sm:table-cell">Invoices</th>
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 text-center hidden md:table-cell">Items</th>
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 text-right hidden md:table-cell">Avg. Ticket</th>
+                <th className="px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 text-right hidden lg:table-cell">Last Purchase</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-              {customerData.map(customer => (
-                <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Avatar name={customer.name} size="sm" shape="square" className="font-bold text-sm rounded-xl from-emerald-500 to-teal-600 mr-3 shadow-sm" />
-                        <span className="font-semibold text-gray-900 dark:text-white">{customer.name}</span>
-                      </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col">
-                      <span className="font-black text-primary dark:text-emerald-400">
-                        {formatCurrency(customer.periodSpent ?? customer.totalSpent, currency)}
-                      </span>
-                      {customer.lifetimeSpent !== undefined && (
-                        <span className="text-[10px] text-gray-500 font-bold uppercase">
-                          {"Life:"} {formatCurrency(customer.lifetimeSpent, currency)}
-                        </span>
-                      )}
+            <tbody className="divide-y divide-neutral-100 dark:divide-white/[0.04]">
+              {pageItems.map(customer => (
+                <tr key={customer.id} className="h-9 hover:bg-neutral-50 dark:hover:bg-white/[0.02] transition-colors">
+                  <td className="px-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <Avatar name={customer.name} size="sm" shape="square" className="rounded" />
+                      <span className="font-medium text-neutral-900 dark:text-white text-[13px]">{customer.name}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap hidden sm:table-cell"><span className="px-2 py-1 rounded-lg bg-emerald-100 dark:bg-primary/10 text-primary text-[10px] font-black">{customer.totalTransactions}</span></td>
-                  <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell"><span className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 text-[10px] font-black">{customer.totalItems}</span></td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400 hidden md:table-cell font-bold">{formatCurrency(customer.avgTransactionValue, currency)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400 hidden lg:table-cell font-bold">{formatAppDate(customer.lastPurchase, country)}</td>
+                  <td className="px-3 whitespace-nowrap">
+                    <span className="font-mono tabular-nums font-semibold text-neutral-900 dark:text-white text-[13px]">
+                      {formatCurrency(customer.periodSpent ?? customer.totalSpent, currency)}
+                    </span>
+                    {customer.lifetimeSpent !== undefined && (
+                      <span className="ml-1.5 text-[10px] text-neutral-400 font-mono">
+                        (Life: {formatCurrency(customer.lifetimeSpent, currency)})
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 whitespace-nowrap text-center hidden sm:table-cell">
+                    <span className="font-mono tabular-nums text-[12px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-white/[0.06] text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/[0.06]">
+                      {customer.totalTransactions}
+                    </span>
+                  </td>
+                  <td className="px-3 whitespace-nowrap text-center hidden md:table-cell">
+                    <span className="font-mono tabular-nums text-[12px] text-neutral-600 dark:text-neutral-400">
+                      {customer.totalItems}
+                    </span>
+                  </td>
+                  <td className="px-3 whitespace-nowrap text-right text-neutral-600 dark:text-neutral-400 hidden md:table-cell font-mono tabular-nums">
+                    {formatCurrency(customer.avgTransactionValue, currency)}
+                  </td>
+                  <td className="px-3 whitespace-nowrap text-right text-neutral-600 dark:text-neutral-400 hidden lg:table-cell font-mono text-[12px]">
+                    {formatAppDate(customer.lastPurchase, country)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -196,44 +215,44 @@ export function CustomersReport({ customerData, currency, theme, country }: Cust
         </div>
 
         {/* Mobile Cards */}
-        <div className="lg:hidden divide-y divide-gray-100 dark:divide-white/[0.05]">
-          {customerData.map(customer => (
-            <div key={customer.id} className="p-4 active:bg-gray-50 dark:active:bg-white/5 transition-colors">
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-3">
-                  <Avatar name={customer.name} size="md" shape="square" className="text-sm from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20" />
+        <div className="lg:hidden divide-y divide-neutral-100 dark:divide-white/[0.04] flex-1">
+          {pageItems.map(customer => (
+            <div key={customer.id} className="p-3">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2">
+                  <Avatar name={customer.name} size="sm" shape="square" className="rounded" />
                   <div>
-                    <p className="text-sm font-black text-gray-900 dark:text-white leading-tight">{customer.name}</p>
-                    <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">{"Last seen:"} {formatAppDate(customer.lastPurchase, country)}</p>
+                    <p className="text-[13px] font-medium text-neutral-900 dark:text-white leading-tight">{customer.name}</p>
+                    <p className="text-[11px] text-neutral-500 font-mono mt-0.5">Last: {formatAppDate(customer.lastPurchase, country)}</p>
                   </div>
                 </div>
-                <div className="flex flex-col items-end">
-                  <p className="text-base font-black text-primary dark:text-emerald-400">
+                <div className="text-right">
+                  <p className="text-[13px] font-mono tabular-nums font-bold text-neutral-900 dark:text-white">
                     {formatCurrency(customer.periodSpent ?? customer.totalSpent, currency)}
                   </p>
-                  {customer.lifetimeSpent !== undefined && (
-                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">
-                      {"Life:"} {formatCurrency(customer.lifetimeSpent, currency)}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 mt-2">
-                <div className="bg-gray-50 dark:bg-white/5 p-2 rounded-xl text-center">
-                  <p className="text-[8px] font-black text-gray-600 uppercase mb-0.5">{"Visits"}</p>
-                  <p className="text-xs font-black text-gray-900 dark:text-white">{customer.totalTransactions}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-white/5 p-2 rounded-xl text-center">
-                  <p className="text-[8px] font-black text-gray-600 uppercase mb-0.5">{"Items"}</p>
-                  <p className="text-xs font-black text-gray-900 dark:text-white">{customer.totalItems}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-white/5 p-2 rounded-xl text-center">
-                  <p className="text-[8px] font-black text-gray-600 uppercase mb-0.5">{"Average"}</p>
-                  <p className="text-xs font-black text-gray-900 dark:text-white">{formatCurrency(customer.avgTransactionValue, currency)}</p>
+                  <p className="text-[10px] font-mono text-neutral-500">{customer.totalTransactions} bills</p>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Pinned Pagination Footer */}
+        <div className="px-3 py-2 bg-neutral-50 dark:bg-white/[0.02] border-t border-neutral-200 dark:border-white/[0.08] flex items-center justify-between gap-4 mt-auto">
+          <p className="hidden sm:block text-[11px] text-neutral-500 font-mono">
+            Showing {customerData.length > 0 ? ((page - 1) * pageSize) + 1 : 0}–{Math.min(page * pageSize, customerData.length)} of {customerData.length}
+          </p>
+          <div className="mx-auto sm:mx-0">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={goToPage}
+              totalItems={customerData.length}
+              mode="numbered"
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -7,29 +7,29 @@ export function ProductVariants({ d }: { d: ProductDetailController }) {
   const { formData, variants, setVariants, variantData, setVariantData } = d;
 
   return (
-    <div className="pt-6 mt-8 border-t border-gray-200 dark:border-white/5">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-[1.5rem]"><PackageSearch className="w-6 h-6" /></div>
+    <div className="pt-4 mt-6 border-t border-neutral-200 dark:border-white/[0.08]">
+      <div className="flex items-center gap-2.5 mb-4">
+        <PackageSearch className="w-5 h-5 text-neutral-400" />
         <div>
-          <h3 className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">{"Customizations & Options"}</h3>
-          <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Manage product variants and add-on modifiers"}</p>
+          <h3 className="text-[13px] font-semibold text-neutral-900 dark:text-white">{"Customizations & Options"}</h3>
+          <p className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider">{"Manage product variants and add-on modifiers"}</p>
         </div>
       </div>
-      <div className="space-y-6">
+      <div className="space-y-4">
         {formData.productType === 'variable' && (
           <>
-          <div className="space-y-3 animate-in fade-in zoom-in-95">
+          <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h4 className="text-xs font-black text-gray-900 dark:text-white uppercase">{"Product Variants"}</h4>
-              <p className="text-[9px] text-gray-600 uppercase font-bold tracking-widest">{"Size, Color, Material (e.g. Garments, Shoes)"}</p>
+              <h4 className="text-[12px] font-semibold text-neutral-900 dark:text-white uppercase">{"Product Variants"}</h4>
+              <p className="text-[10px] text-neutral-500 uppercase font-mono tracking-wider">{"Size, Color, Material (e.g. Garments, Shoes)"}</p>
             </div>
             <Button
               type="button"
               variant="secondary"
               size="sm"
               onClick={() => setVariants([...variants, { name: '', options: [], optionsRaw: '' }])}
-              className="!min-h-0 !px-3 !py-1.5 !rounded-lg !text-[10px] !font-black !bg-white dark:!bg-black !border-gray-200 dark:!border-white/10 !text-primary hover:!border-primary"
+              className="h-7 px-2.5 text-[12px] font-medium rounded-md"
             >
               {"Add Variant Option"}
             </Button>
@@ -59,7 +59,7 @@ export function ProductVariants({ d }: { d: ProductDetailController }) {
             };
 
             return (
-              <div key={index} className="flex gap-2 items-start p-3 bg-white dark:bg-black/40 rounded-xl border border-gray-200 dark:border-white/5">
+              <div key={index} className="flex gap-2 items-start p-3 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08]">
                 <input
                   type="text"
                   placeholder={"Variant Name (e.g. Size)"}
@@ -69,11 +69,11 @@ export function ProductVariants({ d }: { d: ProductDetailController }) {
                     newVariants[index].name = e.target.value;
                     setVariants(newVariants);
                   }}
-                  className="w-1/3 bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 text-xs rounded-lg px-3 py-2 focus:ring-1 focus:ring-emerald-500 font-black"
+                  className="w-1/3 h-8 px-2.5 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] text-[13px] rounded focus:border-emerald-500 focus:outline-none transition-colors"
                 />
 
                 <div
-                  className="flex-1 flex flex-wrap items-center gap-1.5 min-h-[38px] bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-lg px-2.5 py-1.5 focus-within:ring-1 focus-within:ring-emerald-500 focus-within:border-primary transition-all cursor-text"
+                  className="flex-1 flex flex-wrap items-center gap-1.5 min-h-[32px] bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded px-2.5 py-1 focus-within:border-emerald-500 transition-colors cursor-text"
                   onClick={(e) => {
                     const inputEl = e.currentTarget.querySelector('input[type="text"]');
                     if (inputEl) (inputEl as HTMLInputElement).focus();
@@ -82,7 +82,7 @@ export function ProductVariants({ d }: { d: ProductDetailController }) {
                   {variant.options.map((opt, optIndex) => (
                     <span
                       key={optIndex}
-                      className="bg-emerald-50 dark:bg-primary/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-primary/20 px-2 py-0.5 rounded-md text-[11px] font-bold flex items-center gap-1 animate-fadeIn select-none"
+                      className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[11px] font-mono flex items-center gap-1 select-none"
                     >
                       {opt}
                       <Button
@@ -92,7 +92,7 @@ export function ProductVariants({ d }: { d: ProductDetailController }) {
                           e.stopPropagation();
                           removeTag(optIndex);
                         }}
-                        className="!min-h-0 !p-0 !bg-transparent !text-primary hover:!text-emerald-700 dark:hover:!text-emerald-300 !font-bold"
+                        className="!min-h-0 !p-0 !bg-transparent !text-emerald-600 dark:!text-emerald-400 hover:!text-emerald-700 dark:hover:!text-emerald-300"
                       >
                         &times;
                       </Button>
@@ -124,11 +124,11 @@ export function ProductVariants({ d }: { d: ProductDetailController }) {
                     onBlur={(e) => {
                       addTag(e.target.value);
                     }}
-                    className="flex-1 min-w-[60px] bg-transparent border-0 outline-none p-0 text-xs text-gray-900 dark:text-white focus:ring-0 placeholder-gray-400 dark:placeholder-gray-500 font-medium"
+                    className="flex-1 min-w-[60px] bg-transparent border-0 outline-none p-0 text-[13px] text-neutral-900 dark:text-white focus:ring-0 placeholder-neutral-400"
                   />
                 </div>
 
-                <Button type="button" variant="ghost" onClick={() => setVariants(variants.filter((_, i) => i !== index))} className="!min-h-0 !p-2 !rounded-lg !bg-transparent !text-rose-500 hover:!bg-rose-50 dark:hover:!bg-rose-500/10" icon={<X className="w-4 h-4" />} />
+                <Button type="button" variant="ghost" onClick={() => setVariants(variants.filter((_, i) => i !== index))} className="!min-h-0 !h-8 !w-8 !p-0 !rounded !bg-transparent !text-rose-500 hover:!bg-rose-50 dark:hover:!bg-rose-500/10 border border-neutral-200 dark:border-white/[0.08]" icon={<X className="w-3.5 h-3.5" />} />
               </div>
             );
           })}
@@ -168,7 +168,7 @@ export function ProductVariants({ d }: { d: ProductDetailController }) {
                 });
                 setVariantData(newVariantData);
               }}
-              className="!min-h-0 !px-4 !py-2 !rounded-lg !text-[10px] !font-black !bg-emerald-50 dark:!bg-primary/10 !text-emerald-600 dark:!text-primary !border-emerald-200 dark:!border-primary/20 hover:!border-primary !shadow-sm"
+              className="!min-h-0 !px-3 !py-1.5 !rounded !text-[12px] font-medium !bg-emerald-500/10 !text-emerald-600 dark:!text-emerald-400 !border-emerald-500/20 hover:!bg-emerald-500/20"
               icon={<Wand2 className="w-3.5 h-3.5" />}
             >
               {"Generate Price/Stock Matrix"}
@@ -177,9 +177,9 @@ export function ProductVariants({ d }: { d: ProductDetailController }) {
         )}
 
         {variantData.length > 0 && (
-          <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200 dark:border-white/10">
-            <table className="w-full text-left text-[10px] uppercase font-bold text-gray-600 dark:text-gray-400">
-              <thead className="bg-gray-100 dark:bg-black/60 border-b border-gray-200 dark:border-white/10">
+          <div className="mt-4 overflow-x-auto rounded-md border border-neutral-200 dark:border-white/[0.08]">
+            <table className="w-full text-left text-[11px] font-mono uppercase tracking-wider text-neutral-500">
+              <thead className="bg-neutral-50 dark:bg-surface border-b border-neutral-200 dark:border-white/[0.08]">
                 <tr>
                   <th className="px-3 py-2">Variant</th>
                   <th className="px-3 py-2 w-24">Cost</th>
@@ -188,10 +188,10 @@ export function ProductVariants({ d }: { d: ProductDetailController }) {
                   <th className="px-3 py-2 w-28">Barcode</th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-black/20 divide-y divide-gray-100 dark:divide-white/5">
+              <tbody className="bg-white dark:bg-surface divide-y divide-neutral-200 dark:divide-white/[0.08]">
                 {variantData.map((vd, idx) => (
                   <tr key={vd.id}>
-                    <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-white">
+                    <td className="px-3 py-2 whitespace-nowrap text-[13px] text-neutral-900 dark:text-white font-sans font-medium">
                       {vd.option1} {vd.option2 ? ` / ${vd.option2}` : ''}
                     </td>
                     <td className="px-3 py-2">
@@ -204,7 +204,7 @@ export function ProductVariants({ d }: { d: ProductDetailController }) {
                           setVariantData(newData);
                         }}
                         placeholder={formData.cost}
-                        className="w-full bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 text-xs rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-emerald-500"
+                        className="w-full h-7 px-2 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] text-[12px] font-mono tabular-nums rounded focus:border-emerald-500 focus:outline-none"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -217,7 +217,7 @@ export function ProductVariants({ d }: { d: ProductDetailController }) {
                           setVariantData(newData);
                         }}
                         placeholder={formData.price}
-                        className="w-full bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 text-xs rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-emerald-500"
+                        className="w-full h-7 px-2 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] text-[12px] font-mono tabular-nums rounded focus:border-emerald-500 focus:outline-none"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -230,7 +230,7 @@ export function ProductVariants({ d }: { d: ProductDetailController }) {
                           setVariantData(newData);
                         }}
                         placeholder="0"
-                        className="w-full bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 text-xs rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-emerald-500"
+                        className="w-full h-7 px-2 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] text-[12px] font-mono tabular-nums rounded focus:border-emerald-500 focus:outline-none"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -243,7 +243,7 @@ export function ProductVariants({ d }: { d: ProductDetailController }) {
                           setVariantData(newData);
                         }}
                         placeholder="Auto"
-                        className="w-full bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 text-xs rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-emerald-500 uppercase"
+                        className="w-full h-7 px-2 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] text-[12px] font-mono rounded focus:border-emerald-500 focus:outline-none uppercase"
                       />
                     </td>
                   </tr>

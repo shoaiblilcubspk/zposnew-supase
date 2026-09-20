@@ -1,4 +1,0 @@
--- Phase 6: Salesman Immutable on Edit
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS last_edited_by TEXT;
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS last_edited_at TIMESTAMPTZ;
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS edit_count INTEGER DEFAULT 0;

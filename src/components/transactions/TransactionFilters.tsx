@@ -67,80 +67,48 @@ export function TransactionFilters({
   }, [appSales, appSalesmen, appUsers]);
 
   const saleTypeToggles = [
-    { key: 'all', label: "All Sales", icon: <LayoutGrid className="h-4 w-4" /> },
+    { key: 'all', label: "All", icon: <LayoutGrid className="h-4 w-4" /> },
     { key: 'retail', label: "Retail", icon: <Store className="h-4 w-4" />, enabled: appSettings.retailEnabled },
     { key: 'wholesale', label: "Wholesale", icon: <Package className="h-4 w-4" />, enabled: appSettings.wholesaleEnabled },
   ].filter((tt: any) => tt.key === 'all' || tt.enabled);
 
   return (
-    <div className="bg-white/50 dark:bg-black/20 p-3 lg:p-4 rounded-[1.75rem] border border-gray-200/50 dark:border-white/5 shadow-xl">
-      <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
-        <div title={"Searches all-time records in cloud, ignoring date filters"}>
+    <div className="bg-white dark:bg-surface p-3 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none space-y-2.5">
+      {/* Top Row: Search (Left) + Status Segmented & Date Range Picker (Right) */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
+        <div className="flex-1 min-w-0" title={"Searches all-time records in cloud, ignoring date filters"}>
           <SharedSearchBar
             value={searchTerm}
             onChange={val => { setSearchTerm(val); setCurrentPage(1); }}
             placeholder={"Search sales..."}
+            className="w-full"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="grid grid-cols-2 lg:flex items-center gap-2 w-full lg:w-auto">
-            <SearchableSelect
-              label={"SALE TYPE"}
-              options={saleTypeToggles.map(tt => ({ id: tt.key, label: tt.label }))}
-              value={saleTypeFilter}
-              onChange={(val: any) => { setSaleTypeFilter(val); setCurrentPage(1); }}
-              icon={LayoutGrid}
-            />
-            <SegmentedControl
-              options={[
-                { label: "All", value: 'all' },
-                { label: "Sales", value: 'sales' },
-                { label: "Refunds", value: 'refunds' }
-              ]}
-              value={statusFilter}
-              onChange={(val: string) => { setStatusFilter(val as any); setCurrentPage(1); }}
-              className="lg:w-[280px]"
-            />
-          </div>
-          <div className="grid grid-cols-2 lg:flex items-center gap-2 w-full lg:w-auto">
-            <SearchableSelect
-              options={[
-                { id: 'all', label: "Payment: All" },
-                { id: 'cash', label: "Cash" },
-                { id: 'card', label: "Card" },
-                { id: 'online', label: "Online Wallet" }
-              ]}
-              value={paymentFilter}
-              onChange={val => { setPaymentFilter(val); setCurrentPage(1); }}
-              placeholder={"Payment"}
-            />
-            <SearchableSelect
-              options={cashiersList.map(c => ({ id: c, label: c === 'all' ? "Cashier: All" : c.toUpperCase() }))}
-              value={selectedCashier}
-              onChange={val => { setSelectedCashier(val); setCurrentPage(1); }}
-              placeholder={"Cashier"}
-              icon={User}
-              align="right"
-            />
-            <SearchableSelect
-              options={salesmenList.map(s => ({ id: s, label: s === 'all' ? "Salesman: All" : s.toUpperCase() }))}
-              value={selectedSalesman}
-              onChange={val => { setSelectedSalesman(val); setCurrentPage(1); }}
-              placeholder={"Salesman"}
-              icon={Briefcase}
-              align="right"
-            />
+        <div className="grid grid-cols-2 md:flex items-center gap-2 w-full md:w-auto">
+          <SegmentedControl
+            size="sm"
+            options={[
+              { label: "All", value: 'all' },
+              { label: "Sales", value: 'sales' },
+              { label: "Refunds", value: 'refunds' }
+            ]}
+            value={statusFilter}
+            onChange={(val: string) => { setStatusFilter(val as any); setCurrentPage(1); }}
+            className="w-full md:w-56"
+          />
+
+          <div className="w-full md:w-auto min-w-0">
             <DateRangePicker
               preset={dateFilter}
               presets={[
-                { id: 'today', label: "TODAY" },
-                { id: 'yesterday', label: "YESTERDAY" },
-                { id: 'last7', label: "LAST 7 DAYS" },
-                { id: 'thisMonth', label: "THIS MONTH" },
-                { id: 'lastMonth', label: "PREVIOUS MONTH" },
-                { id: 'custom', label: "CUSTOM RANGE" },
-                { id: 'all', label: "ALL TIME" }
+                { id: 'today', label: "Today" },
+                { id: 'yesterday', label: "Yesterday" },
+                { id: 'last7', label: "Last 7 Days" },
+                { id: 'thisMonth', label: "This Month" },
+                { id: 'lastMonth', label: "Previous Month" },
+                { id: 'custom', label: "Custom Range" },
+                { id: 'all', label: "All Time" }
               ]}
               onPresetChange={val => { setDateFilter(val); setCurrentPage(1); }}
               startDate={startDateInput}
@@ -148,8 +116,50 @@ export function TransactionFilters({
               onStartDateChange={(v) => { setStartDateInput(v); setCurrentPage(1); }}
               onEndDateChange={(v) => { setEndDateInput(v); setCurrentPage(1); }}
             />
-
           </div>
+        </div>
+      </div>
+
+      {/* Bottom Row: Secondary Filter Dropdowns in a unified aligned strip */}
+      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-neutral-100 dark:border-white/[0.04]">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full">
+          <SearchableSelect
+            label={"SALE TYPE"}
+            options={saleTypeToggles.map(tt => ({ id: tt.key, label: tt.label }))}
+            value={saleTypeFilter}
+            onChange={(val: any) => { setSaleTypeFilter(val); setCurrentPage(1); }}
+            icon={LayoutGrid}
+          />
+          <SearchableSelect
+            label={"PAYMENT"}
+            options={[
+              { id: 'all', label: "All" },
+              { id: 'cash', label: "Cash" },
+              { id: 'card', label: "Card" },
+              { id: 'online', label: "Online" },
+              ...(appSettings?.enableCreditSales ? [{ id: 'credit', label: "Credit" }] : []),
+              { id: 'split', label: "Split" },
+            ]}
+            value={paymentFilter}
+            onChange={val => { setPaymentFilter(val); setCurrentPage(1); }}
+            placeholder={"Payment"}
+          />
+          <SearchableSelect
+            label={"CASHIER"}
+            options={cashiersList.map(c => ({ id: c, label: c === 'all' ? "All" : c }))}
+            value={selectedCashier}
+            onChange={val => { setSelectedCashier(val); setCurrentPage(1); }}
+            placeholder={"Cashier"}
+            icon={User}
+          />
+          <SearchableSelect
+            label={"SALESMAN"}
+            options={salesmenList.map(s => ({ id: s, label: s === 'all' ? "All" : s }))}
+            value={selectedSalesman}
+            onChange={val => { setSelectedSalesman(val); setCurrentPage(1); }}
+            placeholder={"Salesman"}
+            icon={Briefcase}
+          />
         </div>
       </div>
     </div>

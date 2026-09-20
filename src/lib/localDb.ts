@@ -1,12 +1,11 @@
 import { PosDB } from './PosDB';
-import { PendingOpEntity } from '../types';
 
 export const localDb = new PosDB();
 export const SETTINGS_ID = '00000000-0000-4000-8000-000000000001';
 
 // Cloud-direct: there is NO offline pending-ops queue anymore. This guard now
 // always returns false so realtime handlers never skip a cloud update.
-export async function isPendingDelete(_entity: PendingOpEntity, _entityId: string): Promise<boolean> {
+export async function isPendingDelete(_entity: any, _entityId: string): Promise<boolean> {
   return false;
 }
 

@@ -28,6 +28,10 @@ Import from barrel: `import { Button, Badge, Select } from '../../shared/ui';`
 
 **Rules:**
 - Presentation + interaction only — NO Supabase/Dexie calls, NO business logic inside `src/shared/ui/*`.
+- **Linear & Anti-AI Standard:** 13px base text (`text-[13px]`), 32px rows (`h-8`), -1% tracking (`tracking-[-0.01em]`).
+- Flat engineered surfaces: No card drop shadows (`shadow-none`), hairline 1px borders at 8% (`border-white/[0.08]`). Hover changes surface shade, not elevation.
+- Drop pastel tiles & gradients; tabs are high-density segmented controls (`SegmentedControl`) or crisp minimal underlines (`SubTabBar`).
+- Status is icon + neutral label; badges must be subtle/outline, never rainbow candy pills.
 - Dark mode via single `bg-surface` token — never `dark:bg-[#1C1C1C]`-style hex literals.
 - Visual tweaks: `!`-prefixed `className` overrides (estore theme vars `--color-primary`, `--color-card-bg`, etc.) — NEVER new markup, NEVER page-local variants.
 - New shared component? Create it in `src/shared/ui/`, export from `index.ts`, register it in this file.
@@ -50,11 +54,9 @@ Import: `import { SharedSearchBar, SharedProductList, useDragDropList } from '..
 
 ## ⚙️ 3. Shared Business Logic Modules — `src/lib/`
 
-| Module | Purpose | When to use |
-|--------|---------|-------------|
-| `services.ts` | All DB services (`productsService`, `purchaseRecordsService`, `suppliersService`, ...) | Every DB call — never raw supabase calls in components |
-| `localDb.ts` | Dexie IndexedDB + `queueOp` offline-first queue | Every local read/write |
-| `syncEngine.ts` | Local↔Supabase delta sync, retention pruning | Startup only |
+| `src/lib/services/` | Local SQLite domain services (`products`, `sales`, `inventory`, `customers`, `expenses`, `users`, `settings`) | Every data mutation and read — strictly local SQLite in <10ms |
+| `src/lib/db/` | Local SQLite storage engine adapter (`TauriSqliteDriver` on desktop, `WasmSqliteDriver` in browser) | Single authoritative local database persistence |
+| `src/lib/sync/syncEngine.ts` | Incremental WebRTC P2P event sync (`sync_outbox` / `sync_inbox`) with vector clocks | Background delta replication between paired terminals |
 | `stockInCommit.ts` | `commitStockInToInventory()` — THE single stock-in commit path (PO bulk + Quick Restock) | ANY stock-in operation |
 | `sonner.ts` | `sonner.toast / confirm / loading / success / error` | ALL toasts + confirmations |
 | `currencies.ts` | `formatCurrency`, `getCurrencySymbol`, `formatNumberWithPrecision` | ALL money formatting |
@@ -117,6 +119,7 @@ These are app-level shared components (NOT page-local). Reuse them; never re-imp
 - ❌ Page-local variants of ANY shared module — visual tweaks ONLY via `!`-prefixed className overrides
 - ❌ Second parallel implementation of shared business logic (e.g. stock-in) — `stockInCommit` is the only path
 - ❌ Hand-rolled CSV/Excel/PDF/print code (Blob + `download` attr, `window.print`) → `src/shared/export/` only
+- ❌ **Anti-AI Bans:** Purple-to-blue gradients, pastel icon square tiles, decorative drop shadows on cards/inputs (`shadow-md`/`shadow-lg` banned), bloated `rounded-2xl` corners on small elements, candy-colored pills, centering data/numbers.
 
 ---
 

@@ -1,6 +1,6 @@
 import { useProductsStore } from '../../stores';
 import { useState } from 'react';
-import { DollarSign, Tag, User, Image as ImageIcon, CheckCircle2, Loader2 } from 'lucide-react';
+import { DollarSign, Tag, User, Image as ImageIcon, CheckCircle2, Loader2, X } from 'lucide-react';
 import { productsService } from '../../lib/services';
 import { Product } from '../../types';
 import { sonner } from '../../lib/sonner';
@@ -23,116 +23,124 @@ export function BulkEditModal({ isOpen, onClose, selectedIds, categories, suppli
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
 
   // Filter out 'All' from categories and suppliers for selection
-  const availableCategories = categories.filter(c => c !== 'All');
-  const availableSuppliers = suppliers.filter(s => s !== 'All');
+  const availableCategories = categories.filter(c => c !== 'All' && c !== '');
+  const availableSuppliers = suppliers.filter(s => s !== 'All' && s !== '');
 
-  const [updates, setUpdates] = useState<Partial<Product>>({
-    price: undefined,
-    cost: undefined,
-    category: undefined,
-    supplier: undefined,
-    image: undefined,
-    active: undefined,
-    taxable: undefined,
-  });
+  // Form State for Overrides
+  const [updates, setUpdates] = useState<{
+    price?: number;
+    cost?: number;
+    category?: string;
+    supplier?: string;
+    active?: boolean;
+    taxable?: boolean;
+    image?: string;
+  }>({});
 
   const handleApply = async () => {
     if (selectedIds.length === 0) return;
-
-    // Filter out undefined values to only send actual changes
-    const actualUpdates = Object.fromEntries(
-      Object.entries(updates).filter(([_, v]) => v !== undefined)
-    );
-
-    if (Object.keys(actualUpdates).length === 0) {
-      sonner.error('No changes selected to apply');
-      return;
-    }
-
     setIsUpdating(true);
-    sonner.loading(`Updating ${selectedIds.length} items...`);
 
     try {
-      await productsService.bulkUpdate(selectedIds, actualUpdates);
+      let updateCount = 0;
+      for (const id of selectedIds) {
+        const product = appProducts.find(p => p.id === id);
+        if (!product) continue;
 
-      // Update local state
-      const updatedProducts = appProducts.map(p =>
-        selectedIds.includes(p.id) ? { ...p, ...actualUpdates, updatedAt: new Date() } : p
-      );
+        const updatedData: Partial<Product> = {};
+        if (updates.price !== undefined) updatedData.price = updates.price;
+        if (updates.cost !== undefined) updatedData.cost = updates.cost;
+        if (updates.category !== undefined) updatedData.category = updates.category;
+        if (updates.supplier !== undefined) updatedData.supplier = updates.supplier;
+        if (updates.active !== undefined) updatedData.active = updates.active;
+        if (updates.taxable !== undefined) updatedData.taxable = updates.taxable;
+        if (updates.image !== undefined) updatedData.image = updates.image;
 
-      useProductsStore.getState().setProducts(updatedProducts);
-      sonner.success(`${selectedIds.length} products updated successfully`);
+        if (Object.keys(updatedData).length > 0) {
+          await productsService.updateProduct(id, updatedData);
+          updateCount++;
+        }
+      }
+
+      sonner.success("Bulk Update Applied", {
+        description: `Successfully updated ${updateCount} products.`
+      });
       onClose();
-    } catch (error) {
-      console.error('Bulk Update Error:', error);
-      sonner.error('Failed to apply bulk updates');
+    } catch (err: any) {
+      sonner.error("Update Failed", {
+        description: err.message || "Failed to update selected products."
+      });
     } finally {
       setIsUpdating(false);
-      sonner.close();
     }
   };
 
-
+  const footer = (
+    <div className="flex items-center justify-between w-full">
+      <span className="text-[11px] font-mono text-neutral-500">
+        Targets: <strong className="text-neutral-900 dark:text-white">{selectedIds.length}</strong> items
+      </span>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="secondary"
+          onClick={onClose}
+          disabled={isUpdating}
+          className="h-8 px-3 text-[13px]"
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleApply}
+          disabled={isUpdating}
+          className="h-8 px-4 text-[13px]"
+          icon={isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+        >
+          Apply Bulk Changes
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <>
       <Modal
         isOpen={isOpen}
         onClose={onClose}
-        title={"Bulk Logistics"}
-        subtitle={"executing_bulk_protocols".replace('{count}', selectedIds.length.toString())}
-        maxWidth="lg"
-        footer={
-          <div className="flex items-center justify-end gap-2 sm:gap-3 w-full">
-            <Button
-              variant="danger"
-              onClick={onClose}
-              className="!bg-transparent !border-rose-200 dark:!border-rose-900/30 !text-[#ff4b6e] hover:!bg-rose-50 dark:hover:!bg-rose-500/10 hover:!opacity-100 !shadow-none !px-4 sm:!px-6 !py-2.5 sm:!py-3.5 !text-[9px] sm:!text-[10px] !rounded-2xl !shrink-0 !min-h-0"
-            >
-              {"Abort Protocol"}
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={handleApply}
-              disabled={isUpdating}
-              className="flex-1 sm:flex-none sm:!min-w-[240px] !py-2.5 sm:!py-3.5 !text-[9px] sm:!text-[11px]"
-              icon={isUpdating ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin shrink-0" /> : <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />}
-            >
-              <span>{isUpdating ? "executing" : "commit_protocols"}</span>
-            </Button>
-          </div>
-        }
+        title="Batch Edit Products"
+        description="Fields left unchanged or blank will remain as they currently are on each target product."
+        size="lg"
+        footer={footer}
       >
-        <div className="space-y-10">
+        <div className="space-y-6">
           {/* Financial Overrides */}
-          <div className="space-y-6">
-            <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-              <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
+          <div className="space-y-3">
+            <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-3.5 h-0.5 bg-emerald-500 rounded-full"></span>
               {"Financial Overrides"}
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider block">{"Retail Price"}</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <div>
+                <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1">{"Retail Price"}</label>
                 <div className="relative">
-                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
+                  <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
                   <input
                     type="number"
                     placeholder={"No Change"}
-                    className="w-full pl-12 pr-4 bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium placeholder:text-gray-600"
+                    className="w-full h-8 pl-8 pr-2.5 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] font-mono tabular-nums text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-neutral-400"
                     onChange={(e) => setUpdates(prev => ({ ...prev, price: e.target.value ? parseFloat(e.target.value) : undefined }))}
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider block">{"Acquisition Cost"}</label>
+              <div>
+                <label className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 block mb-1">{"Acquisition Cost"}</label>
                 <div className="relative">
-                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
+                  <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
                   <input
                     type="number"
                     placeholder={"No Change"}
-                    className="w-full pl-12 pr-4 bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium placeholder:text-gray-600"
+                    className="w-full h-8 pl-8 pr-2.5 bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded text-[13px] font-mono tabular-nums text-neutral-900 dark:text-white focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-neutral-400"
                     onChange={(e) => setUpdates(prev => ({ ...prev, cost: e.target.value ? parseFloat(e.target.value) : undefined }))}
                   />
                 </div>
@@ -141,12 +149,12 @@ export function BulkEditModal({ isOpen, onClose, selectedIds, categories, suppli
           </div>
 
           {/* Classification Matrix */}
-          <div className="space-y-6">
-            <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-              <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
+          <div className="space-y-3">
+            <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-3.5 h-0.5 bg-emerald-500 rounded-full"></span>
               {"Classification Matrix"}
             </h3>
-            <div className="space-y-5 relative z-30">
+            <div className="space-y-3.5 relative z-30">
               <SearchableSelect
                 label={"Global Category"}
                 options={[{ id: '', label: "no_change" }, ...availableCategories.map(cat => ({ id: cat, label: cat }))]}
@@ -164,54 +172,63 @@ export function BulkEditModal({ isOpen, onClose, selectedIds, categories, suppli
             </div>
           </div>
 
-          {/* Visual Protocol */}
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-                <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
-                {"Visual Protocol"}
-              </h3>
-              {updates.image && (
-                <Button variant="ghost" onClick={() => setUpdates(prev => ({ ...prev, image: undefined }))} className="!min-h-0 !p-0 !bg-transparent hover:!bg-transparent !text-rose-500 !text-[10px] hover:!underline">
-                  {"Reset Asset"}
-                </Button>
-              )}
-            </div>
-
-            <div className="space-y-4">
+          {/* Media Asset Override */}
+          <div className="space-y-3">
+            <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-3.5 h-0.5 bg-emerald-500 rounded-full"></span>
+              {"Media Asset Override"}
+            </h3>
+            <div>
               <div
-                className="flex flex-col items-center justify-center p-8 bg-[#f8f9fa] dark:bg-black/75 rounded-[24px] border-2 border-dashed border-gray-200 dark:border-white/5 hover:border-primary/30 transition-all cursor-pointer group gap-4"
+                className="flex flex-col items-center justify-center p-5 bg-neutral-50 dark:bg-app rounded-md border-2 border-dashed border-neutral-300 dark:border-white/[0.12] hover:border-primary/40 transition-colors cursor-pointer group gap-2.5"
                 onClick={() => setShowMediaLibrary(true)}
               >
-                <div className="h-16 w-16 rounded-2xl bg-white dark:bg-surface flex items-center justify-center overflow-hidden shadow-sm">
-                  {updates.image ? <img src={updates.image} className="h-full w-full object-cover" /> : <ImageIcon className="h-8 w-8 text-gray-600 group-hover:text-primary transition-colors" />}
+                <div className="relative h-14 w-14 rounded bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] flex items-center justify-center shadow-none">
+                  {updates.image ? (
+                    <>
+                      <img src={updates.image} className="h-full w-full object-cover rounded" />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setUpdates(prev => ({ ...prev, image: undefined }));
+                        }}
+                        title="Remove image"
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center transition-colors shadow-sm border border-white/20 bg-neutral-900/80 hover:bg-rose-600 text-white z-10"
+                      >
+                        <X className="w-3 h-3 stroke-[2.5]" />
+                      </button>
+                    </>
+                  ) : (
+                    <ImageIcon className="h-8 w-8 text-neutral-400 group-hover:text-primary transition-colors" />
+                  )}
                 </div>
                 <div className="text-center">
-                  <p className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-wide">Choose / Upload Image</p>
-                  <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">Select existing from gallery or upload a new compressed image</p>
+                  <p className="text-[13px] font-semibold text-neutral-900 dark:text-white">Choose / Upload Image</p>
+                  <p className="text-[12px] text-neutral-600 dark:text-neutral-400 mt-0.5">Select existing from gallery or upload a new compressed image</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Operational State */}
-          <div className="space-y-6">
-            <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-              <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
+          <div className="space-y-3">
+            <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-3.5 h-0.5 bg-emerald-500 rounded-full"></span>
               {"Operational State"}
             </h3>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-2.5">
               {[
                 { label: "asset_activation", key: 'active' },
                 { label: "fiscal_taxation", key: 'taxable' },
               ].map(({ label, key }) => (
-                <label key={key} className={`flex items-center justify-between p-5 rounded-[20px] border transition-all cursor-pointer ${(updates as any)[key] !== undefined ? 'bg-emerald-50 dark:bg-primary/10 border-emerald-200 dark:border-primary/20' : 'bg-[#f8f9fa] dark:bg-black/75 border-gray-200 dark:border-white/5'}`}>
-                  <span className={`text-[11px] font-black uppercase tracking-widest ${(updates as any)[key] !== undefined ? 'text-primary dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400'}`}>{label}</span>
+                <label key={key} className={`flex items-center justify-between p-3 rounded-md border transition-colors cursor-pointer ${(updates as any)[key] !== undefined ? 'bg-primary/5 border-primary/30' : 'bg-neutral-50 dark:bg-surface border-neutral-200 dark:border-white/[0.08]'}`}>
+                  <span className={`text-[12px] font-medium ${(updates as any)[key] !== undefined ? 'text-primary dark:text-emerald-400' : 'text-neutral-700 dark:text-neutral-300'}`}>{label}</span>
                   <div className="relative">
                     <input
                       type="checkbox"
-                      className="rounded-lg border-gray-300 dark:border-white/10 dark:bg-transparent text-primary focus:ring-0 h-6 w-6 transition-all cursor-pointer"
+                      className="rounded border-neutral-300 dark:border-white/10 dark:bg-transparent text-primary focus:ring-0 h-4 w-4 transition-colors cursor-pointer"
                       checked={(updates as any)[key] === true}
                       ref={el => {
                         if (el) el.indeterminate = (updates as any)[key] === undefined;
@@ -227,7 +244,7 @@ export function BulkEditModal({ isOpen, onClose, selectedIds, categories, suppli
                     />
                     {(updates as any)[key] === undefined && (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-3 h-0.5 bg-gray-400 rounded-full"></div>
+                        <div className="w-2 h-0.5 bg-neutral-400 rounded-full"></div>
                       </div>
                     )}
                   </div>

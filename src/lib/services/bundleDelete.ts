@@ -1,15 +1,28 @@
-import {
-  localDb,
-} from '../localDb';
-import { cloudWrite } from '../cloudWrite';
+import { getDatabase, TABLES } from '../db';
+import { commitLocalTransaction } from '../events';
 
-/** Delete bundle and all its items (cloud-direct: cloud is the single source of truth) */
+/** Soft-delete bundle: set active=0 + tombstone + P2P outbox */
 export async function deleteBundle(bundleId: string): Promise<void> {
-  // Cloud FIRST — cloud FK cascade removes bundle_items. Throw on failure keeps the
-  // local cache intact (no divergence).
-  await cloudWrite('bundles', 'delete', bundleId, {});
+  const now = Date.now();
+  const db = await getDatabase();
 
-  // Local cache cleanup.
-  await localDb.bundleItems.where('bundleId').equals(bundleId).delete();
-  await localDb.bundles.delete(bundleId);
+  await db.transaction(async tx => {
+    await tx.execute(
+      `UPDATE ${TABLES.BUNDLES} SET active = 0, updated_at = ? WHERE id = ?;`,
+      [now, bundleId]
+    );
+    // Tombstone for P2P sync awareness (peers will soft-delete too)
+    await tx.execute(
+      `INSERT OR REPLACE INTO ${TABLES.TOMBSTONES} (entity_type, entity_id, deleted_at, deleted_by)
+       VALUES ('BUNDLE', ?, ?, 'local');`,
+      [bundleId, now]
+    );
+  });
+
+  await commitLocalTransaction({
+    entityType: 'BUNDLE',
+    entityId: bundleId,
+    eventType: 'BUNDLE_DELETED',
+    payload: { id: bundleId, active: false, deletedAt: now },
+  });
 }

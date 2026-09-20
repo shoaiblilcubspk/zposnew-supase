@@ -9,7 +9,7 @@ interface Option {
   sublabel?: string;
 }
 
-interface SearchableSelectProps {
+export interface SearchableSelectProps {
   options: Option[];
   value: string;
   onChange: (value: string) => void;
@@ -17,8 +17,10 @@ interface SearchableSelectProps {
   placeholder?: string;
   label?: string;
   icon?: any;
+  iconColor?: string;
   required?: boolean;
   align?: 'left' | 'right';
+  disabled?: boolean;
 }
 
 export function SearchableSelect({
@@ -29,6 +31,7 @@ export function SearchableSelect({
   placeholder = 'Search...',
   label,
   icon: Icon,
+  iconColor,
   required,
   align = 'left'
 }: SearchableSelectProps) {
@@ -57,8 +60,8 @@ export function SearchableSelect({
 
     const style: React.CSSProperties = {
       position: 'fixed',
-      minWidth: Math.max(triggerWidth, 180),
-      maxWidth: Math.min(300, window.innerWidth - 32),
+      minWidth: Math.max(triggerWidth, 200),
+      maxWidth: Math.min(320, window.innerWidth - 32),
       zIndex: 9999,
     };
 
@@ -128,36 +131,37 @@ export function SearchableSelect({
         ref={triggerRef}
         type="button"
         onClick={() => isOpen ? closeDropdown() : openDropdown()}
-        className={`flex items-center gap-2 px-3 py-2 bg-white dark:bg-black/30 rounded-xl border transition-all active:scale-95 w-full text-left min-h-[36px] sm:min-h-[40px] ${
-          required && !value ? 'border-rose-500/50 shadow-sm shadow-rose-500/10' : 'border-gray-200 dark:border-white/5'
+        className={`flex items-center gap-2 px-3 h-9 bg-white dark:bg-surface rounded-md border transition-colors w-full text-left shadow-none ${
+          required && !value ? 'border-rose-500/50' : 'border-neutral-200 dark:border-white/[0.08] hover:border-neutral-300 dark:hover:border-white/20'
         }`}
       >
-        {Icon && <Icon className="h-3.5 w-3.5 text-gray-600 shrink-0" />}
-        <span className="flex-1 text-[10px] font-black uppercase tracking-widest truncate text-gray-900 dark:text-white flex items-center gap-2">
-          {label ? <span className="text-gray-600 dark:text-gray-400 mr-1">{label}:</span> : ''}
-          {selectedOption?.image && <img src={selectedOption.image} alt="" className="w-5 h-5 rounded-md object-cover" />}
-          {selectedOption?.label || value || 'Select...'}
+        {Icon && <Icon className={`h-4 w-4 ${iconColor || 'text-primary dark:text-emerald-400'} shrink-0`} />}
+        <span className="flex-1 text-[13.5px] sm:text-[14px] tracking-[-0.01em] truncate text-neutral-900 dark:text-white flex items-center gap-1.5">
+          {label ? <span className="text-neutral-700 dark:text-neutral-300 font-bold mr-0.5 text-[13px] sm:text-[13.5px]">{label}:</span> : ''}
+          {selectedOption?.image && <img src={selectedOption.image} alt="" className="w-4.5 h-4.5 rounded object-cover" />}
+          <span className="font-bold text-neutral-900 dark:text-white truncate">
+            {selectedOption?.label || value || 'Select...'}
+          </span>
         </span>
-        <ChevronDown className={`h-3 w-3 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-3.5 w-3.5 text-neutral-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && createPortal(
         <div
           ref={dropdownRef}
           style={dropdownStyle}
-          className="bg-[var(--bg-card,#fff)] dark:bg-[var(--surface,#111)] border border-gray-200 dark:border-white/10 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden animate-in fade-in duration-100"
+          className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md shadow-lg flex flex-col overflow-hidden animate-in fade-in duration-100"
         >
-          <div className="p-1.5 border-b border-gray-200 dark:border-white/5 flex-shrink-0">
+          <div className="p-1.5 border-b border-neutral-200 dark:border-white/[0.08] flex-shrink-0">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400 pointer-events-none" />
               <input
                 ref={searchInputRef}
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={placeholder}
-                className="w-full bg-gray-50 dark:bg-black/75 border-none rounded-lg pl-8 pr-3 py-1.5 text-[16px] font-bold focus:ring-1 focus:ring-emerald-500 outline-none"
-                style={{ fontSize: '16px' }}
+                className="w-full h-9 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-white/[0.08] rounded pl-8 pr-2.5 text-[13.5px] sm:text-[14px] font-medium text-neutral-900 dark:text-neutral-100 focus:border-primary focus:outline-none transition-colors"
               />
             </div>
           </div>
@@ -171,40 +175,42 @@ export function SearchableSelect({
                       onChange(option.id);
                       closeDropdown();
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-lg flex items-center gap-3 transition-colors ${
+                    className={`w-full text-left px-3 h-9 rounded-md flex items-center gap-2 transition-colors text-[13.5px] sm:text-[14px] ${
                       value === option.id
-                        ? 'bg-primary text-white'
-                        : 'text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-white/10'
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold'
+                        : 'text-neutral-900 dark:text-neutral-100 font-semibold hover:bg-neutral-100 dark:hover:bg-surface-hover'
                     }`}
-                    style={{ minHeight: '40px' }}
                   >
                     {option.image && (
-                      <img src={option.image} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                      <img src={option.image} alt="" className="w-5 h-5 rounded object-cover shrink-0" />
                     )}
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[12px] font-bold uppercase tracking-wider truncate">{option.label}</span>
-                      {option.sublabel && <span className={`text-[9px] font-black uppercase tracking-widest truncate ${value === option.id ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>{option.sublabel}</span>}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="truncate">{option.label}</span>
+                      {option.sublabel && (
+                        <span className={`text-[12px] truncate font-mono ${value === option.id ? 'text-emerald-600 dark:text-emerald-300' : 'text-neutral-500'}`}>
+                          {option.sublabel}
+                        </span>
+                      )}
                     </div>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="p-3 text-center text-gray-500 text-[11px] font-bold uppercase">No results found</div>
+              <div className="p-3 text-center text-neutral-500 text-[13px] font-medium">No results found</div>
             )}
           </div>
 
           {onAddNew && search.trim() && !options.some(o => o.label.toLowerCase() === search.toLowerCase()) && (
-            <div className="p-1 border-t border-gray-200 dark:border-white/5 bg-gray-50/30 dark:bg-white/[0.02] flex-shrink-0">
+            <div className="p-1 border-t border-neutral-200 dark:border-white/[0.08] bg-neutral-50/50 dark:bg-white/[0.02] flex-shrink-0">
               <button
                 type="button"
                 onClick={() => {
                   onAddNew(search);
                   closeDropdown();
                 }}
-                className="w-full text-left px-3 py-2 rounded-lg text-[13px] font-bold uppercase tracking-wider text-primary hover:bg-primary/10 transition-all flex items-center gap-2"
-                style={{ minHeight: '40px' }}
+                className="w-full text-left px-2.5 h-8 rounded text-[13px] font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors flex items-center gap-2"
               >
-                <div className="w-5 h-5 bg-primary/10 rounded flex items-center justify-center">
+                <div className="w-4 h-4 bg-emerald-500/10 rounded flex items-center justify-center">
                    <Plus className="h-3 w-3" />
                 </div>
                 Add New "{search}"

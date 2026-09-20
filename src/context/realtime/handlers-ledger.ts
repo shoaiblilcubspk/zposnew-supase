@@ -15,7 +15,7 @@ export function attachLedgerHandlers(channel: any, ctx: RealtimeCtx) {
   const { user } = ctx;
 
   channel
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, async (payload: any) => {
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         if (await isPendingDelete('payments', payload.new.id)) return;
         await localDb.payments.put(mapPayment(payload.new));
@@ -27,7 +27,7 @@ export function attachLedgerHandlers(channel: any, ctx: RealtimeCtx) {
         usePaymentsStore.getState().setPayments(all);
       }
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_history' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_history' }, async (payload: any) => {
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         if (await isPendingDelete('stock_history', payload.new.id)) return;
         setStockReconcileSuspended(true);
@@ -37,7 +37,7 @@ export function attachLedgerHandlers(channel: any, ctx: RealtimeCtx) {
         await localDb.stockHistory.delete(payload.old.id);
       }
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, async (payload: any) => {
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
         if (await isPendingDelete('users', payload.new.id)) return;
         await localDb.users.put(payload.new);
@@ -49,7 +49,7 @@ export function attachLedgerHandlers(channel: any, ctx: RealtimeCtx) {
         useUsersStore.getState().setUsers(all);
       }
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'sales_tabs' }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sales_tabs' }, async (payload: any) => {
       const currentUserId = user?.id;
       if (!currentUserId) return;
       const affectedUserId = (payload.new as any)?.user_id || (payload.old as any)?.user_id;

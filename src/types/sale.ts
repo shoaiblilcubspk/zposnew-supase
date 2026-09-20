@@ -16,6 +16,7 @@ export interface CartItem {
   discountValue?: number; // Raw input (e.g. 10 for 10%)
   discountType: 'percentage' | 'fixed';
   subtotal: number;
+  price?: number;
   // batchId removed — batch system deprecated
   purchaseCost?: number; // Total purchase cost for this line item (FIFO calculated)
   originalPrice?: number; // The original retail price before any manual edits
@@ -34,6 +35,7 @@ export interface CartItem {
   serialNumber?: string;
   // Bundle Deal fields
   bundleId?: string;   // Which bundle this item came from (for grouping in cart/receipt)
+  bundle_id?: string;  // Legacy alias
   bundleName?: string; // Display name of the bundle deal
   bundleHideItemPrices?: boolean; // When true, this item's original price is hidden; only deal total shown
   refundedQuantity?: number; // Quantity of this item that was refunded
@@ -86,7 +88,7 @@ export interface Sale {
   total: number;
   billDiscountValue?: number;
   billDiscountType?: 'percentage' | 'fixed';
-  paymentMethod: 'cash' | 'card' | 'digital' | 'online' | 'cheque' | 'split';
+  paymentMethod: 'cash' | 'card' | 'digital' | 'online' | 'cheque' | 'split' | 'credit';
   cardDetails?: CardDetails;
   status: 'pending' | 'completed' | 'refunded' | 'partially_refunded' | 'draft';
   paymentStatus?: 'paid' | 'partially_paid' | 'unpaid' | 'refunded' | 'partially_refunded' | 'reversed' | string;
@@ -101,6 +103,7 @@ export interface Sale {
   changeAmount?: number;    // Change given back
   saleDate?: string; // YYYY-MM-DD
   saleType?: 'retail' | 'wholesale';
+  dcNumber?: string;
   // New features
   extraCharges?: { name: string; amount: number }[];
   splitPayments?: SplitPayment[];
@@ -148,5 +151,6 @@ export interface SalesTab {
   billDiscountType?: 'percentage' | 'fixed';
   notes?: string;
   editingSaleId?: string | null;
+  salesmanId?: string | null;
   createdAt: Date;
 }

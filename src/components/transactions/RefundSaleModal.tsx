@@ -56,52 +56,52 @@ export default function RefundSaleModal({ isOpen, onClose, sale, onConfirmRefund
       showClose={!isProcessing}
     >
       <div className="p-4 space-y-4">
-        <div className="bg-rose-50 dark:bg-rose-900/20 text-rose-800 dark:text-rose-300 p-3 rounded-xl flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="text-sm">
+        <div className="bg-rose-500/10 text-rose-700 dark:text-rose-400 p-3 rounded-md border border-rose-500/20 flex items-start gap-2.5">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-rose-500" />
+          <p className="text-[13px] leading-relaxed">
             Refunding will restore stock for ALL items and adjust revenue reports. This is a full refund and cannot be undone.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">Refund Via Wallet</label>
+          <div className="space-y-1">
+            <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">Refund Via Wallet</label>
             <Select
               value={method}
               onChange={(e) => setMethod(e.target.value)}
-              className="!py-2.5"
+              className="h-8 text-[13px]"
             >
               {modes.map(m => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
             </Select>
           </div>
-          <div className="space-y-1.5 sm:col-span-1">
-            <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">Reason (Optional)</label>
+          <div className="space-y-1 sm:col-span-1">
+            <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">Reason (Optional)</label>
             <input
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. Damaged item, wrong size..."
-              className="input w-full text-[13px] font-medium py-2.5 px-3 bg-white dark:bg-black/20 rounded-xl border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              className="w-full h-8 text-[13px] px-2.5 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-400 transition-colors"
             />
           </div>
         </div>
 
-        <div className="pt-4 border-t border-gray-100 dark:border-dark-700 flex justify-between items-center">
-          <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">Refund Amount</p>
-          <p className="text-xl font-black text-rose-600">
+        <div className="pt-3 border-t border-neutral-200 dark:border-white/[0.08] flex justify-between items-center">
+          <p className="text-[13px] font-medium text-neutral-500">Refund Amount</p>
+          <p className="text-[15px] font-mono font-bold text-rose-600 dark:text-rose-400 tabular-nums">
             {formatCurrency(totalAvailableToRefund, settings?.currency || 'Rs')}
           </p>
         </div>
       </div>
 
-      <div className="p-4 border-t border-gray-100 dark:border-dark-700 flex gap-2">
+      <div className="p-3 border-t border-neutral-200 dark:border-white/[0.08] flex justify-end gap-2 bg-neutral-50/50 dark:bg-white/[0.01]">
         <Button
           variant="secondary"
           onClick={onClose}
           disabled={isProcessing}
-          className="flex-1 !py-3 !rounded-xl !font-bold !bg-gray-100 dark:!bg-dark-700 !text-gray-700 dark:!text-gray-300 disabled:opacity-50"
+          className="h-8 text-[13px] px-3 font-medium rounded-md"
         >
           Cancel
         </Button>
@@ -109,9 +109,9 @@ export default function RefundSaleModal({ isOpen, onClose, sale, onConfirmRefund
           variant="danger"
           onClick={handleConfirm}
           disabled={isProcessing}
-          className="flex-1 !py-3 !rounded-xl !font-bold !shadow-lg disabled:opacity-50 !bg-rose-500 !shadow-rose-500/20"
+          className="h-8 text-[13px] px-3 font-medium rounded-md"
         >
-          <RotateCcw className={`h-5 w-5 ${isProcessing ? 'animate-spin' : ''}`} />
+          <RotateCcw className={`h-3.5 w-3.5 mr-1.5 ${isProcessing ? 'animate-spin' : ''}`} />
           {isProcessing ? 'Processing...' : 'Confirm Refund'}
         </Button>
       </div>

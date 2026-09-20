@@ -6,6 +6,7 @@ import { Product } from '../../../types';
 import { Button, Badge } from '../../../shared/ui';
 import { BarcodeCard } from './BarcodeCard';
 import { BarcodeSidebar } from './BarcodeSidebar';
+import { BarcodePreviewToolbar } from './BarcodePreviewToolbar';
 
 interface BarcodeGeneratorProps {
     products: Product[];
@@ -27,10 +28,8 @@ export function clearPersistedBarcodeState() {
 export function BarcodeGenerator({ products, onClose, onProductsChange }: BarcodeGeneratorProps) {
     const settings = useBarcodeSettings();
     const {
-        paperSize, a4Columns, a4Rows,
-        barcodeScale, barcodeHeight,
-        labelPadding, labelBorder,
-        showBarcode, showQr, qrSize, nameLines, barcodeFontSize, contentScale,
+        paperSize, a4Columns, a4Rows, barcodeScale, barcodeHeight,
+        labelPadding, labelBorder, showBarcode, showQr, qrSize, nameLines, barcodeFontSize, contentScale,
         marginX, marginY, gapX, gapY, barcodeBarWidth, barcodeZoom,
         showPrice, showName, showCategory, showSku, appSettings
     } = settings;
@@ -69,10 +68,6 @@ export function BarcodeGenerator({ products, onClose, onProductsChange }: Barcod
     };
 
     const isThermal = paperSize !== 'A4';
-    const pad = labelPadding;
-    const ratio = contentScale;
-    const fs = barcodeFontSize;
-    const barH = barcodeHeight;
 
     const totalLabels = localProducts.reduce((sum, p) => sum + (quantities[p.id] || 0), 0);
 
@@ -152,10 +147,10 @@ export function BarcodeGenerator({ products, onClose, onProductsChange }: Barcod
             paperSize={paperSize}
             labelBorder={labelBorder}
             currency={appSettings.currency}
-            pad={pad}
-            ratio={ratio}
-            fs={fs}
-            barH={barH}
+            pad={labelPadding}
+            ratio={contentScale}
+            fs={barcodeFontSize}
+            barH={barcodeHeight}
             barcodeBarWidth={barcodeBarWidth}
             barcodeScale={barcodeScale}
             barcodeZoom={barcodeZoom}
@@ -177,43 +172,34 @@ export function BarcodeGenerator({ products, onClose, onProductsChange }: Barcod
     );
 
     return (
-        <div className="flex flex-col h-full min-h-[600px] w-full bg-white dark:bg-surface overflow-hidden relative border-t border-gray-100 dark:border-white/5">
-
-            <div className="flex-shrink-0 flex items-center justify-between gap-2 px-3 md:px-5 py-2.5 border-b border-gray-200 dark:border-white/5 bg-gray-50/60 dark:bg-white/[0.02] flex-wrap">
+        <div className="flex flex-col h-full min-h-[600px] w-full bg-white dark:bg-surface overflow-hidden relative border-t border-neutral-200 dark:border-white/[0.08]">
+            <div className="flex-shrink-0 flex items-center justify-between gap-2 px-3 md:px-5 py-2.5 border-b border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface flex-wrap">
                 <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="p-1.5 bg-blue-600/10 rounded-lg flex-shrink-0">
-                        <Printer className="h-4 w-4 text-blue-600" />
+                    <div className="p-1.5 bg-neutral-100 dark:bg-white/[0.06] rounded flex-shrink-0">
+                        <Printer className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
                     </div>
                     <div className="min-w-0">
-                        <h2 className="text-sm font-black text-gray-900 dark:text-white leading-none truncate">{"Barcode Print Engine"}</h2>
-                        <p className="hidden sm:block text-[9px] text-gray-600 mt-0.5 truncate">{"Barcode Print Engine Sub"}</p>
+                        <h2 className="text-sm font-semibold text-neutral-900 dark:text-white leading-none truncate">{"Barcode Print Engine"}</h2>
+                        <p className="hidden sm:block text-[11px] text-neutral-500 mt-0.5 truncate">{"Configure and print barcode labels"}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                    <Badge
-                        tone={totalLabels === 0 ? 'neutral' : 'info'}
-                        size="md"
-                        className={`hidden sm:inline-flex !rounded-lg !px-2.5 !py-1 !text-[9px] !font-bold ${totalLabels === 0
-                            ? '!bg-gray-50 dark:!bg-white/5 !text-gray-600 !border-gray-200 dark:!border-white/5'
-                            : '!bg-blue-50 dark:!bg-blue-600/10 !text-blue-700 dark:!text-blue-400 !border-blue-200 dark:!border-blue-900/30'}`}
-                    >
-                        {"labels_pages_count".replace('{totalLabels}', totalLabels.toString()).replace('{pages}', pages.length.toString())}
-                    </Badge>
+                    <span className="hidden sm:inline-flex text-[11px] font-mono text-neutral-500 dark:text-neutral-400">
+                        {totalLabels} {totalLabels === 1 ? 'label' : 'labels'} ({pages.length} {pages.length === 1 ? 'page' : 'pages'})
+                    </span>
                     <Button
                         onClick={handlePrint}
                         disabled={totalLabels === 0}
-                        className="!h-9 !min-h-0 !px-4 !gap-1.5 !text-[10px] !font-black !shadow-md !shadow-blue-500/20 whitespace-nowrap"
+                        variant="primary"
+                        size="sm"
                         icon={<Printer className="h-3.5 w-3.5 flex-shrink-0" />}
                     >
-                        <span className="hidden xs:inline">{"Print And Save"}</span>
-                        <span className="xs:hidden">{"print"}</span>
+                        <span>{"Print Labels"}</span>
                     </Button>
-                    <Button variant="ghost" onClick={onClose} className="!min-h-0 !p-1.5 !rounded-lg !text-gray-600 hover:!text-gray-700 dark:hover:!text-white hover:!bg-gray-100 dark:hover:!bg-white/5" icon={<X className="h-4.5 w-4.5" />} />
+                    <Button variant="ghost" size="sm" onClick={onClose} icon={<X className="h-4 w-4" />} />
                 </div>
             </div>
-
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
-
                 <BarcodeSidebar
                     settings={settings}
                     localProducts={localProducts}
@@ -223,71 +209,20 @@ export function BarcodeGenerator({ products, onClose, onProductsChange }: Barcod
                     updateQty={updateQty}
                     setGlobalQty={setGlobalQty}
                 />
-
                 <div ref={previewAreaRef}
-                    className="h-[35vh] lg:h-full lg:flex-1 flex-shrink-0 bg-gray-100 dark:bg-[#0f0f0f] flex flex-col overflow-hidden order-1 lg:order-2 relative min-h-0"
+                    className="h-[35vh] lg:h-full lg:flex-1 flex-shrink-0 bg-neutral-100 dark:bg-[#0f0f0f] flex flex-col overflow-hidden order-1 lg:order-2 relative min-h-0"
                 >
-
-                    <div className="flex-shrink-0 flex items-center justify-between gap-2 px-3 py-2 bg-gray-100/95 dark:bg-[#0f0f0f]/95 border-b border-gray-200/50 dark:border-white/5 flex-wrap gap-y-1.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                            <div className="flex items-center gap-1.5 bg-white/80 dark:bg-white/5 py-1 px-2.5 rounded-full border border-gray-200 dark:border-white/5 shadow-sm">
-                                <span className="text-[8px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest whitespace-nowrap hidden sm:inline">{"simulation"}</span>
-                                <div className="hidden sm:block h-2 w-px bg-gray-300 dark:bg-white/10" />
-                                <span className="text-[9px] font-black text-blue-600 uppercase">{paperSize}</span>
-                                <div className="h-2 w-px bg-gray-300 dark:bg-white/10" />
-                                <span className="text-[9px] font-black text-primary">{pages.length}pg</span>
-                                <div className="h-2 w-px bg-gray-300 dark:bg-white/10" />
-                                <span className="text-[9px] font-black text-gray-600">{a4Columns}×{a4Rows}</span>
-                            </div>
-                            <Badge tone="warning" className="!bg-amber-500/10 !text-amber-600 dark:!text-amber-400 !text-[8px] !px-2.5 !py-1 !rounded-full !border-amber-500/20 hidden sm:inline-flex">
-                                ⚠ {"Margins None"}
-                            </Badge>
-                        </div>
-
-                        <div className="flex items-center gap-2 bg-white dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 p-1.5 px-3 shadow-sm">
-                            <Button
-                                variant="ghost"
-                                onClick={() => setZoomDelta(d => Math.max(d - 0.05, -autoScale + 0.1))}
-                                className="!min-h-0 !w-6 !h-6 !p-0 !rounded-lg !bg-transparent !text-gray-500 hover:!text-gray-900 dark:hover:!text-white hover:!bg-gray-100 dark:hover:!bg-white/10 active:!scale-90"
-                                icon={<Minus className="h-3 w-3" />}
-                            />
-
-                            <input
-                                type="range"
-                                min={-autoScale + 0.1}
-                                max={2.5 - autoScale}
-                                step={0.01}
-                                value={zoomDelta}
-                                onChange={(e) => setZoomDelta(parseFloat(e.target.value))}
-                                className="w-20 sm:w-32 h-1 bg-gray-200 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                            />
-
-                            <Button
-                                variant="ghost"
-                                onClick={() => setZoomDelta(d => Math.min(d + 0.05, 2.5 - autoScale))}
-                                className="!min-h-0 !w-6 !h-6 !p-0 !rounded-lg !bg-transparent !text-gray-500 hover:!text-gray-900 dark:hover:!text-white hover:!bg-gray-100 dark:hover:!bg-white/10 active:!scale-90"
-                                icon={<Plus className="h-3 w-3" />}
-                            />
-
-                            <div className="w-px h-4 bg-gray-200 dark:bg-white/10 mx-1" />
-
-                            <Button
-                                variant="ghost"
-                                onClick={() => { setZoomDelta(0); }}
-                                className="!min-h-0 !px-1.5 !rounded-lg !bg-transparent !text-[9px] !font-black !normal-case !tracking-normal !text-blue-600 hover:!bg-blue-50 dark:hover:!bg-blue-600/10 whitespace-nowrap !min-w-[32px]"
-                            >
-                                {Math.round(previewScale * 100)}%
-                            </Button>
-
-                            <div className="w-px h-4 bg-gray-200 dark:bg-white/10 mx-1" />
-
-                            <Button onClick={calcAutoScale} title={"Fit To Window"}
-                                variant="ghost"
-                                className="!min-h-0 !w-6 !h-6 !p-0 !rounded-lg !bg-transparent !text-gray-500 hover:!text-gray-900 dark:hover:!text-white hover:!bg-gray-100 dark:hover:!bg-white/10 active:!scale-90"
-                                icon={<Maximize2 className="h-3 w-3" />}
-                            />
-                        </div>
-                    </div>
+                    <BarcodePreviewToolbar
+                        paperSize={paperSize}
+                        pageCount={pages.length}
+                        a4Columns={a4Columns}
+                        a4Rows={a4Rows}
+                        autoScale={autoScale}
+                        zoomDelta={zoomDelta}
+                        previewScale={previewScale}
+                        setZoomDelta={setZoomDelta}
+                        calcAutoScale={calcAutoScale}
+                    />
 
                     <div className="flex-1 overflow-auto">
                         <div className="flex flex-col items-center py-4 px-2 min-h-full">
@@ -295,13 +230,13 @@ export function BarcodeGenerator({ products, onClose, onProductsChange }: Barcod
                                 {paperSize === 'A4' ? (
                                     pages.map((page, pi) => (
                                         <div key={`pw-${pi}`} className="flex flex-col items-center">
-                                            <div className="page-indicator print:hidden flex items-center gap-2 my-2.5"
+                                            <div className="page-indicator print:hidden flex items-center gap-2 my-2"
                                                 style={{ width: `${A4_W * previewScale}px`, maxWidth: 'calc(100vw - 32px)' }}>
-                                                <div className="h-px flex-1 bg-gray-300 dark:bg-white/10" />
-                                                <span className="flex items-center gap-1.5 text-[8px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest px-2.5 py-1 rounded-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-sm whitespace-nowrap">
-                                                    <span className="text-blue-500">●</span> {"page"} {pi + 1} / {pages.length}
+                                                <div className="h-px flex-1 bg-neutral-200 dark:border-white/[0.08]" />
+                                                <span className="flex items-center gap-1.5 text-[11px] font-mono text-neutral-600 dark:text-neutral-400 px-2.5 py-0.5 rounded bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] shadow-none whitespace-nowrap">
+                                                    <span className="text-emerald-500">●</span> page {pi + 1} / {pages.length}
                                                 </span>
-                                                <div className="h-px flex-1 bg-gray-300 dark:bg-white/10" />
+                                                <div className="h-px flex-1 bg-neutral-200 dark:border-white/[0.08]" />
                                             </div>
 
                                             <div className="print-page bg-white shadow-2xl print:shadow-none"

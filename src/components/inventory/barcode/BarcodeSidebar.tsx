@@ -113,17 +113,17 @@ export function BarcodeSidebar({
                     <div className="space-y-3">
 
                         <div>
-                            <span className="text-[9px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Symbols</span>
-                            <div className="grid grid-cols-2 gap-2 mt-1">
+                            <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wide">Symbols</span>
+                            <div className="grid grid-cols-2 gap-1.5 mt-1">
                                 <button
                                     onClick={() => setShowBarcode(!showBarcode)}
-                                    className={`py-1.5 text-[10px] font-bold rounded-xl transition-all border ${showBarcode ? 'bg-primary/10 border-primary text-primary dark:text-white' : 'bg-gray-50 border-gray-200 text-gray-500 dark:bg-white/5 dark:border-white/10 dark:text-gray-400'}`}
+                                    className={`h-8 text-[11px] font-mono rounded transition-colors border ${showBarcode ? 'bg-primary/10 border-primary text-primary dark:text-emerald-400 font-medium' : 'bg-white dark:bg-white/[0.02] border-neutral-200 dark:border-white/[0.08] text-neutral-600 dark:text-neutral-400'}`}
                                 >
                                     Barcode
                                 </button>
                                 <button
                                     onClick={() => setShowQr(!showQr)}
-                                    className={`py-1.5 text-[10px] font-bold rounded-xl transition-all border ${showQr ? 'bg-primary/10 border-primary text-primary dark:text-white' : 'bg-gray-50 border-gray-200 text-gray-500 dark:bg-white/5 dark:border-white/10 dark:text-gray-400'}`}
+                                    className={`h-8 text-[11px] font-mono rounded transition-colors border ${showQr ? 'bg-primary/10 border-primary text-primary dark:text-emerald-400 font-medium' : 'bg-white dark:bg-white/[0.02] border-neutral-200 dark:border-white/[0.08] text-neutral-600 dark:text-neutral-400'}`}
                                 >
                                     QR Code
                                 </button>
@@ -158,65 +158,48 @@ export function BarcodeSidebar({
                                     <span className="text-[9px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Columns</span>
                                     <span className="text-[10px] font-black text-blue-600">{a4Columns}</span>
                                 </div>
-                                <div className="flex bg-gray-100 dark:bg-white/[0.05] p-0.5 rounded-xl">
+                                <div className="flex bg-neutral-100 dark:bg-white/[0.05] p-0.5 rounded-md border border-neutral-200 dark:border-white/[0.08]">
                                     {[2, 3, 4, 5, 6].map(n => (
                                         <button key={n} onClick={() => setA4Columns(n)}
-                                            className={`flex-1 py-1.5 text-xs font-bold rounded-[10px] transition-all ${a4Columns === n ? 'bg-white dark:bg-blue-600 shadow-sm text-blue-600 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}>
+                                            className={`flex-1 py-1 text-[12px] font-mono font-medium rounded transition-colors ${a4Columns === n ? 'bg-primary text-white' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'}`}>
                                             {n}
                                         </button>
                                     ))}
                                 </div>
                             </div>
                             <SliderRow label={"Rows per Page"} disp={String(a4Rows)} min={3} max={20} step={1} val={a4Rows} set={v => setA4Rows(Math.round(v))} />
-                            <p className="text-[8px] text-gray-600 dark:text-gray-500 italic -mt-1">Labels auto-scale to fit rows & columns</p>
+                            <p className="text-[11px] text-neutral-500 italic -mt-1">Labels auto-scale to fit rows & columns</p>
                         </>}
                     </div>
                 </section>
 
-                <section className="border-t border-gray-200 dark:border-white/5 pt-3">
+                <section className="border-t border-neutral-200 dark:border-white/[0.08] pt-3">
                     <div className="flex items-center justify-between mb-2">
                         <SectionTitle>Print Quantities</SectionTitle>
                         <div className="flex gap-1 -mt-2.5">
                             <Button variant="ghost" onClick={() => {
-                                const resetQties = localProducts.reduce((a, p) => ({ ...a, [p.id]: 1 }), {});
-                                setQuantities(resetQties);
-
-                                setBarcodeScale(1.0);
-                                setBarcodeHeight(30);
-                                setLabelPadding(8);
-                                setBarcodeFontSize(8);
-                                setBarcodeBarWidth(0.8);
-                                setContentScale(1.0);
-                                setMarginX(0);
-                                setMarginY(0);
-                                setGapX(0);
-                                setGapY(0);
-                                setNameLines(1);
-                                setPaperSize('A4');
-                                setA4Columns(3);
-                                setA4Rows(10);
-                                setShowPrice(true);
-                                setShowName(true);
-                                setShowSku(false);
-                                setShowCategory(false);
-                                setLabelBorder(true);
-                                setBarcodeType('BARCODE');
+                                setQuantities(localProducts.reduce((a, p) => ({ ...a, [p.id]: 1 }), {}));
+                                setBarcodeScale(1.0); setBarcodeHeight(30); setLabelPadding(8); setBarcodeFontSize(8);
+                                setBarcodeBarWidth(0.8); setContentScale(1.0); setMarginX(0); setMarginY(0); setGapX(0);
+                                setGapY(0); setNameLines(1); setPaperSize('A4'); setA4Columns(3); setA4Rows(10);
+                                setShowPrice(true); setShowName(true); setShowSku(false); setShowCategory(false);
+                                setLabelBorder(true); setShowBarcode(true); setShowQr(false);
                             }}
-                                className="!min-h-0 !px-2 !py-1 !rounded-lg !text-[8px] !font-bold !normal-case !tracking-normal !bg-gray-100 dark:!bg-white/5 !text-gray-600 dark:!text-gray-400 hover:!bg-gray-200 dark:hover:!bg-white/10">Reset All</Button>
+                                className="!min-h-0 !px-2 !py-0.5 !rounded !text-[11px] !font-medium !normal-case !tracking-normal !bg-neutral-100 dark:!bg-white/5 !text-neutral-600 dark:!text-neutral-400">Reset All</Button>
                             <Button variant="primary" onClick={() => { const v = prompt('Copies for all:', '5'); if (v) { const n = parseInt(v); if (!isNaN(n)) setGlobalQty(n); } }}
-                                className="!min-h-0 !px-2 !py-1 !rounded-lg !text-[8px] !font-bold !normal-case !tracking-normal !bg-blue-600 hover:!bg-blue-700 !shadow-sm">Set All</Button>
+                                className="!min-h-0 !px-2 !py-0.5 !rounded !text-[11px] !font-medium !normal-case !tracking-normal">Set All</Button>
                         </div>
                     </div>
                     <div className="space-y-1 max-h-32 overflow-y-auto pr-0.5 custom-scrollbar">
                         {localProducts.map(p => (
-                            <div key={p.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl border border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02] hover:bg-white dark:hover:bg-white/[0.05] transition-all group/item">
-                                <Button variant="ghost" onClick={() => setLocalProducts(localProducts.filter(x => x.id !== p.id))} className="!min-h-0 !p-1.5 !rounded-lg !bg-transparent !text-gray-600 hover:!text-red-500 hover:!bg-red-50 dark:hover:!bg-red-500/10" icon={<X className="h-3.5 w-3.5" />} />
+                            <div key={p.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md border border-neutral-200 dark:border-white/[0.08] bg-neutral-50 dark:bg-white/[0.02] hover:bg-white dark:hover:bg-white/[0.05] transition-colors group/item">
+                                <Button variant="ghost" onClick={() => setLocalProducts(localProducts.filter(x => x.id !== p.id))} className="!min-h-0 !p-1 !rounded !bg-transparent !text-neutral-400 hover:!text-rose-500 hover:!bg-rose-50 dark:hover:!bg-rose-500/10" icon={<X className="h-3.5 w-3.5" />} />
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[9px] font-bold text-gray-900 dark:text-white truncate uppercase leading-tight">{p.name}</p>
-                                    <p className="text-[8px] text-gray-600 font-mono leading-tight">{p.barcodeValue || p.barcode || p.sku || 'NO-SKU'}</p>
+                                    <p className="text-[12px] font-medium text-neutral-900 dark:text-white truncate leading-tight">{p.name}</p>
+                                    <p className="text-[11px] text-neutral-500 font-mono leading-tight">{p.barcodeValue || p.barcode || p.sku || 'NO-SKU'}</p>
                                 </div>
-                                <div className="flex items-center bg-white dark:bg-[#1C1C1C] rounded-lg border border-gray-200 dark:border-white/10 p-0.5 shadow-sm flex-shrink-0">
-                                    <Button variant="ghost" onClick={() => updateQty(p.id, -1)} className="!min-h-0 !w-6 !h-6 !p-0 !rounded-md !bg-transparent !text-gray-600 hover:!text-red-500 hover:!bg-red-50 dark:hover:!bg-red-900/20 active:!scale-90" icon={<Minus className="h-2.5 w-2.5" />} />
+                                <div className="flex items-center bg-white dark:bg-surface rounded border border-neutral-200 dark:border-white/[0.08] p-0.5 flex-shrink-0">
+                                    <Button variant="ghost" onClick={() => updateQty(p.id, -1)} className="!min-h-0 !w-5 !h-5 !p-0 !rounded-sm !bg-transparent !text-neutral-500 hover:!text-rose-500" icon={<Minus className="h-2.5 w-2.5" />} />
                                     <input type="text" inputMode="numeric" value={quantities[p.id] !== undefined ? quantities[p.id] : 0}
                                         onChange={e => {
                                             let str = e.target.value.replace(/^0+/, '');
@@ -224,20 +207,20 @@ export function BarcodeSidebar({
                                             const v = Math.max(0, Math.min(999, parseInt(str) || 0));
                                             setQuantities(q => ({ ...q, [p.id]: v }));
                                         }}
-                                        className="w-14 text-center text-[11px] font-black bg-transparent border-none focus:ring-0 text-gray-900 dark:text-white p-0 [appearance:textfield]" />
-                                    <Button variant="ghost" onClick={() => updateQty(p.id, 1)} className="!min-h-0 !w-6 !h-6 !p-0 !rounded-md !bg-transparent !text-gray-600 hover:!text-green-500 hover:!bg-green-50 dark:hover:!bg-green-900/20 active:!scale-90" icon={<Plus className="h-2.5 w-2.5" />} />
+                                        className="w-10 text-center text-[12px] font-mono font-medium bg-transparent border-none focus:ring-0 text-neutral-900 dark:text-white p-0 [appearance:textfield]" />
+                                    <Button variant="ghost" onClick={() => updateQty(p.id, 1)} className="!min-h-0 !w-5 !h-5 !p-0 !rounded-sm !bg-transparent !text-neutral-500 hover:!text-emerald-500" icon={<Plus className="h-2.5 w-2.5" />} />
                                 </div>
                             </div>
                         ))}
                         {localProducts.length === 0 && (
-                            <div className="text-center py-4 text-gray-600 text-[10px] font-black uppercase tracking-widest">
+                            <div className="text-center py-4 text-neutral-400 text-[12px]">
                                 No Products Selected
                             </div>
                         )}
                     </div>
                 </section>
 
-                <section className="border-t border-gray-200 dark:border-white/5 pt-3">
+                <section className="border-t border-neutral-200 dark:border-white/[0.08] pt-3">
                     <SectionTitle>Content Options</SectionTitle>
                     <div className="grid grid-cols-3 gap-1.5">
                         {([
@@ -248,9 +231,9 @@ export function BarcodeSidebar({
                             { label: "Border", val: labelBorder, set: setLabelBorder },
                         ] as const).map(({ label, val, set }) => (
                             <button key={label} onClick={() => (set as any)(!val)}
-                                className={`py-1.5 rounded-xl border text-[8px] font-bold transition-all ${val
-                                    ? 'bg-blue-50 dark:bg-blue-600/10 border-blue-200 dark:border-blue-900/30 text-blue-700 dark:text-blue-400'
-                                    : 'bg-white dark:bg-white/[0.02] border-gray-200 dark:border-white/5 text-gray-600 dark:text-gray-500 hover:border-gray-200 dark:hover:border-white/10'}`}>
+                                className={`py-1 rounded border text-[11px] font-medium transition-colors ${val
+                                    ? 'bg-primary/10 border-primary/30 text-emerald-400'
+                                    : 'bg-white dark:bg-white/[0.02] border-neutral-200 dark:border-white/[0.08] text-neutral-600 dark:text-neutral-400'}`}>
                                 {label}
                             </button>
                         ))}
@@ -259,13 +242,13 @@ export function BarcodeSidebar({
                     {showName && (
                         <div className="mt-2">
                             <div className="flex justify-between items-center mb-1">
-                                <span className="text-[9px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Name Lines</span>
-                                <span className="text-[10px] font-black text-blue-600">{nameLines} {nameLines > 1 ? "Lines" : "Line"}</span>
+                                <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">Name Lines</span>
+                                <span className="text-[11px] font-mono text-primary">{nameLines} {nameLines > 1 ? "Lines" : "Line"}</span>
                             </div>
-                            <div className="flex bg-gray-100 dark:bg-white/[0.05] p-0.5 rounded-xl">
+                            <div className="flex bg-neutral-100 dark:bg-white/[0.05] p-0.5 rounded-md border border-neutral-200 dark:border-white/[0.08]">
                                 {([1, 2] as const).map(n => (
                                     <button key={n} onClick={() => setNameLines(n)}
-                                        className={`flex-1 py-1.5 text-[9px] font-bold rounded-[10px] transition-all ${nameLines === n ? 'bg-white dark:bg-blue-600 shadow-sm text-blue-600 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}>
+                                        className={`flex-1 py-1 text-[11px] font-medium rounded transition-colors ${nameLines === n ? 'bg-primary text-white' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'}`}>
                                         {n} {n > 1 ? "Lines" : "Line"}
                                     </button>
                                 ))}
@@ -299,13 +282,13 @@ export function BarcodeSidebar({
                 </section>
             </div>
 
-            <div className="flex-shrink-0 relative z-10 px-4 py-3 bg-white dark:bg-surface border-t border-gray-200 dark:border-white/5 pb-[max(env(safe-area-inset-bottom,12px),12px)] lg:pb-3 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
-                <Button variant="secondary" size="md" onClick={saveAsDefault} disabled={isSaving}
-                    className="w-full !h-12 lg:!h-10 !text-[10px] lg:!text-[11px] !font-black !tracking-widest active:!scale-[0.98]">
+            <div className="flex-shrink-0 relative z-10 px-4 py-2.5 bg-white dark:bg-surface border-t border-neutral-200 dark:border-white/[0.08] shadow-none">
+                <Button variant="primary" size="sm" onClick={saveAsDefault} disabled={isSaving}
+                    className="w-full">
                     {isSaving
-                        ? <div className="h-4 w-4 lg:h-3.5 lg:w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        : <Save className="h-4 w-4 lg:h-3.5 lg:w-3.5" />}
-                    {isSaving ? "saving" : "save_settings"}
+                        ? <div className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        : <Save className="h-3.5 w-3.5" />}
+                    {isSaving ? "Saving..." : "Save Settings"}
                 </Button>
             </div>
         </div>

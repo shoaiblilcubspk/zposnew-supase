@@ -9,12 +9,12 @@ export function GridDensityController() {
 
   const handleColumnChange = (cols: number) => {
     useSettingsStore.getState().setSettings({ posGridColumns: cols });
-    // Save as device-local pref only (not to cloud)
     try {
+      localStorage.setItem('pos_grid_columns', String(cols));
       const existing = JSON.parse(localStorage.getItem('pos_local_prefs') || '{}');
       localStorage.setItem('pos_local_prefs', JSON.stringify({ ...existing, posGridColumns: cols }));
     } catch (e) {}
-    sonner.success(`Grid density set to ${cols} columns`);
+    sonner.success(`Grid density set to ${cols === 0 ? 'Auto' : `${cols} columns`}`);
   };
 
   return (

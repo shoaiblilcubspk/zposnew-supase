@@ -1,5 +1,4 @@
 import { localDb, generateId } from '../localDb';
-import { cloudWrite } from '../cloudWrite';
 import { getDeviceId } from '../deviceId';
 
 export async function logAuditEvent(entry: {
@@ -17,12 +16,5 @@ export async function logAuditEvent(entry: {
     performedByRole: entry.performedByRole || null, deviceId: getDeviceId(),
     note: entry.note || null, meta: entry.meta || null, createdAt: now,
   };
-  // Audit trail is append-only and NON-FATAL: a failed write must never break the
-  // financial operation that triggered it. Cloud-direct (fire-and-forget), then cache.
-  cloudWrite('sale_audit_log', 'create', id, {
-    id: row.id, sale_id: row.saleId, invoice_number: row.invoiceNumber, action: row.action,
-    performed_by_name: row.performedByName, performed_by_role: row.performedByRole,
-    device_id: row.deviceId, note: row.note, meta: row.meta, created_at: now.toISOString(),
-  }).catch(() => {});
   try { await localDb.sale_audit_log.add(row); } catch { /* non-fatal */ }
 }

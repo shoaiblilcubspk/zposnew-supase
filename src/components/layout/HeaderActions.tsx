@@ -1,108 +1,141 @@
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, Sun, Moon, Settings, LogOut } from 'lucide-react';
-import { sonner } from '../../lib/sonner';
 import { can } from '../../lib/permissions';
-import { Button, Avatar } from '../../shared/ui';
+import { RealIcon } from '../../shared/ui';
+import { useSyncStatusStore } from '../../lib/sync/syncStatusStore';
 
 interface HeaderActionsProps {
   appSettings: any;
   appCurrentUser: any;
   toggleTheme: () => void;
   handleLogout: () => void;
+  onLockTerminal?: () => void;
   onShowMobileMenu?: () => void;
   forceSync: () => Promise<void>;
 }
 
-export function HeaderActions({ appSettings, appCurrentUser, toggleTheme, handleLogout, onShowMobileMenu, forceSync }: HeaderActionsProps) {
+export function HeaderActions({
+  appSettings,
+  appCurrentUser,
+  toggleTheme,
+  handleLogout,
+  onLockTerminal,
+  onShowMobileMenu,
+}: HeaderActionsProps) {
   const navigate = useNavigate();
+
+  const pendingCount = useSyncStatusStore((s) => s.pendingOutboxCount);
+  const connectedPeers = useSyncStatusStore((s) => s.connectedPeersCount);
+  const isSyncing = useSyncStatusStore((s) => s.isSyncing);
+
   return (
-    <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
-      <Button
-        variant="ghost"
-        onClick={async () => {
-          try {
-            if (typeof navigator !== 'undefined' && !navigator.onLine) {
-              sonner.warning("Offline — local data dikhaya ja raha hai. Cloud sync ke liye internet connect karein.");
-              return;
-            }
-            if ('caches' in window) {
-              const keys = await caches.keys();
-              await Promise.all(keys.filter(k => k.startsWith('supabase')).map(key => caches.delete(key)));
-            }
-            sessionStorage.clear();
-            if ('serviceWorker' in navigator) {
-              const regs = await navigator.serviceWorker.getRegistrations();
-              await Promise.all(regs.map((r) => r.unregister()));
-            }
-            sonner.success("Full cloud sync — sab devices pe same data aa raha hai...");
-            await forceSync();
-          } catch (err) {
-            console.error('Force sync failed:', err);
-            sonner.close();
-          }
-        }}
-        title="Force Fresh Cloud Sync & Clear Cache"
-        className="!min-h-0 !w-8 !h-8 sm:!w-9 sm:!h-9 !p-0 !rounded-full !text-blue-500 hover:!text-blue-700 dark:hover:!text-blue-300 hover:!bg-blue-500/10 dark:hover:!bg-blue-500/15"
-      >
-        <RefreshCw className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
-      </Button>
+    <div className="flex items-center gap-1.5 flex-shrink-0 select-none">
+      {/* Unified Apple Control Cluster — Compact on Mobile, Spacious on Desktop */}
+      <div className="flex items-center h-8.5 md:h-10 px-1 md:px-1.5 rounded-full bg-neutral-100/80 dark:bg-white/[0.06] border border-neutral-200/80 dark:border-white/[0.1] shadow-xs backdrop-blur-md">
+        {/* Lock Terminal Button */}
+        <button
+          type="button"
+          onClick={onLockTerminal}
+          title="Lock Terminal (⌘L)"
+          className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 lg:w-8.5 lg:h-8.5 rounded-full hover:bg-white dark:hover:bg-white/10 active:scale-90 transition-all duration-150 cursor-pointer text-neutral-700 dark:text-neutral-300"
+        >
+          <RealIcon name="lock" size={20} className="w-4.5 h-4.5 md:w-5 md:h-5" />
+        </button>
 
-      <Button
-        variant="ghost"
-        onClick={toggleTheme}
-        title={appSettings.theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        className={`!min-h-0 !w-8 !h-8 sm:!w-9 sm:!h-9 !p-0 !rounded-full ${
-          appSettings.theme === 'dark'
-            ? '!text-amber-400 hover:!bg-amber-400/10'
-            : '!text-blue-600 hover:!bg-blue-600/10'
-        }`}
-      >
-        {appSettings.theme === 'dark' ? <Sun className="h-4.5 w-4.5 sm:h-5 sm:w-5" /> : <Moon className="h-4.5 w-4.5 sm:h-5 sm:w-5" />}
-      </Button>
+        {/* Theme Toggle Button */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          title={appSettings.theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 lg:w-8.5 lg:h-8.5 rounded-full hover:bg-white dark:hover:bg-white/10 active:scale-90 transition-all duration-150 cursor-pointer text-neutral-700 dark:text-neutral-300"
+        >
+          <RealIcon
+            name={appSettings.theme === 'dark' ? 'sun' : 'moon'}
+            size={20}
+            className="w-4.5 h-4.5 md:w-5 md:h-5"
+          />
+        </button>
 
-      <div
-        onClick={() => onShowMobileMenu?.()}
-        className="flex items-center gap-2 lg:gap-2.5 ml-1 cursor-pointer lg:cursor-default group"
-      >
-        <div className="hidden xl:block text-right leading-none">
-          <p className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-tight truncate max-w-[110px]">
-            {appCurrentUser?.name}
-          </p>
-          <div className="flex items-center justify-end gap-1 mt-0.5">
-            <p className="text-[9px] font-bold text-primary uppercase tracking-widest">
-              @{appCurrentUser?.username || 'user'}
-            </p>
-            <span className="text-[8px] text-gray-600 opacity-60">· {appCurrentUser?.role}</span>
-          </div>
-        </div>
-
-        <Avatar
-          src={appCurrentUser?.avatar || undefined}
-          name={appCurrentUser?.name || 'Z'}
-          size="sm"
-          className="!h-8 !w-8 sm:!h-9 sm:!w-9 !shadow-sm active:!scale-95"
-        />
-
-        <div className="hidden md:flex items-center gap-0.5">
-          {can(appCurrentUser?.role, 'view_settings') && (
-          <Button
-            variant="ghost"
-            onClick={(e) => { e.stopPropagation(); navigate('/settings'); }}
+        {/* Desktop Only: Settings & Exit */}
+        {can(appCurrentUser?.role, 'view_settings') && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate('/settings');
+            }}
             aria-label="Settings"
-            className="!min-h-0 !p-2 !rounded-full !text-gray-500 hover:!text-gray-700 dark:!text-gray-400 dark:hover:!text-white hover:!bg-gray-100 dark:hover:!bg-white/10"
+            title="Settings"
+            className="hidden md:flex items-center justify-center w-8 h-8 lg:w-8.5 lg:h-8.5 rounded-full hover:bg-white dark:hover:bg-white/10 active:scale-90 transition-all duration-150 cursor-pointer text-neutral-700 dark:text-neutral-300"
           >
-            <Settings className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
-          </Button>
-          )}
-          <Button
-            variant="ghost"
-            onClick={(e) => { e.stopPropagation(); handleLogout(); }}
-            aria-label="Sign out"
-            className="!min-h-0 !p-2 !rounded-full !text-gray-500 hover:!text-red-500 dark:!text-gray-400 dark:hover:!text-red-400 hover:!bg-red-500/10 dark:hover:!bg-red-500/15"
-          >
-            <LogOut className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
-          </Button>
-        </div>
+            <RealIcon name="settings" size={20} className="w-5 h-5" />
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleLogout();
+          }}
+          aria-label="Sign out"
+          title="Sign Out"
+          className="hidden md:flex items-center justify-center w-8 h-8 lg:w-8.5 lg:h-8.5 rounded-full hover:bg-rose-50 dark:hover:bg-rose-500/15 text-neutral-600 hover:text-rose-600 dark:text-neutral-300 dark:hover:text-rose-400 active:scale-90 transition-all duration-150 cursor-pointer"
+        >
+          <RealIcon name="exit" size={20} className="w-5 h-5" />
+        </button>
+
+        {/* Divider */}
+        <div className="h-4 md:h-5 w-px bg-neutral-200/80 dark:bg-white/10 mx-0.5 md:mx-1 shrink-0" />
+
+        {/* Profile Trigger — Compact on Mobile, Spacious & Refined on Desktop */}
+        <button
+          type="button"
+          onClick={() => onShowMobileMenu?.()}
+          title={`${appCurrentUser?.name || 'User'} (${appCurrentUser?.role || 'Admin'}) · ${connectedPeers > 0 ? `${connectedPeers} Peers` : 'Local Terminal'}`}
+          className="group relative flex items-center gap-1.5 md:gap-2 pl-0.5 pr-2 md:pr-3 h-7 md:h-8.5 rounded-full hover:bg-white dark:hover:bg-white/10 active:scale-95 transition-all duration-150 cursor-pointer shrink-0"
+        >
+          {/* Avatar with cleanly positioned external status dot */}
+          <div className="relative shrink-0 flex items-center justify-center w-6 h-6 md:w-7.5 md:h-7.5 lg:w-8 lg:h-8 rounded-full ring-1 md:ring-1.5 ring-neutral-200 dark:ring-white/15 overflow-visible bg-neutral-200 dark:bg-white/10">
+            {appCurrentUser?.avatar ? (
+              <img
+                src={appCurrentUser.avatar}
+                alt={appCurrentUser?.name || 'User'}
+                className="w-full h-full rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full rounded-full bg-gradient-to-tr from-primary to-emerald-400 text-white font-bold text-[10px] md:text-[11px] flex items-center justify-center">
+                {(appCurrentUser?.name || 'S').charAt(0).toUpperCase()}
+              </div>
+            )}
+            {/* Embedded Status indicator — positioned outside the avatar to prevent clipping */}
+            <span
+              className={`absolute -bottom-0.5 -right-0.5 w-2 md:w-2.5 h-2 md:h-2.5 rounded-full ring-1.5 md:ring-2 ring-white dark:ring-[#121214] ${
+                isSyncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
+              }`}
+            />
+          </div>
+
+          {/* User Name & Discrete Status */}
+          <div className="flex items-center gap-1.5 leading-none">
+            <span className="text-[11.5px] md:text-[13px] font-semibold text-neutral-800 dark:text-white tracking-tight truncate max-w-[65px] sm:max-w-[120px]">
+              {appCurrentUser?.name || 'Shoaib'}
+            </span>
+
+            {/* Micro Sync Status or Pending Count */}
+            {pendingCount > 0 ? (
+              <span
+                className="px-1.5 py-0.5 text-[8.5px] md:text-[9.5px] font-mono font-bold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25 tabular-nums leading-none"
+                title={`${pendingCount} pending events`}
+              >
+                {pendingCount}
+              </span>
+            ) : (
+              <span className="text-[9.5px] md:text-[10px] font-medium text-neutral-400 dark:text-neutral-500 hidden sm:inline capitalize">
+                • {appCurrentUser?.role || 'Admin'}
+              </span>
+            )}
+          </div>
+        </button>
       </div>
     </div>
   );

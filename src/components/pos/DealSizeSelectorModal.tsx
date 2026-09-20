@@ -30,7 +30,7 @@ export function DealSizeSelectorModal({
           Select Deal Size / Variant
         </p>
         
-        <div className="space-y-3">
+        <div className="space-y-2">
           {sortedBundles.map((bundle) => (
             <button
               key={bundle.id}
@@ -38,20 +38,18 @@ export function DealSizeSelectorModal({
                 onSelect(bundle);
                 onClose();
               }}
-              className="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-white/10 hover:border-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-all text-left group shadow-sm hover:shadow-md"
+              className="w-full flex items-center justify-between p-3 rounded-md border border-neutral-200 dark:border-white/[0.08] hover:border-emerald-500/40 hover:bg-neutral-50 dark:hover:bg-surface-hover transition-colors text-left group shadow-none"
             >
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <div className="font-black text-gray-900 dark:text-white uppercase tracking-wider text-sm truncate">
-                    {bundle.variantName}
-                  </div>
+                <div className="font-medium text-neutral-900 dark:text-white text-[13px] truncate">
+                  {bundle.variantName}
                 </div>
               </div>
-              <div className="flex items-center gap-4 shrink-0 ml-3">
-                <div className="font-black text-violet-600 dark:text-violet-400 text-base">
+              <div className="flex items-center gap-3 shrink-0 ml-3">
+                <div className="font-mono font-medium tabular-nums text-emerald-600 dark:text-emerald-400 text-[14px]">
                   {formatCurrency(bundle.finalPrice, currency)}
                 </div>
-                <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                <div className="h-7 w-7 rounded bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
                   <ChevronRight className="h-4 w-4" />
                 </div>
               </div>

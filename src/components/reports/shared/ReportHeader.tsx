@@ -1,9 +1,10 @@
-import React from 'react';
-import { ChevronLeft, PieChart as PieIcon, RefreshCw, TrendingUp } from 'lucide-react';
-import { Button } from '../../../shared/ui';
+import { ChevronLeft, RefreshCw } from 'lucide-react';
+import { Button, RealIcon, ScrollableTabBar } from '../../../shared/ui';
+import { REPORTS_TABS } from '../../../shared/navigation/tabRegistry';
 import { formatAppDate } from '../../../lib/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { can } from '../../../lib/permissions';
+
 interface Props {
   validStartDate: Date;
   validEndDate: Date;
@@ -17,68 +18,66 @@ export function ReportHeader({
   validStartDate, validEndDate, appSettings, isDataLoading, appCurrentUser, reportType
 }: Props) {
   const navigate = useNavigate();
-  const TABS = [
-    { id: 'sales', label: "DASHBOARD", icon: TrendingUp, color: 'bg-primary' },
-    { id: 'inventory', label: "INVENTORY", icon: PieIcon, color: 'bg-blue-600' },
-    { id: 'customers', label: "CUSTOMERS", icon: PieIcon, color: 'bg-teal-600' },
-    { id: 'expenses', label: "EXPENSES", icon: PieIcon, color: 'bg-rose-600' },
-    { id: 'financial', label: "PAYMENTS", icon: PieIcon, color: 'bg-indigo-600' },
-    { id: 'salesmen', label: "SALESMEN", icon: PieIcon, color: 'bg-cyan-600' },
-    { id: 'suppliers', label: "SUPPLIERS", icon: PieIcon, color: 'bg-amber-600' },
-  ];
 
   return (
-    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
-      <div className="flex flex-col md:flex-row md:items-center gap-4 sm:gap-6 xl:gap-10">
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="ghost"
-            type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'pos' }))}
-            icon={<ChevronLeft className="h-4 w-4" />}
-            className="!min-h-0 !p-2 !rounded-xl !gap-1 !text-gray-600 dark:!text-gray-400 mr-1 !hover:bg-gray-100 dark:!hover:bg-white/5"
-          >
-            <span className="hidden sm:inline text-[8px] font-black uppercase tracking-widest">{"Back"}</span>
-          </Button>
-          <div className="h-6 w-px bg-gray-200 dark:bg-white/10 mx-1 hidden sm:block" />
+    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-1 border-b border-neutral-200 dark:border-white/[0.08]">
+      <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'pos' }))}
+          icon={<ChevronLeft className="h-4 w-4" />}
+          className="h-8 px-2.5 rounded text-neutral-500 hover:text-neutral-900 dark:hover:text-white border border-transparent hover:border-neutral-200 dark:hover:border-white/[0.08]"
+        >
+          <span className="hidden sm:inline text-[12px] font-medium">POS</span>
+        </Button>
 
-          <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center shadow-inner border border-primary/10">
-            <PieIcon className="h-4 w-4 text-primary" />
+        <div className="h-4 w-px bg-neutral-200 dark:bg-white/[0.08] hidden sm:block" />
+
+        <div className="flex items-center gap-2.5">
+          <div className="shrink-0 flex items-center justify-center drop-shadow-md">
+            <RealIcon name="reportTab" size="md" />
           </div>
-          <div className="shrink-0 flex items-center gap-3">
-            <div>
-              <h1 className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">{"Intelligence"}</h1>
-              <p className="hidden sm:block text-gray-600 dark:text-gray-400 text-[7px] font-black uppercase tracking-[0.2em] mt-0.5 opacity-60">
-                {formatAppDate(validStartDate, appSettings?.country)} - {formatAppDate(validEndDate, appSettings?.country)}
-              </p>
-            </div>
-            {isDataLoading && (
-              <div className="flex items-center gap-2 px-2 py-1 bg-primary/10 border border-primary/20 rounded-lg animate-in fade-in zoom-in duration-300">
-                <RefreshCw className="h-2.5 w-2.5 text-primary animate-spin" />
-                <span className="text-[8px] font-black text-primary uppercase tracking-widest">Live Sync</span>
-              </div>
-            )}
+          <div>
+            <h1 className="text-base font-semibold text-neutral-900 dark:text-white tracking-[-0.01em] leading-tight">
+              Reports & Analytics
+            </h1>
+            <p className="text-[12px] text-neutral-500 font-normal tracking-tight mt-0.5">
+              <span className="font-mono">{formatAppDate(validStartDate, appSettings?.country)}</span> — <span className="font-mono">{formatAppDate(validEndDate, appSettings?.country)}</span>
+            </p>
           </div>
         </div>
 
-        <div className="chip-nav-container flex-1 lg:flex-none">
-          {TABS.filter(_tab => {
-            return can(appCurrentUser?.role, 'view_reports');
-          }).map(tab => {
-            const isActive = reportType === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => navigate('/reports/' + tab.id)}
-                className={`chip-nav-item ${isActive ? `${tab.color} text-white shadow-lg` : 'text-gray-600'}`}
-              >
-                <tab.icon className="w-3.5 h-3.5" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        {isDataLoading && (
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-neutral-100 dark:bg-white/[0.06] border border-neutral-200 dark:border-white/[0.08]">
+            <RefreshCw className="h-3 w-3 text-primary animate-spin" />
+            <span className="text-[10px] font-mono text-neutral-600 dark:text-neutral-400">Syncing...</span>
+          </div>
+        )}
       </div>
+
+      {/* Tactile Apple Segmented Pills for Reports Tabs */}
+      <ScrollableTabBar>
+        {REPORTS_TABS.filter(_tab => can(appCurrentUser?.role, 'view_reports')).map(tab => {
+          const isActive = reportType === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => navigate('/reports/' + tab.id)}
+              className={`group relative whitespace-nowrap transition-all duration-150 flex-shrink-0 flex items-center gap-2 px-3 h-8 rounded-full text-[12.5px] tracking-tight active:scale-95 border cursor-pointer select-none ${
+                isActive
+                  ? 'bg-primary text-white font-bold border-primary shadow-xs'
+                  : 'bg-white dark:bg-white/[0.05] text-neutral-900 dark:text-neutral-100 font-semibold border-neutral-200/80 dark:border-white/[0.08] hover:border-neutral-300 dark:hover:border-white/20 hover:bg-neutral-50 dark:hover:bg-white/[0.08]'
+              }`}
+            >
+              <div className="shrink-0 flex items-center justify-center transition-transform duration-150 group-hover:scale-105">
+                <RealIcon name={tab.realIcon} size={20} />
+              </div>
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </ScrollableTabBar>
     </div>
   );
 }

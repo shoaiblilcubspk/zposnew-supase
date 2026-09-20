@@ -14,18 +14,18 @@ interface VariantsBuilderProps {
 
 export function VariantsBuilder({ formData, _setFormData, variants, setVariants, variantData, setVariantData }: VariantsBuilderProps) {
   return (
-    <div className="space-y-3 p-4 bg-gray-50 dark:bg-surface rounded-2xl border border-gray-200 dark:border-white/5 animate-in fade-in zoom-in-95">
+    <div className="space-y-2.5 p-3 bg-neutral-50 dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08]">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-xs font-black text-gray-900 dark:text-white uppercase">{"Product Variants"}</h4>
-          <p className="text-[9px] text-gray-600 uppercase font-bold tracking-widest">Size, Color, Material (e.g. Garments, Shoes)</p>
+          <h4 className="text-[12px] font-medium text-neutral-900 dark:text-white uppercase tracking-wider">{"Product Variants"}</h4>
+          <p className="text-[11px] text-neutral-500">Size, Color, Material (e.g. Garments, Shoes)</p>
         </div>
         <Button
           type="button"
           variant="secondary"
           size="sm"
           onClick={() => setVariants([...variants, { name: '', options: [], optionsRaw: '' }])}
-          className="!min-h-0 !px-3 !py-1.5 !rounded-lg !text-[10px] !font-black !bg-white dark:!bg-black !border-gray-200 dark:!border-white/10 !text-primary hover:!border-primary"
+          className="!h-8 !px-2.5 !rounded-md !text-[12px] !font-medium"
         >
           {"Add Variant Option"}
         </Button>
@@ -55,7 +55,7 @@ export function VariantsBuilder({ formData, _setFormData, variants, setVariants,
         };
 
         return (
-          <div key={index} className="flex gap-2 items-start p-3 bg-white dark:bg-black/40 rounded-xl border border-gray-200 dark:border-white/5">
+          <div key={index} className="flex gap-2 items-start p-2.5 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08]">
             <input
               type="text"
               placeholder="Variant Name (e.g. Size)"
@@ -163,33 +163,33 @@ export function VariantsBuilder({ formData, _setFormData, variants, setVariants,
               });
               setVariantData(newVariantData);
             }}
-            className="!min-h-0 !px-4 !py-2 !rounded-lg !text-[10px] !font-black !bg-emerald-50 dark:!bg-primary/10 !text-emerald-600 dark:!text-primary !border-emerald-200 dark:!border-primary/20 hover:!border-primary !shadow-sm"
+            className="!h-8 !px-3 !rounded-md !text-[12px] !font-medium"
             icon={<Wand2 className="w-3.5 h-3.5" />}
           >
-            {"Generate Price/Stock Matrix"}
+            {"Generate Matrix"}
           </Button>
         </div>
       )}
 
       {variantData.length > 0 && (
-        <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200 dark:border-white/10">
-          <table className="w-full text-left text-[10px] uppercase font-bold text-gray-600 dark:text-gray-400">
-            <thead className="bg-gray-100 dark:bg-black/60 border-b border-gray-200 dark:border-white/10">
+        <div className="mt-3 overflow-x-auto rounded-md border border-neutral-200 dark:border-white/[0.08]">
+          <table className="w-full text-left text-[11px] font-medium text-neutral-600 dark:text-neutral-400">
+            <thead className="bg-neutral-50 dark:bg-white/[0.02] border-b border-neutral-200 dark:border-white/[0.08]">
               <tr>
-                <th className="px-3 py-2">Variant</th>
-                <th className="px-3 py-2 w-24">Cost</th>
-                <th className="px-3 py-2 w-24">Exact Price</th>
-                <th className="px-3 py-2 w-20">Stock</th>
-                <th className="px-3 py-2 w-28">Barcode</th>
+                <th className="px-3 py-1.5 uppercase tracking-wider">Variant</th>
+                <th className="px-3 py-1.5 w-24 uppercase tracking-wider">Cost</th>
+                <th className="px-3 py-1.5 w-24 uppercase tracking-wider">Price</th>
+                <th className="px-3 py-1.5 w-20 uppercase tracking-wider">Stock</th>
+                <th className="px-3 py-1.5 w-28 uppercase tracking-wider">Barcode</th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-black/20 divide-y divide-gray-100 dark:divide-white/5">
+            <tbody className="bg-white dark:bg-surface divide-y divide-neutral-100 dark:divide-white/[0.04]">
               {variantData.map((vd, idx) => (
                 <tr key={vd.id}>
-                  <td className="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-white">
+                  <td className="px-3 py-1.5 whitespace-nowrap text-neutral-900 dark:text-white">
                     {vd.option1} {vd.option2 ? ` / ${vd.option2}` : ''}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-1.5">
                     <input
                       type="number"
                       value={vd.cost || ''}
@@ -199,10 +199,10 @@ export function VariantsBuilder({ formData, _setFormData, variants, setVariants,
                         setVariantData(newData);
                       }}
                       placeholder={formData.cost}
-                      className="w-full bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 text-xs rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-emerald-500"
+                      className="w-full h-7 bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] text-[12px] font-mono rounded px-2 focus:border-primary outline-none"
                     />
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-1.5">
                     <input
                       type="number"
                       value={vd.priceOverride || ''}
@@ -212,10 +212,10 @@ export function VariantsBuilder({ formData, _setFormData, variants, setVariants,
                         setVariantData(newData);
                       }}
                       placeholder={formData.price}
-                      className="w-full bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 text-xs rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-emerald-500"
+                      className="w-full h-7 bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] text-[12px] font-mono rounded px-2 focus:border-primary outline-none"
                     />
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-1.5">
                     <input
                       type="number"
                       value={vd.stock || ''}
@@ -225,10 +225,10 @@ export function VariantsBuilder({ formData, _setFormData, variants, setVariants,
                         setVariantData(newData);
                       }}
                       placeholder="0"
-                      className="w-full bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 text-xs rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-emerald-500"
+                      className="w-full h-7 bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] text-[12px] font-mono rounded px-2 focus:border-primary outline-none"
                     />
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-1.5">
                     <input
                       type="text"
                       value={vd.barcode || ''}
@@ -238,7 +238,7 @@ export function VariantsBuilder({ formData, _setFormData, variants, setVariants,
                         setVariantData(newData);
                       }}
                       placeholder="Auto"
-                      className="w-full bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 text-xs rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-emerald-500 uppercase"
+                      className="w-full h-7 bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.08] text-[12px] font-mono rounded px-2 focus:border-primary outline-none uppercase"
                     />
                   </td>
                 </tr>

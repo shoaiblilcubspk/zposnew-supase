@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Default capability for Zaynahs POS desktop app","local":true,"windows":["main"],"permissions":["core:default","sql:default","fs:default"]}}

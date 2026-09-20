@@ -59,31 +59,31 @@ export function CameraScanner({
       <style>{`
         #${CONTAINER_ID} canvas { display: none !important; }
         #${CONTAINER_ID} video { object-fit: cover !important; width: 100% !important; height: 100% !important; min-height: 380px !important; }
-        #${CONTAINER_ID} { overflow: hidden !important; border-radius: 1.5rem !important; min-height: 380px !important; }
+        #${CONTAINER_ID} { overflow: hidden !important; border-radius: 6px !important; min-height: 380px !important; }
       `}</style>
 
-      <div className="relative bg-[#000] overflow-hidden flex-1 min-h-[380px] sm:min-h-[420px] flex items-center justify-center rounded-[2rem]">
+      <div className="relative bg-[#000] overflow-hidden flex-1 min-h-[380px] sm:min-h-[420px] flex items-center justify-center rounded-md border border-neutral-800">
         {isInitializing && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-20 bg-[#000]">
-            <Loader2 className="w-10 h-10 text-primary animate-spin" />
-            <p className="text-[10px] font-black text-primary uppercase tracking-widest animate-pulse">Initializing Engine...</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-20 bg-[#000]">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            <p className="text-[12px] font-medium text-neutral-400">Initializing Scanner...</p>
           </div>
         )}
 
         {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-8 gap-6 z-20 bg-[#000]">
-            <div className="w-16 h-16 bg-rose-500/10 rounded-3xl flex items-center justify-center">
-              <AlertTriangle className="w-8 h-8 text-rose-500" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 gap-4 z-20 bg-[#000]">
+            <div className="w-10 h-10 bg-rose-500/10 rounded-md flex items-center justify-center border border-rose-500/20">
+              <AlertTriangle className="w-5 h-5 text-rose-500" />
             </div>
-            <div className="text-center space-y-2">
-              <p className="text-white font-black text-sm uppercase tracking-tight">Access Restricted</p>
-              <p className="text-gray-600 text-[10px] font-bold uppercase leading-relaxed max-w-[200px] mx-auto">{error}</p>
+            <div className="text-center space-y-1">
+              <p className="text-white font-medium text-[13px]">Access Restricted</p>
+              <p className="text-neutral-400 text-[12px] max-w-[240px] mx-auto">{error}</p>
             </div>
             <button
               onClick={handleRetry}
-              className="btn btn-md btn-primary"
+              className="h-8 px-3.5 bg-primary hover:bg-primary-hover text-white text-[13px] font-medium rounded-md transition-colors"
             >
-              Restart Engine
+              Restart Camera
             </button>
           </div>
         )}
@@ -93,12 +93,12 @@ export function CameraScanner({
         {!isInitializing && !error && (
           <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center">
             <div className="relative" style={{ width: isMobile ? '90%' : '300px', height: isMobile ? '140px' : '180px', maxWidth: '340px' }}>
-              <div className="absolute -top-1 -left-1 w-10 h-10 border-t-[4px] border-l-[4px] border-primary rounded-tl-2xl shadow-[0_0_20px_rgba(16,185,129,0.5)]" />
-              <div className="absolute -top-1 -right-1 w-10 h-10 border-t-[4px] border-r-[4px] border-primary rounded-tr-2xl shadow-[0_0_20px_rgba(16,185,129,0.5)]" />
-              <div className="absolute -bottom-1 -left-1 w-10 h-10 border-b-[4px] border-l-[4px] border-primary rounded-bl-2xl shadow-[0_0_20px_rgba(16,185,129,0.5)]" />
-              <div className="absolute -bottom-1 -right-1 w-10 h-10 border-b-[4px] border-r-[4px] border-primary rounded-br-2xl shadow-[0_0_20px_rgba(16,185,129,0.5)]" />
-              <div className="absolute inset-x-0 h-[2.5px] bg-emerald-400 shadow-[0_0_25px_rgba(16,185,129,1)] animate-scan opacity-90" />
-              <div className="absolute inset-0 bg-primary/10 rounded-2xl ring-1 ring-emerald-500/30" />
+              <div className="absolute -top-1 -left-1 w-8 h-8 border-t-2 border-l-2 border-primary rounded-tl-md" />
+              <div className="absolute -top-1 -right-1 w-8 h-8 border-t-2 border-r-2 border-primary rounded-tr-md" />
+              <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-2 border-l-2 border-primary rounded-bl-md" />
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-2 border-r-2 border-primary rounded-br-md" />
+              <div className="absolute inset-x-0 h-[1.5px] bg-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.8)] animate-scan opacity-90" />
+              <div className="absolute inset-0 bg-primary/5 rounded-md ring-1 ring-emerald-500/30" />
             </div>
           </div>
         )}

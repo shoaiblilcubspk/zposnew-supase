@@ -3,16 +3,6 @@ import { useProductsStore, useInventoryStore } from '../../../stores';
 import { Product } from '../../../types';
 import type { ProductFormData } from './useProductForm';
 
-// Remove scalar + per-variant stock so a product write never sets products.stock
-// directly — stock is ledger-driven (stock_history insert → DB trigger).
-function stripStockFields(p: any) {
-  const c = { ...p };
-  delete c.stock;
-  if (Array.isArray(c.variantData)) {
-    c.variantData = c.variantData.map((v: any) => { const x = { ...v }; delete x.stock; return x; });
-  }
-  return c;
-}
 
 interface UseProductSubmitArgs {
   product: Product | null;
@@ -110,6 +100,8 @@ export function useProductSubmit({
       variantData,
       modifiers,
       productAddons,
+      expiryDate: formData.expiryDate ? formData.expiryDate : undefined,
+      expiryAlertDays: formData.expiryAlertDays ? parseInt(formData.expiryAlertDays) || 90 : 90,
       createdAt: product?.createdAt || new Date(),
       updatedAt: new Date(),
     };
@@ -118,29 +110,8 @@ export function useProductSubmit({
       const { productsService } = await import('../../../lib/services');
 
       if (product) {
-        if (product.trackInventory && productData.trackInventory && product.stock !== productData.stock) {
-          const { localDb, generateId } = await import('../../../lib/localDb');
-          const { cloudWrite } = await import('../../../lib/cloudWrite');
-          const { toRemoteStockHistory } = await import('../../../lib/services');
-          const diff = (productData.stock || 0) - (product.stock || 0);
-          const histId = generateId();
-          const histEntry = {
-            id: histId,
-            productId: product.id,
-            changeQty: diff,
-            type: 'adjustment' as const,
-            referenceId: 'MANUAL_EDIT',
-            note: 'Direct Stock Edit via Form',
-            balanceAfter: productData.stock || 0,
-            cashierName: 'System',
-            createdAt: new Date()
-          };
-          await cloudWrite('stock_history', 'create', histId, toRemoteStockHistory(histEntry));
-          await localDb.stockHistory.add(histEntry);
-        }
-        // stock already applied via the stock_history insert above; never write it directly.
-        await productsService.update(productData.id, stripStockFields(productData));
-        useProductsStore.getState().updateProduct(productData);
+        const updated = await productsService.update(productData.id, productData);
+        useProductsStore.getState().updateProduct({ ...productData, ...updated });
       } else {
         if (formData.supplier.trim()) {
           const { suppliersService } = await import('../../../lib/services');
@@ -158,28 +129,8 @@ export function useProductSubmit({
           }
         }
 
-        // Create WITHOUT stock (cloud default 0); initial stock is ledger-driven.
-        const newProduct = await productsService.create(stripStockFields(productData));
-        if (productData.trackInventory && (productData.stock || 0) > 0) {
-          const { localDb, generateId } = await import('../../../lib/localDb');
-          const { cloudWrite } = await import('../../../lib/cloudWrite');
-          const { toRemoteStockHistory } = await import('../../../lib/services');
-          const initId = generateId();
-          const initEntry = {
-            id: initId,
-            productId: newProduct.id,
-            changeQty: productData.stock,
-            type: 'stock_in' as const,
-            note: 'Initial Stock on Create',
-            balanceAfter: productData.stock,
-            cashierName: 'System',
-            createdAt: new Date()
-          };
-          await cloudWrite('stock_history', 'create', initId, toRemoteStockHistory(initEntry));
-          await localDb.stockHistory.add(initEntry);
-        }
-        // Local cache keeps the intended stock for display (cloud trigger will match).
-        useProductsStore.getState().addProduct({ ...newProduct, stock: productData.stock, variantData: productData.variantData });
+        const newProduct = await productsService.create(productData);
+        useProductsStore.getState().addProduct({ ...newProduct, variantData: productData.variantData });
       }
 
       sonner.success(product ? 'Product updated successfully' : 'Product added successfully');
@@ -203,10 +154,14 @@ export function useProductSubmit({
           image: '',
           isService: false,
           requireSerial: false,
+          productType: 'simple',
+          expiryDate: '',
+          expiryAlertDays: '90',
         });
         setVariants([]);
         setVariantData([]);
         setModifiers([]);
+        setProductAddons([]);
       }
 
       onClose();

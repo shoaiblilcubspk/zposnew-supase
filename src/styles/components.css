@@ -1,106 +1,131 @@
 @layer components {
+  /* ── 1. Linear Flat Surfaces & Cards ── */
   .card {
-    @apply bg-white dark:bg-surface rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm;
+    @apply bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none transition-colors duration-100;
   }
 
+  /* ── 2. Linear Engineered Buttons (High Density 36px standard) ── */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
-    min-height: 44px;
-    /* touch target minimum */
+    @apply inline-flex items-center justify-center gap-1.5 rounded h-9 px-3.5 text-[13.5px] font-medium tracking-[-0.01em] whitespace-nowrap transition-colors duration-100 ease-out disabled:opacity-40 disabled:cursor-not-allowed shadow-none;
   }
 
   .btn-primary {
-    @apply bg-primary hover:bg-primary-hover text-white shadow-lg;
+    @apply bg-primary hover:bg-primary-hover text-white border border-emerald-500/20 shadow-none;
   }
 
   .btn-secondary {
-    @apply bg-surface border border-default text-default hover:bg-gray-50 dark:hover:bg-white/5;
+    @apply bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] text-neutral-800 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-surface-hover shadow-none;
   }
 
   .btn-danger {
-    @apply bg-danger text-white shadow-lg hover:opacity-90;
+    @apply bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/30 shadow-none;
+  }
+
+  .btn-blue {
+    @apply bg-blue-600 hover:bg-blue-700 text-white border border-blue-500/20 shadow-none;
+  }
+
+  .btn-indigo {
+    @apply bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500/20 shadow-none;
+  }
+
+  .btn-amber {
+    @apply bg-amber-600 hover:bg-amber-700 text-white border border-amber-500/20 shadow-none;
+  }
+
+  .btn-soft-blue {
+    @apply bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/20 dark:hover:bg-blue-500/20 shadow-none;
+  }
+
+  .btn-soft-emerald {
+    @apply bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20 dark:hover:bg-emerald-500/20 shadow-none;
   }
 
   .btn-ghost {
-    @apply bg-transparent text-default hover:bg-app;
+    @apply bg-transparent text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-surface hover:text-neutral-900 dark:hover:text-white shadow-none;
   }
 
   .btn-sm {
-    @apply px-3 py-1.5 text-xs;
+    @apply h-8 px-3 text-[13px];
   }
 
   .btn-md {
-    @apply px-4 py-2.5 text-sm;
+    @apply h-9 px-3.5 text-[14px];
   }
 
   .btn-lg {
-    @apply px-6 py-3.5 text-base;
+    @apply h-10 px-4 text-[14.5px];
   }
 
+  /* ── 3. High-Density Inputs & Selects (36px standard) ── */
   .input {
-    @apply w-full px-4 py-3 border border-gray-200 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white dark:bg-[#1C1C1C] text-gray-900 dark:text-white;
+    @apply w-full h-9 px-3 text-[14px] tracking-[-0.01em] border border-neutral-200 dark:border-white/[0.08] rounded focus:border-primary focus:outline-none transition-colors duration-100 bg-white dark:bg-surface text-neutral-900 dark:text-neutral-100;
   }
 
   .input-sm {
-    @apply px-3 py-2 text-sm;
+    @apply h-8 px-2.5 text-[13px];
   }
 
   .select {
-    @apply w-full px-4 py-3 border border-gray-200 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white dark:bg-[#1C1C1C] text-gray-900 dark:text-white;
+    @apply w-full h-9 px-3 text-[14px] tracking-[-0.01em] border border-neutral-200 dark:border-white/[0.08] rounded focus:border-primary focus:outline-none transition-colors duration-100 bg-white dark:bg-surface text-neutral-900 dark:text-neutral-100;
   }
 
   .textarea {
-    @apply w-full px-4 py-3 border border-gray-200 dark:border-white/5 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white dark:bg-[#1C1C1C] text-gray-900 dark:text-white resize-none;
+    @apply w-full p-2.5 text-[14px] tracking-[-0.01em] border border-neutral-200 dark:border-white/[0.08] rounded focus:border-primary focus:outline-none transition-colors duration-100 bg-white dark:bg-surface text-neutral-900 dark:text-neutral-100 resize-none;
   }
 
+  /* ── 4. Metric Stat Card (Asymmetric Hierarchy - Zero Gradients) ── */
   .stat-card {
-    @apply relative overflow-hidden rounded-[1.25rem] sm:rounded-[1.5rem] transition-all duration-300 hover:scale-[1.02] shadow-xl border border-white/10;
-    min-height: 80px;
-    background-size: 200% 200%;
+    @apply relative overflow-hidden rounded-md border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface shadow-none p-3.5 transition-colors duration-100;
+    min-height: 72px;
   }
 
   .stat-card-inner {
-    @apply relative z-10 p-2.5 sm:p-5 flex flex-col justify-between h-full;
+    @apply relative z-10 flex flex-col justify-between h-full;
   }
 
   .stat-card-label {
-    @apply text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] text-white/60 mb-0.5 block leading-tight truncate;
+    @apply text-[13px] font-bold tracking-tight text-neutral-800 dark:text-neutral-200 mb-1 block leading-tight truncate;
   }
 
   .stat-card-value {
-    @apply text-base sm:text-2xl lg:text-2xl xl:text-3xl font-black text-white tracking-[-0.05em] leading-none block whitespace-nowrap drop-shadow-md;
-    font-variant-numeric: tabular-nums;
+    @apply text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white tracking-[-0.02em] leading-none block tabular-nums font-mono;
   }
 
   .premium-card {
-    @apply relative overflow-hidden rounded-[1.75rem] sm:rounded-[3rem] border border-white/5 bg-white dark:bg-surface shadow-2xl transition-all duration-500;
+    @apply relative overflow-hidden rounded-md border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface shadow-none transition-colors duration-100;
   }
 
   .glass-card {
-    @apply bg-white/5 border border-white/10 rounded-[1.5rem] sm:rounded-[2rem] shadow-xl;
+    @apply bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md shadow-none;
   }
 
   .stat-card-icon {
-    @apply absolute -bottom-2 -right-2 sm:-bottom-4 sm:-right-4 opacity-10 pointer-events-none transition-all duration-700 group-hover:scale-110 group-hover:opacity-20 group-hover:-rotate-12 h-16 w-16 sm:h-24 sm:w-24;
+    @apply absolute top-3 right-3 text-neutral-600 dark:text-neutral-400 pointer-events-none h-5 w-5;
   }
 
   .chip-nav-container {
-    @apply flex items-center gap-1.5 p-1 bg-white dark:bg-zinc-900/50 rounded-[1.25rem] border border-gray-200/50 dark:border-white/5 overflow-x-auto scrollbar-hide shadow-sm;
+    @apply flex items-center gap-1 p-0.5 bg-neutral-100 dark:bg-neutral-900/80 rounded border border-neutral-200 dark:border-white/[0.08] overflow-x-auto scrollbar-hide shadow-none;
   }
 
   .chip-nav-item {
-    @apply flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 relative z-10 whitespace-nowrap active:scale-95;
+    @apply flex items-center gap-1.5 px-3 py-1 rounded text-[12px] font-medium tracking-[-0.01em] transition-colors duration-100 relative z-10 whitespace-nowrap;
   }
 
-  /* --- Content Layout (scroll is handled by main tag in App.tsx) --- */
+  /* --- Content Layout --- */
   .main-content-scroll {
-    @apply flex-1 flex flex-col pb-[80px] sm:pb-[90px] lg:pb-4 min-h-0 w-full;
+    @apply flex-1 flex flex-col min-h-0 w-full;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px) !important;
+  }
+
+  @media (min-width: 1024px) {
+    .main-content-scroll {
+      padding-bottom: 1.5rem !important;
+    }
   }
 
   .modal-overlay {
-    @apply fixed inset-0 bg-black/80 dark:bg-app-[6px] flex items-start justify-center z-[250] p-0 sm:p-6 overflow-y-auto;
-    padding-top: max(env(safe-area-inset-top, 16px), 24px);
-    padding-bottom: max(env(safe-area-inset-bottom, 16px), 80px);
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[250] p-3 sm:p-6 overflow-y-auto;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -121,99 +146,79 @@
     @apply z-[400];
   }
 
+  /* Floating Overlay Modals (Shadow allowed ONLY on floating overlays) */
   .modal {
-    @apply bg-white dark:bg-surface border dark:border-white/5 transition-all duration-300;
-    box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.5);
-    width: 360px;
-    max-width: 360px !important;
+    @apply bg-white dark:bg-surface border border-neutral-200 dark:border-white/10 rounded-lg shadow-2xl overflow-hidden flex flex-col;
+    width: 480px;
+    max-width: 90vw;
     max-height: 90dvh;
     min-height: 0;
-    transform-origin: center center;
-    overscroll-behavior: contain;
-    border-radius: 2.5rem;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    /* Interactive fix for mobile keyboard */
     position: relative;
     z-index: 50;
   }
 
-  /* Responsive Modal Pattern (Mobile Bottom Sheet) */
   @media (max-width: 767px) {
     .modal-overlay {
       @apply items-end p-0;
-      touch-action: none;
     }
 
     .modal,
     .modal-xl {
       @apply w-full max-w-full !important;
-      border-radius: 1.75rem 1.75rem 0 0 !important;
+      border-radius: 0.75rem 0.75rem 0 0 !important;
       max-height: calc(100dvh - 16px) !important;
       margin-bottom: 0 !important;
-      height: auto;
-      flex-shrink: 0;
-    }
-
-    .modal-body {
-      max-height: 75dvh !important;
-      touch-action: pan-y;
     }
   }
 
-  /* Universal 360px modal — identical on desktop, tablet, and mobile */
-  @media (min-width: 640px) {
-    .modal {
-      width: 360px;
-      max-width: 360px !important;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .modal {
-      max-width: 360px !important;
-    }
-  }
-
-  /* Expansive Modal for Reports/Checkouts */
   .modal-xl {
-    @apply w-full max-w-[1400px] !important;
-    max-height: 95dvh;
+    @apply w-full max-w-[1100px] !important;
+    max-height: 92dvh;
     min-height: 0;
-    @apply bg-white dark:bg-surface shadow-2xl overflow-hidden flex flex-col rounded-[2.5rem];
+    @apply bg-white dark:bg-surface shadow-2xl border border-neutral-200 dark:border-white/10 overflow-hidden flex flex-col rounded-lg;
   }
-
-  @media (max-width: 1024px) {
-    .modal-xl {
-      @apply max-w-[95%] !important;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .modal-xl {
-      @apply max-w-full !important;
-      border-radius: 0;
-      height: 100dvh;
-      max-height: 100dvh;
-    }
-  }
-
 
   .modal-header {
-    @apply px-5 py-3.5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between flex-shrink-0 bg-white dark:bg-surface;
+    @apply px-4 py-3 border-b border-neutral-200 dark:border-white/[0.08] flex items-center justify-between flex-shrink-0 bg-white dark:bg-surface;
   }
 
   .modal-body {
-    @apply p-4 sm:p-8 scrollbar-hide overflow-y-auto;
-    max-height: 85dvh;
+    @apply p-4 scrollbar-hide overflow-y-auto;
+    max-height: 80dvh;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    touch-action: pan-y;
-    scroll-behavior: smooth;
   }
 
   .modal-footer {
-    @apply px-6 py-3.5 border-t border-gray-100 dark:border-white/5 flex justify-end space-x-3 flex-shrink-0 bg-gray-50/30 dark:bg-black/20;
+    @apply px-4 py-3 border-t border-neutral-200 dark:border-white/[0.08] flex justify-end gap-2 flex-shrink-0 bg-neutral-50/50 dark:bg-black/20;
+  }
+
+  /* ── 5. Centralized Typography Classes (1-Place System) ── */
+  .form-label {
+    @apply text-[13.5px] font-semibold text-neutral-900 dark:text-neutral-100 block mb-1;
+  }
+
+  .form-hint {
+    @apply text-[12px] font-medium text-neutral-600 dark:text-neutral-400 mt-1;
+  }
+
+  .section-header {
+    @apply text-[13px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-1.5;
+  }
+
+  .table-header {
+    @apply text-[13px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider;
+  }
+
+  .table-cell {
+    @apply text-[14px] font-medium text-neutral-900 dark:text-white;
+  }
+
+  .money-text {
+    @apply font-mono font-bold tabular-nums text-neutral-900 dark:text-white text-[14px];
+  }
+
+  .badge-text {
+    @apply text-[12px] font-bold uppercase tracking-wide;
   }
 }

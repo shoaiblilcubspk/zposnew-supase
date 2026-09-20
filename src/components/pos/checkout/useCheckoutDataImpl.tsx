@@ -1,8 +1,7 @@
-import { useAppStore, useCartStore, useProductsStore, useSalesStore, useSettingsStore, useUsersStore } from '../../../stores';
+import { useAppStore, useCartStore, useCustomersStore, useProductsStore, useSalesStore, useSettingsStore, useUsersStore } from '../../../stores';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Store, Package, CreditCard, Banknote, Building2, Layers } from 'lucide-react';
 import { Sale } from '../../../types';
-import { useInvoiceGeneration } from '../../../hooks/useInvoice';
 import { useCartCalculations } from '../../../hooks/useCartCalculations';
 import { useAuth } from '../../../context/AuthContext';
 import { usePOSKeyboard } from '../../../hooks/usePOSKeyboard';
@@ -23,9 +22,7 @@ export function useCheckoutData(onClose: () => void, onComplete: (sale: Sale) =>
   const appBillDiscountType = useCartStore(s => s.billDiscountType);
   const appActiveSalesTab = useCartStore(s => s.activeSalesTab);
   const appBundles = useAppStore(s => s.bundles);
-
   const { profile } = useAuth();
-  const _generateInvoice = useInvoiceGeneration();
 
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountPaid, setAmountPaid] = useState('');
@@ -34,7 +31,7 @@ export function useCheckoutData(onClose: () => void, onComplete: (sale: Sale) =>
   const [saleNotes, setSaleNotes] = useState('');
   const [saleType, setSaleType] = useState<'retail' | 'wholesale'>('retail');
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
-  const [salesmanId, setSalesmanId] = useState<string>('');
+  const [salesmanId, setSalesmanId] = useState<string>(() => useCartStore.getState().salesmanId || '');
 
   // Split payment state (two parts across cash/card/digital)
   const [splitMethodA, setSplitMethodA] = useState<'cash' | 'card' | 'online'>('cash');
@@ -45,20 +42,18 @@ export function useCheckoutData(onClose: () => void, onComplete: (sale: Sale) =>
   const handleSelectMethod = (m: string) => {
     setPaymentMethod(m as any);
     if (m === 'split') {
-      // Default to an even 50/50 split so a bill is never accidentally booked
-      // to a single method (prevents the "whole amount landed on one method" bug).
       const half = (finalTotal / 2).toString();
       setSplitAmountA(half);
       setSplitAmountB(half);
-    } else if (m !== 'cash') {
-      setAmountPaid(finalTotal.toString());
+    } else if (m === 'cash') {
+      setAmountPaid('');
+    } else {
+      setAmountPaid(finalTotal > 0 ? finalTotal.toString() : '');
     }
   };
 
-  // New Fields
-  const [extraCharges, setExtraCharges] = useState<{ name: string; amount: string }[]>([
-    { name: 'DC', amount: '' }
-  ]);
+  // Extra charges
+  const [extraCharges, setExtraCharges] = useState<{ name: string; amount: string }[]>([{ name: 'DC', amount: '' }]);
 
   const { retailEnabled, wholesaleEnabled } = appSettings;
   const { subtotal, totalDiscount, taxAmount, total: baseTotal, activePromotions: appliedDiscounts, freeGifts } = useCartCalculations(paymentMethod);
@@ -75,9 +70,6 @@ export function useCheckoutData(onClose: () => void, onComplete: (sale: Sale) =>
     extraCharges.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0)
     , [extraCharges]);
 
-  // Delivery/service extra charges are included in the tax base (not merely added
-  // to the total post-tax), so a delivered order is taxed consistently. Do not move
-  // these out of the tax base.
   const taxRate = appSettings.taxRate || 0;
   const extraChargesTax = Math.round(extraChargesTotal * (taxRate / 100) * 100) / 100;
   const finalTax = Math.round((taxAmount + extraChargesTax) * 100) / 100;
@@ -111,16 +103,18 @@ export function useCheckoutData(onClose: () => void, onComplete: (sale: Sale) =>
     return appSales.find(s => s.id === appEditingSaleId) || null;
   }, [appEditingSaleId, appSales]);
 
+  const checkoutInitRef = useRef<string | null>(null);
+
   useEffect(() => {
-    // If a sale has been completed, do not reset the state or form fields
     if (completedSale || showReceipt) return;
 
-    setAmountPaid('');
+    const currentKey = appEditingSaleId || '__new_sale__';
+    if (checkoutInitRef.current === currentKey) return;
+    checkoutInitRef.current = currentKey;
+
     setShowReceipt(false);
     setCompletedSale(null);
-    setPaymentMethod('cash');
 
-    // If editing, load notes and extra charges
     if (appEditingSaleId) {
       if (editingSale) {
         setSaleNotes(appNotes || editingSale.notes || '');
@@ -132,19 +126,39 @@ export function useCheckoutData(onClose: () => void, onComplete: (sale: Sale) =>
         } else {
           setExtraCharges([{ name: 'DC', amount: '' }]);
         }
-        if (editingSale.paymentMethod) setPaymentMethod((editingSale.paymentMethod === 'split') ? 'cash' : editingSale.paymentMethod);
-        if (editingSale.salesmanId) setSalesmanId(editingSale.salesmanId);
+        const initialPm = (editingSale.paymentMethod || 'cash') as any;
+        setPaymentMethod(initialPm);
+        if (initialPm === 'split') {
+          if (editingSale.splitPayments && editingSale.splitPayments.length >= 2) {
+            setSplitMethodA(editingSale.splitPayments[0].method as any);
+            setSplitAmountA(String(editingSale.splitPayments[0].amount));
+            setSplitMethodB(editingSale.splitPayments[1].method as any);
+            setSplitAmountB(String(editingSale.splitPayments[1].amount));
+          } else {
+            const half = (finalTotal / 2).toFixed(2);
+            setSplitAmountA(half);
+            setSplitAmountB(half);
+          }
+        }
+        setAmountPaid(editingSale.receivedAmount ? String(editingSale.receivedAmount) : String(finalTotal));
+        const targetSm = editingSale.salesmanId || useCartStore.getState().salesmanId;
+        const matchingSm = appSalesmen.find(s => s.id === targetSm || s.name === editingSale.salesmanName) || appUsers.find(u => u.id === targetSm || u.name === editingSale.salesmanName);
+        setSalesmanId(matchingSm?.id || targetSm || '');
       }
     } else {
       setSaleNotes(appNotes || '');
       setExtraCharges([{ name: 'DC', amount: '' }]);
+      const currentCartSm = useCartStore.getState().salesmanId || (profile?.role === 'salesman' ? profile.id : '');
+      setSalesmanId(currentCartSm || '');
       const preferredMode = appSettings.defaultSaleType || 'retail';
       if (preferredMode === 'retail' && retailEnabled) setSaleType('retail');
       else if (preferredMode === 'wholesale' && wholesaleEnabled) setSaleType('wholesale');
       else if (retailEnabled) setSaleType('retail');
       else if (wholesaleEnabled) setSaleType('wholesale');
+      setPaymentMethod('cash');
+      setAmountPaid('');
     }
-  }, [retailEnabled, wholesaleEnabled, appEditingSaleId, editingSale, appSettings.defaultSaleType, completedSale, showReceipt]);
+  }, [retailEnabled, wholesaleEnabled, appEditingSaleId, editingSale, appSettings.defaultSaleType, completedSale, showReceipt, appSalesmen, appUsers, profile, finalTotal, appNotes]);
 
   // canProcessPayment is declared below — usePOSKeyboard is called after it
 
@@ -194,8 +208,22 @@ export function useCheckoutData(onClose: () => void, onComplete: (sale: Sale) =>
     setCompletedSale,
   });
 
-  const handlePaymentRef = useRef<() => Promise<void>>(async () => { });
-  handlePaymentRef.current = handlePayment;
+  const [isPinVerifyOpen, setIsPinVerifyOpen] = useState(false);
+
+  const activeUser = profile || appUsers.find(u => u.id === (profile?.id || localStorage.getItem('pos_active_user_id')));
+  const isPinRequired = Boolean(activeUser?.requirePinOnSale || (activeUser?.id && appUsers.find(u => u.id === activeUser.id)?.requirePinOnSale));
+
+  const initiatePayment = () => {
+    if (!canProcessPayment() || isProcessing) return;
+    if (isPinRequired && activeUser?.id) {
+      setIsPinVerifyOpen(true);
+    } else {
+      handlePayment();
+    }
+  };
+
+  const handlePaymentRef = useRef<() => void>(() => { });
+  handlePaymentRef.current = initiatePayment;
 
   // ── Keyboard Shortcuts (must come after canProcessPayment is defined) ──
   usePOSKeyboard({
@@ -216,68 +244,55 @@ export function useCheckoutData(onClose: () => void, onComplete: (sale: Sale) =>
   ].filter(st => st.enabled);
 
   const isCreditAllowed = useMemo(() => {
+    // Global credit must be enabled
     if (!appSettings.enableCreditSales) return false;
-    if (!appSelectedCustomer) return false;
-    if (appSelectedCustomer.allow_credit === false || appSelectedCustomer.allowCredit === false) return false;
+    // A real customer must be selected (not null, not empty object)
+    if (!appSelectedCustomer?.id) return false;
+    // Cashier role restriction check
     const role = profile?.role || 'cashier';
     if (role === 'cashier' && !appSettings.cashierCanCredit) return false;
     return true;
   }, [appSettings.enableCreditSales, appSettings.cashierCanCredit, appSelectedCustomer, profile]);
 
   const payMethods = [
-    { id: 'cash', label: 'Cash', icon: Banknote },
-    { id: 'card', label: 'Card', icon: CreditCard },
-    { id: 'online', label: 'Online Wallet', icon: Building2 },
-    ...(isCreditAllowed ? [{ id: 'credit', label: 'Credit (Udhar)', icon: Store }] : []),
-    { id: 'split', label: 'Split', icon: Layers },
+    { id: 'cash', label: 'Cash', icon: Banknote, realIcon: 'cashWallet' as const },
+    { id: 'card', label: 'Card', icon: CreditCard, realIcon: 'cardWallet' as const },
+    { id: 'online', label: 'Online', icon: Building2, realIcon: 'bankWallet' as const },
+    ...(isCreditAllowed ? [{ id: 'credit', label: 'Credit', icon: Store, realIcon: 'expenses' as const }] : []),
+    { id: 'split', label: 'Split', icon: Layers, realIcon: 'split' as const },
   ];
 
+  const handleSalesmanChange = (id: string) => {
+    setSalesmanId(id);
+    useCartStore.getState().setSalesmanId(id || null);
+    if (appActiveSalesTab) useCartStore.getState().updateSalesTab({ id: appActiveSalesTab, updates: { salesmanId: id || null } });
+  };
+
+  const appCustomers = useCustomersStore(s => s.customers);
+
+  const handleSelectCustomer = (customerId: string) => {
+    if (!customerId) {
+      useCartStore.getState().setSelectedCustomer(null);
+      return;
+    }
+    const found = appCustomers.find(c => c.id === customerId) || null;
+    useCartStore.getState().setSelectedCustomer(found);
+    if (appActiveSalesTab) useCartStore.getState().updateSalesTab({ id: appActiveSalesTab, updates: { selectedCustomer: found } });
+  };
 
   return {
-    appSettings,
-    paymentMethod,
-    handleSelectMethod,
-    amountPaid,
-    setAmountPaid,
-    splitMethodA,
-    setSplitMethodA,
-    splitMethodB,
-    setSplitMethodB,
-    splitAmountA,
-    setSplitAmountA,
-    splitAmountB,
-    setSplitAmountB,
-    finalTotal,
-    change,
-    quickAmounts,
-    extraCharges,
-    setExtraCharges,
-    saleType,
-    setSaleType,
-    saleTypes,
-    payMethods,
-    salesmanId,
-    setSalesmanId,
-    appUsers,
-    appSalesmen,
-    saleNotes,
-    setSaleNotes,
-    appActiveSalesTab,
-    checkoutCartItems,
-    appBundles,
-    showDiscount,
-    subtotal,
-    totalDiscount,
-    taxAmount,
-    totalQty,
-    showReceipt,
-    completedSale,
-    setShowReceipt,
-    setCompletedSale,
-    isShortcutsModalOpen,
-    setIsShortcutsModalOpen,
-    handlePayment,
-    canProcessPayment,
-    isProcessing,
+    appSettings, paymentMethod, handleSelectMethod, amountPaid, setAmountPaid,
+    splitMethodA, setSplitMethodA, splitMethodB, setSplitMethodB,
+    splitAmountA, setSplitAmountA, splitAmountB, setSplitAmountB,
+    finalTotal, change, quickAmounts, extraCharges, setExtraCharges,
+    saleType, setSaleType, saleTypes, payMethods, salesmanId,
+    setSalesmanId: handleSalesmanChange, appUsers, appSalesmen,
+    saleNotes, setSaleNotes, appActiveSalesTab, checkoutCartItems,
+    appBundles, showDiscount, subtotal, totalDiscount, taxAmount,
+    totalQty, showReceipt, completedSale, setShowReceipt, setCompletedSale,
+    isShortcutsModalOpen, setIsShortcutsModalOpen, handlePayment,
+    initiatePayment, isPinVerifyOpen, setIsPinVerifyOpen,
+    profile: activeUser || profile, canProcessPayment, isProcessing,
+    appSelectedCustomer, appCustomers, handleSelectCustomer, isCreditAllowed,
   };
 }

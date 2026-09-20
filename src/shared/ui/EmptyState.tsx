@@ -10,12 +10,22 @@ import { cn } from '../../lib/utils';
  * Presentation only.
  */
 export interface EmptyStateProps {
-  icon?: React.ReactNode;
+  icon?: React.ReactNode | React.ElementType;
   title: string;
   subtext?: string;
   action?: React.ReactNode;
   compact?: boolean;
   className?: string;
+}
+
+function renderEmptyStateIcon(iconNode?: React.ReactNode | React.ElementType, defaultClass = 'h-full w-full'): React.ReactNode {
+  if (!iconNode) return <PackageOpen className={defaultClass} />;
+  if (React.isValidElement(iconNode)) return iconNode;
+  if (typeof iconNode === 'function' || (typeof iconNode === 'object' && (iconNode as any)?.$$typeof)) {
+    const IconComponent = iconNode as React.ElementType;
+    return <IconComponent className={defaultClass} />;
+  }
+  return iconNode as React.ReactNode;
 }
 
 export function EmptyState({
@@ -35,7 +45,7 @@ export function EmptyState({
       )}
     >
       <div className={cn('mx-auto text-primary/30 mb-3', compact ? 'h-8 w-8' : 'h-12 w-12')}>
-        {icon || <PackageOpen className="h-full w-full" />}
+        {renderEmptyStateIcon(icon)}
       </div>
       <p className="text-sm font-black uppercase tracking-wider text-gray-600 dark:text-gray-400">
         {title}

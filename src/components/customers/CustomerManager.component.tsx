@@ -1,6 +1,7 @@
 import { useCustomersStore, useSalesStore, useSettingsStore, useUsersStore } from '../../stores';
 import { useState, useMemo } from 'react';
-import { Plus, User, Mail, CreditCard, Users, Receipt } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, User, Mail, CreditCard, Users, Receipt, ChevronLeft } from 'lucide-react';
 import { Customer } from '../../types';
 import { can } from '../../lib/permissions';
 import { CustomerModal } from './CustomerModal';
@@ -22,6 +23,7 @@ import {
 } from './customerManagerUtils';
 
 export function CustomerManager() {
+  const navigate = useNavigate();
   const appCurrentUser = useUsersStore(s => s.currentUser);
   const appSettings = useSettingsStore(s => s.settings);
   const appCustomers = useCustomersStore(s => s.customers);
@@ -140,42 +142,52 @@ export function CustomerManager() {
 
   return (
     <div className="main-content-scroll p-1 sm:p-4 lg:p-6 bg-gray-50/50 dark:bg-app space-y-3 lg:space-y-6 max-w-[1400px] mx-auto">
-      {/* Layer 1: Identity & Tab Navigation */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 pb-2">
-        <div className="flex flex-col md:flex-row md:items-center gap-4 sm:gap-6 xl:gap-10">
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="h-10 w-10 sm:h-12 sm:w-12 bg-primary/10 rounded-xl flex items-center justify-center shadow-inner border border-primary/10">
-              <User className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-            </div>
-            <div className="shrink-0 flex flex-col">
-              <h1 className="text-lg sm:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">{"Customers"}</h1>
-              <p className="hidden sm:block text-gray-600 dark:text-gray-400 text-[9px] font-black uppercase tracking-[0.2em] mt-1 opacity-60">{"CRM Hub"} • {appCustomers.length} {"Records"}</p>
+      {/* Layer 1: Identity & Header */}
+      <div className="flex items-center justify-between gap-2 sm:gap-3 pb-1 border-b border-neutral-200 dark:border-white/[0.08]">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/pos')}
+            className="!p-1.5 text-neutral-500 hover:text-neutral-900 dark:hover:text-white shrink-0"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex items-center gap-2 min-w-0">
+            <User className="w-5 h-5 text-neutral-400 dark:text-neutral-500 shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-[15px] sm:text-lg font-semibold tracking-tight text-neutral-900 dark:text-white truncate">
+                Customers
+              </h1>
+              <p className="text-[11px] sm:text-[12px] text-neutral-500 dark:text-neutral-400 font-normal mt-0.5">
+                CRM Directory • <span className="font-mono font-medium text-neutral-700 dark:text-neutral-300">{appCustomers.length}</span> Records
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="primary"
-            onClick={handleAddCustomer}
-            icon={<Plus className="h-3.5 w-3.5" />}
-          >
-            {"Add Customer"}
-          </Button>
-        </div>
+        <Button
+          variant="primary"
+          onClick={handleAddCustomer}
+          icon={<Plus className="h-3.5 w-3.5" />}
+          className="shrink-0 h-8 !px-2.5 sm:!px-3 !text-[11px] sm:!text-[12px]"
+        >
+          {"Add Customer"}
+        </Button>
       </div>
 
       {/* Layer 2: Filter Toolbar */}
-      <div className="relative z-30 bg-white/50 dark:bg-black/20 p-3 lg:p-4 rounded-[1.75rem] border border-gray-200/50 dark:border-white/5 shadow-xl ring-1 ring-black/5 dark:ring-white/5">
-        <div className="flex flex-col xl:flex-row gap-4">
-          {/* Search — shared module */}
-          <SharedSearchBar
-            value={searchTerm}
-            onChange={(val) => { setSearchTerm(val); setCurrentPage(1); }}
-            placeholder={"Search customers..."}
-          />
+      <div className="bg-white dark:bg-surface p-2.5 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5">
+          <div className="flex-1 min-w-0">
+            <SharedSearchBar
+              value={searchTerm}
+              onChange={(val) => { setSearchTerm(val); setCurrentPage(1); }}
+              placeholder={"Search customers..."}
+            />
+          </div>
 
-          <div className="grid grid-cols-2 sm:flex items-center gap-2">
+          <div className="w-full sm:w-auto min-w-0 shrink-0">
             <SearchableSelect
               label={"RANGE"}
               options={[
@@ -195,61 +207,55 @@ export function CustomerManager() {
         </div>
 
         {dateFilter === 'custom' && (
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center mt-3 p-2 bg-white/50 dark:bg-black/20 rounded-xl animate-in slide-in-from-top-2 w-full">
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center mt-2.5 pt-2.5 border-t border-neutral-200 dark:border-white/[0.08] w-full">
             <input
               type="date"
               value={startDateInput}
               onChange={(e) => setStartDateInput(e.target.value)}
-              className="w-full sm:flex-1 px-3 py-2 text-[10px] font-black bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-lg text-gray-900 dark:text-white uppercase shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="w-full sm:flex-1 h-8 px-2.5 text-[12px] font-mono bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded text-neutral-900 dark:text-white outline-none focus:border-primary"
             />
-            <span className="hidden sm:block text-[10px] font-black text-gray-600 uppercase tracking-tighter">to</span>
+            <span className="hidden sm:block text-[11px] text-neutral-500 uppercase tracking-tight">to</span>
             <input
               type="date"
               value={endDateInput}
               onChange={(e) => setEndDateInput(e.target.value)}
-              className="w-full sm:flex-1 px-3 py-2 text-[10px] font-black bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 rounded-lg text-gray-900 dark:text-white uppercase shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="w-full sm:flex-1 h-8 px-2.5 text-[12px] font-mono bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded text-neutral-900 dark:text-white outline-none focus:border-primary"
             />
           </div>
         )}
       </div>
 
-      {/* Layer 3: Vibrant Stats section */}
-      <div className="relative z-20 grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mt-2">
-        <div className="stat-card bg-gradient-to-br from-emerald-500 to-teal-600 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Total Customers"}</span>
-            <span className="stat-card-value">{totalCustomers}</span>
+      {/* Layer 3: Flat Linear Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: "Total Customers", icon: User, value: totalCustomers, sub: "Profiles" },
+          { label: "Total Sales", icon: CreditCard, value: formatCurrency(totalPurchases, appSettings.currency) },
+          { label: "Average Sale", icon: Mail, value: formatCurrency(averagePurchase, appSettings.currency) },
+          { label: "Active (30d)", icon: Users, value: activeCustomers }
+        ].map((item, idx) => (
+          <div key={idx} className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                {item.label}
+              </span>
+              <item.icon className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
+            </div>
+            <div className="mt-1.5 flex items-baseline justify-between">
+              <span className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white font-mono tabular-nums">
+                {item.value}
+              </span>
+              {item.sub && (
+                <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                  {item.sub}
+                </span>
+              )}
+            </div>
           </div>
-          <User className="stat-card-icon" />
-        </div>
-
-        <div className="stat-card bg-gradient-to-br from-blue-600 to-indigo-700 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Total Sales"}</span>
-            <span className="stat-card-value">{formatCurrency(totalPurchases, appSettings.currency)}</span>
-          </div>
-          <CreditCard className="stat-card-icon" />
-        </div>
-
-        <div className="stat-card bg-gradient-to-br from-orange-500 to-amber-600 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Average Sale"}</span>
-            <span className="stat-card-value">{formatCurrency(averagePurchase, appSettings.currency)}</span>
-          </div>
-          <Mail className="stat-card-icon" />
-        </div>
-
-        <div className="stat-card bg-gradient-to-br from-cyan-500 to-blue-500 group">
-          <div className="stat-card-inner">
-            <span className="stat-card-label">{"Active (30d)"}</span>
-            <span className="stat-card-value">{activeCustomers}</span>
-          </div>
-          <Users className="stat-card-icon" />
-        </div>
+        ))}
       </div>
 
-      {/* Main View Container */}
-      <div className="bg-white dark:bg-surface rounded-3xl border border-gray-200 dark:border-white/5 overflow-hidden shadow-xl">
+      {/* Main View Container (Pinned Height for Pagination) */}
+      <div className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] overflow-hidden shadow-none sm:min-h-[calc(100vh-320px)] min-h-[280px] flex flex-col justify-between">
         <CustomerTable
           filteredCustomers={filteredCustomers}
           paginatedCustomers={paginatedCustomers}

@@ -91,7 +91,7 @@ export function renderBarcodeSVG(
       
     const safeValue = value ? value.replace(/[^\x20-\x7E]/g, '') : 'PR9999';
       
-    JsBarcode(target, safeValue, {
+    JsBarcode(target as any, safeValue, {
       format: 'CODE128',
       width: 1.5,
       height: 60,
@@ -105,8 +105,8 @@ export function renderBarcodeSVG(
 
     // Add viewBox dynamically for responsive scaling
     const svgEl = typeof elementOrId === 'string'
-      ? (document.querySelector(target) as SVGSVGElement)
-      : (elementOrId as SVGSVGElement);
+      ? (document.querySelector(target as string) as unknown as SVGSVGElement)
+      : (elementOrId as unknown as SVGSVGElement);
 
     if (svgEl && svgEl.tagName && svgEl.tagName.toLowerCase() === 'svg') {
       const w = svgEl.getAttribute('width');

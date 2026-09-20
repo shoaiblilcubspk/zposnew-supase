@@ -19,6 +19,7 @@ interface StoreIdentityProps {
 interface LocalizationProps {
   formData: any;
   setFormData: SetForm;
+  setFormDataDirect: SetForm;
   handleChange: ChangeHandler;
   handleInstantUpdate: InstantUpdater;
 }
@@ -31,81 +32,80 @@ interface InvoicingProps {
 
 export function GeneralStoreIdentity({ formData, setFormData, handleChange, handleInstantUpdate}: StoreIdentityProps) {
   return (
-    <div className="p-4 sm:p-6 bg-gray-50/50 dark:bg-white/[0.02] rounded-[2rem] border border-gray-200 dark:border-white/5 space-y-6">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-gray-200 dark:border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-white dark:bg-white/10 rounded-xl shadow-sm">
-            <Store className="w-5 h-5 text-[#10B981]" />
-          </div>
+    <div className="p-4 sm:p-5 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none space-y-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-3 border-b border-neutral-200 dark:border-white/[0.08]">
+        <div className="flex items-center gap-2.5">
+          <Store className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
           <div>
-            <h3 className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">{"Store Identity"}</h3>
-            <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{"How your business appears to customers"}</p>
+            <h3 className="text-[14px] font-semibold text-neutral-900 dark:text-white tracking-[-0.01em]">Store Identity</h3>
+            <p className="text-[11px] text-neutral-500 font-mono tracking-tight">How your business appears to customers</p>
           </div>
         </div>
         <div className="w-full md:w-auto">
           <LogoUpload
             currentLogo={formData.storeLogo}
             onLogoChange={(url: string | undefined) => {
-              setFormData((prev: any) => ({ ...prev, storeLogo: url }));
-              handleInstantUpdate('storeLogo', url);
+              // Only update local form state — isDirty is set inside setFormData wrapper.
+              // Logo is saved + P2P shared ONLY when user clicks "Update System".
+              setFormData((prev: any) => ({ ...prev, storeLogo: url ?? '' }));
             }}
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Business Name"}</label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Business Name</label>
           <input
             type="text"
             name="storeName"
             value={formData.storeName}
             onChange={handleChange}
-            className="w-full bg-white dark:bg-black/20 border-gray-200 dark:border-white/5 rounded-xl py-2 px-3 focus:ring-2 focus:ring-[#10B981]/10 focus:border-[#10B981] transition-all text-[13px] sm:text-sm text-gray-900 dark:text-white font-bold"
+            className="w-full h-8 px-2.5 rounded bg-white dark:bg-app border border-neutral-200 dark:border-white/[0.08] text-[13px] text-neutral-900 dark:text-white focus:outline-none focus:border-primary"
             placeholder="My Store"
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Contact Phone"}</label>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Contact Phone</label>
           <input
             type="tel"
             name="storePhone"
             value={formData.storePhone}
             onChange={handleChange}
-            className="w-full bg-white dark:bg-black/20 border-gray-200 dark:border-white/5 rounded-xl py-2 px-3 focus:ring-2 focus:ring-[#10B981]/10 focus:border-[#10B981] transition-all text-[13px] sm:text-sm text-gray-900 dark:text-white font-bold"
+            className="w-full h-8 px-2.5 rounded bg-white dark:bg-app border border-neutral-200 dark:border-white/[0.08] text-[13px] text-neutral-900 dark:text-white focus:outline-none focus:border-primary"
             placeholder="+92 3XX XXXXXXX"
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Store Email"}</label>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Store Email</label>
           <input
             type="email"
             name="storeEmail"
             value={formData.storeEmail}
             onChange={handleChange}
-            className="w-full bg-white dark:bg-black/20 border-gray-200 dark:border-white/5 rounded-xl py-2 px-3 focus:ring-2 focus:ring-[#10B981]/10 focus:border-[#10B981] transition-all text-[13px] sm:text-sm text-gray-900 dark:text-white font-bold"
+            className="w-full h-8 px-2.5 rounded bg-white dark:bg-app border border-neutral-200 dark:border-white/[0.08] text-[13px] text-neutral-900 dark:text-white focus:outline-none focus:border-primary"
             placeholder="contact@mystore.com"
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Store Website"}</label>
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Store Website</label>
           <input
             type="text"
             name="storeWebsite"
             value={formData.storeWebsite}
             onChange={handleChange}
-            className="w-full bg-white dark:bg-black/20 border-gray-200 dark:border-white/5 rounded-xl py-2 px-3 focus:ring-2 focus:ring-[#10B981]/10 focus:border-[#10B981] transition-all text-[13px] sm:text-sm text-gray-900 dark:text-white font-bold"
+            className="w-full h-8 px-2.5 rounded bg-white dark:bg-app border border-neutral-200 dark:border-white/[0.08] text-[13px] text-neutral-900 dark:text-white focus:outline-none focus:border-primary"
             placeholder="www.mystore.com"
           />
         </div>
-        <div className="md:col-span-2 space-y-1.5">
-          <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Physical Address"}</label>
+        <div className="md:col-span-2 space-y-1">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Physical Address</label>
           <textarea
             name="storeAddress"
             value={formData.storeAddress}
             onChange={handleChange}
             rows={2}
-            className="w-full bg-white dark:bg-black/20 border-gray-200 dark:border-white/5 rounded-xl py-2.5 px-3 focus:ring-2 focus:ring-[#10B981]/10 focus:border-[#10B981] transition-all text-sm text-gray-900 dark:text-white font-bold resize-none"
+            className="w-full p-2 rounded bg-white dark:bg-app border border-neutral-200 dark:border-white/[0.08] text-[13px] text-neutral-900 dark:text-white focus:outline-none focus:border-primary resize-none"
             placeholder="123 Main Street"
           />
         </div>
@@ -114,35 +114,33 @@ export function GeneralStoreIdentity({ formData, setFormData, handleChange, hand
   );
 }
 
-export function GeneralLocalization({ formData, setFormData, handleChange, handleInstantUpdate}: LocalizationProps) {
+export function GeneralLocalization({ formData, setFormData, setFormDataDirect, handleChange, handleInstantUpdate}: LocalizationProps) {
   return (
-    <div className="p-4 sm:p-6 bg-gray-50/50 dark:bg-white/[0.02] rounded-[2rem] border border-gray-200 dark:border-white/5 space-y-6">
-      <div className="flex items-center gap-3 pb-4 border-b border-gray-200 dark:border-white/5">
-        <div className="p-2.5 bg-white dark:bg-white/10 rounded-xl shadow-sm">
-          <Globe className="w-5 h-5 text-blue-500" />
-        </div>
+    <div className="p-4 sm:p-5 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none space-y-4">
+      <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-200 dark:border-white/[0.08]">
+        <Globe className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
         <div>
-          <h3 className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">{"Localization & Defaults"}</h3>
-          <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{"Currencies, languages and system default types"}</p>
+          <h3 className="text-[14px] font-semibold text-neutral-900 dark:text-white tracking-[-0.01em]">Localization & Defaults</h3>
+          <p className="text-[11px] text-neutral-500 font-mono tracking-tight">Currencies, languages and system default types</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2 relative z-30">
-          <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Store Currency"}</label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="space-y-1 relative z-30">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Store Currency</label>
           <SearchableSelect
             options={CURRENCIES.map(c => ({ id: c.code, label: `${c.code} - ${c.name} (${c.symbol})` }))}
             value={formData.currency}
             onChange={(val) => {
-              setFormData((prev: any) => ({ ...prev, currency: val }));
+              setFormDataDirect((prev: any) => ({ ...prev, currency: val }));
               handleInstantUpdate('currency', val);
             }}
             placeholder="Select currency..."
             icon={Globe}
           />
         </div>
-        <div className="space-y-2 relative z-30">
-          <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Store Country"}</label>
+        <div className="space-y-1 relative z-30">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Store Country</label>
           <SearchableSelect
             options={[
               { id: 'PK', label: 'Pakistan (🇵🇰)' },
@@ -172,15 +170,15 @@ export function GeneralLocalization({ formData, setFormData, handleChange, handl
             ]}
             value={formData.country || 'PK'}
             onChange={(val) => {
-              setFormData((prev: any) => ({ ...prev, country: val }));
+              setFormDataDirect((prev: any) => ({ ...prev, country: val }));
               handleInstantUpdate('country', val);
             }}
             placeholder="Select country..."
             icon={Globe}
           />
         </div>
-        <div className="space-y-2 relative z-20">
-          <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Default POS View"}</label>
+        <div className="space-y-1 relative z-20">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Default POS View</label>
           <SearchableSelect
             options={[
               { id: 'retail', label: 'Retail Mode' },
@@ -188,15 +186,15 @@ export function GeneralLocalization({ formData, setFormData, handleChange, handl
             ]}
             value={formData.defaultSaleType || 'retail'}
             onChange={(val) => {
-              setFormData((prev: any) => ({ ...prev, defaultSaleType: val as any }));
+              setFormDataDirect((prev: any) => ({ ...prev, defaultSaleType: val as any }));
               handleInstantUpdate('defaultSaleType', val);
             }}
             placeholder="Select mode..."
             icon={LayoutGrid}
           />
         </div>
-        <div className="space-y-2 relative z-10">
-          <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Standard Paper Size"}</label>
+        <div className="space-y-1 relative z-10">
+          <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Standard Paper Size</label>
           <SearchableSelect
             options={[
               { id: '80mm', label: '80mm (Standard Thermal)' },
@@ -205,7 +203,7 @@ export function GeneralLocalization({ formData, setFormData, handleChange, handl
             ]}
             value={formData.receiptPaperSize}
             onChange={(val) => {
-              setFormData((prev: any) => ({ ...prev, receiptPaperSize: val as any }));
+              setFormDataDirect((prev: any) => ({ ...prev, receiptPaperSize: val as any }));
               handleInstantUpdate('receiptPaperSize', val);
             }}
             placeholder="Select size..."
@@ -213,26 +211,26 @@ export function GeneralLocalization({ formData, setFormData, handleChange, handl
           />
         </div>
         <div className="grid grid-cols-2 gap-2 relative">
-          <div className="space-y-1.5">
-            <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Default Tax %"}</label>
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Default Tax %</label>
             <input
               type="number"
               name="taxRate"
               value={formData.taxRate}
               onChange={handleChange}
               step="0.01"
-              className="w-full bg-white dark:bg-black/20 border-gray-200 dark:border-white/5 rounded-xl py-2 px-3 focus:ring-2 focus:ring-[#10B981]/10 focus:border-[#10B981] transition-all text-[13px] sm:text-sm text-gray-900 dark:text-white font-bold"
+              className="w-full h-8 px-2.5 rounded bg-white dark:bg-app border border-neutral-200 dark:border-white/[0.08] text-[13px] text-neutral-900 dark:text-white focus:outline-none focus:border-primary font-mono tabular-nums"
               placeholder="0.00"
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Tax/Business ID"}</label>
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">Tax/Business ID</label>
             <input
               type="text"
               name="taxId"
               value={formData.taxId}
               onChange={handleChange}
-              className="w-full bg-white dark:bg-black/20 border-gray-200 dark:border-white/5 rounded-xl py-2 px-3 focus:ring-2 focus:ring-[#10B981]/10 focus:border-[#10B981] transition-all text-[13px] sm:text-sm text-gray-900 dark:text-white font-bold"
+              className="w-full h-8 px-2.5 rounded bg-white dark:bg-app border border-neutral-200 dark:border-white/[0.08] text-[13px] text-neutral-900 dark:text-white focus:outline-none focus:border-primary font-mono"
               placeholder="NTN / VAT"
             />
           </div>
@@ -242,50 +240,4 @@ export function GeneralLocalization({ formData, setFormData, handleChange, handl
   );
 }
 
-export function GeneralInvoicing({ formData, handleChange, handleRepairCounter}: InvoicingProps) {
-  return (
-    <div className="p-4 sm:p-6 bg-gray-50/50 dark:bg-white/[0.02] rounded-[2rem] border border-gray-200 dark:border-white/5 space-y-6">
-      <div className="flex items-center gap-4 pb-4 border-b border-gray-200 dark:border-white/5">
-        <div className="p-3 bg-white dark:bg-white/10 rounded-2xl shadow-sm">
-          <ClipboardList className="w-5 h-5 text-amber-500" />
-        </div>
-        <div>
-          <h3 className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">{"Business Logic"}</h3>
-          <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{"Invoicing, prefix, and serialization controls"}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Invoice Prefix"}</label>
-          <input
-            type="text"
-            name="invoicePrefix"
-            value={formData.invoicePrefix}
-            onChange={handleChange}
-            className="w-full bg-white dark:bg-black/20 border-gray-200 dark:border-white/5 rounded-xl py-2 px-3 focus:ring-2 focus:ring-[#10B981]/10 focus:border-[#10B981] transition-all text-gray-900 dark:text-white font-bold"
-          />
-        </div>
-        <div className="space-y-1.5 flex flex-col justify-end">
-          <label className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1 mb-1.5">{"Serial Start"}</label>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              name="invoiceCounter"
-              value={formData.invoiceCounter}
-              onChange={handleChange}
-              className="flex-1 bg-white dark:bg-black/20 border-gray-200 dark:border-white/5 rounded-xl py-2 px-3 focus:ring-2 focus:ring-[#10B981]/10 focus:border-[#10B981] transition-all text-gray-900 dark:text-white font-bold"
-            />
-            <Button
-              type="button"
-              onClick={handleRepairCounter}
-              className="!min-h-0 !px-4 !py-2 !rounded-xl !text-[10px] !font-black !bg-indigo-50 dark:!bg-indigo-950/20 !text-indigo-600 dark:!text-indigo-400 !border !border-indigo-200/50 !shadow-none !hover:bg-indigo-100 dark:!hover:bg-indigo-950/20 whitespace-nowrap"
-            >
-              Repair
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+export { ReceiptInvoicingSection as GeneralInvoicing } from './ReceiptInvoicingSection';

@@ -11,6 +11,9 @@ import { useAuth } from '../../context/AuthContext';
 import { sonner } from '../../lib/sonner';
 import { can } from '../../lib/permissions';
 import { Button } from '../../shared/ui';
+import { RealIcon } from '../../shared/icons';
+import { MAIN_NAV_ITEMS } from '../../shared/navigation/tabRegistry';
+import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';
 import { MobileMenuDrawer } from './MobileMenuDrawer';
 import { HeaderActions } from './HeaderActions';
 
@@ -18,12 +21,14 @@ export interface HeaderProps {
   onShowMobileMenu?: () => void;
   onHideMobileMenu?: () => void;
   isMobileMenuOpen?: boolean;
+  onLockTerminal?: () => void;
 }
 
 export function Header({
   onShowMobileMenu,
   onHideMobileMenu,
-  isMobileMenuOpen = false
+  isMobileMenuOpen = false,
+  onLockTerminal,
 }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,71 +47,29 @@ export function Header({
     }
   }, [isMobileMenuOpen]);
 
-  const navRef = useRef<HTMLDivElement>(null);
-  const mobileNavRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const moreRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (moreRef.current && !moreRef.current.contains(event.target as Node)) {
-        setIsMoreOpen(false);
-      }
-    };
-    if (isMoreOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isMoreOpen]);
-
-  const checkScroll = useCallback(() => {
-    if (navRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = navRef.current;
-      setCanScrollLeft(scrollLeft > 1);
-      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
-    }
-  }, []);
-
-  useEffect(() => {
-    const el = navRef.current;
-    if (!el) return;
-    checkScroll();
-    el.addEventListener('scroll', checkScroll, { passive: true });
-    window.addEventListener('resize', checkScroll);
-    return () => {
-      el.removeEventListener('scroll', checkScroll);
-      window.removeEventListener('resize', checkScroll);
-    };
-  }, [checkScroll]);
-
-  useEffect(() => { setTimeout(checkScroll, 100); }, [appCurrentUser, checkScroll]);
-
-  const scrollNav = (direction: 'left' | 'right') => {
-    navRef.current?.scrollBy({ left: direction === 'left' ? -160 : 160, behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    if (navRef.current) {
-      const activeBtn = navRef.current.querySelector('[data-active="true"]') as HTMLElement;
-      activeBtn?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-    }
-    if (mobileNavRef.current) {
-      const activeBtn = mobileNavRef.current.querySelector('[data-active="true"]') as HTMLElement;
-      activeBtn?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-    }
-  }, [location.pathname]);
+  const {
+    containerRef: navRef,
+    canScrollLeft,
+    canScrollRight,
+    isDragging,
+    scroll: scrollNav
+  } = useHorizontalScroll<HTMLDivElement>({
+    step: 220,
+    enableDrag: true,
+    enableWheel: true,
+    activeItemSelector: '[data-active="true"]',
+    activeDep: location.pathname
+  });
 
   const toggleTheme = async () => {
-    const newTheme = (appSettings.theme || 'dark') === 'dark' ? 'light' : 'dark';
+    const current = appSettings.theme || 'dark';
+    const newTheme = current === 'dark' ? 'light' : 'dark';
     useSettingsStore.getState().setSettings({ theme: newTheme });
+    localStorage.setItem('theme', newTheme);
     try {
-      // Save as device-local pref only (not to cloud)
       const existing = JSON.parse(localStorage.getItem('pos_local_prefs') || '{}');
       localStorage.setItem('pos_local_prefs', JSON.stringify({ ...existing, theme: newTheme }));
+      settingsService.update({ theme: newTheme }).catch(() => { });
     } catch (err) {
       console.error('Failed to save theme:', err);
     }
@@ -121,99 +84,82 @@ export function Header({
 
   const getNavigationItems = () => {
     const role = appCurrentUser?.role;
-    const items = [];
-
-    if (can(role, 'view_dashboard')) items.push({ id: 'dashboard', label: "Dashboard", icon: AppIcons.dashboard, color: 'text-primary' });
-    if (can(role, 'view_pos')) items.push({ id: 'pos', label: "POS", icon: AppIcons.pos, color: 'text-blue-500' });
-
-    if (can(role, 'view_transactions')) items.push({ id: 'transactions', label: "Sales", icon: AppIcons.sales, color: 'text-orange-500' });
-    if (can(role, 'view_expenses')) items.push({ id: 'expenses', label: "Expenses", icon: AppIcons.expenses, color: 'text-rose-500' });
-    if (can(role, 'view_inventory')) items.push({ id: 'inventory', label: "Inventory", icon: AppIcons.inventory, color: 'text-purple-500' });
-    if (can(role, 'view_customers')) items.push({ id: 'customers', label: "Customers", icon: AppIcons.customers, color: 'text-sky-500' });
-    if (can(role, 'view_discounts')) items.push({ id: 'discounts', label: "Discounts", icon: AppIcons.discounts, color: 'text-pink-500' });
-    if (can(role, 'view_reports')) items.push({ id: 'reports', label: "Reports", icon: AppIcons.reports, color: 'text-red-500' });
-    if (can(role, 'view_suppliers')) items.push({ id: 'suppliers', label: "Suppliers", icon: AppIcons.suppliers, color: 'text-amber-500' });
-    if (can(role, 'view_users')) items.push({ id: 'users', label: 'Users', icon: Users, color: 'text-indigo-500' });
-
-    return items;
+    return MAIN_NAV_ITEMS.filter(item => !item.permission || can(role, item.permission));
   };
 
   const navigationItems = getNavigationItems();
 
   return (
-    <header className={`bg-white dark:bg-app border-b border-gray-200 dark:border-white/5 sticky top-0 ${isMobileMenuOpen ? 'z-[400]' : 'z-[40]'} lg:z-[40] pt-[env(safe-area-inset-top)] px-safe`}>
-      <div className="flex items-center h-12 lg:h-[72px] px-3 md:px-6 gap-2 lg:gap-4">
-        <div className="flex items-center gap-2 lg:gap-4 flex-shrink-0">
-          <div className="rounded-lg lg:rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 bg-white overflow-hidden flex items-center justify-center">
+    <header className={`bg-white dark:bg-app border-b border-gray-200 dark:border-white/[0.08] sticky top-0 overflow-visible ${isMobileMenuOpen ? 'z-[400]' : 'z-[40]'} lg:z-[40] pt-[env(safe-area-inset-top)] px-safe`}>
+      <div className="flex items-center h-13 lg:h-14 px-3 md:px-6 gap-2 lg:gap-4">
+        <div className="flex items-center gap-2.5 lg:gap-3 flex-shrink-0">
+          <div className="rounded-lg border border-neutral-200 dark:border-white/[0.12] bg-white dark:bg-black/40 overflow-hidden flex items-center justify-center h-10 w-10 sm:h-11 sm:w-11 p-0.5 shrink-0 shadow-sm">
             {appSettings.storeLogo ? (
-              <img src={appSettings.storeLogo} alt="Logo"
-                className="h-7 w-7 md:h-12 md:w-12 lg:h-14 lg:w-14 object-contain p-0.5" />
+              <img src={appSettings.storeLogo} alt="Logo" className="h-full w-full object-contain" />
             ) : (
-              <img src="/zaynahs-logo.svg" alt="POS"
-                className="h-7 w-7 md:h-12 md:w-12 lg:h-14 lg:w-14 object-contain p-1" />
+              <img src="/zaynahs-logo.svg" alt="POS" className="h-full w-full object-contain p-0.5" />
             )}
           </div>
-          <div className="hidden xs:block leading-none">
-            <p className="text-[14px] md:text-[17px] lg:text-lg font-black text-gray-900 dark:text-white tracking-tight truncate max-w-[120px] sm:max-w-[160px] lg:max-w-[220px]">
+          <div className="hidden xs:block leading-tight">
+            <p className="text-[14px] font-bold text-neutral-900 dark:text-white tracking-tight truncate max-w-[140px] sm:max-w-[180px]">
               {appSettings.storeName}
-            </p>
-            <p className="hidden sm:block text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.25em] text-primary mt-1 lg:mt-1.5 opacity-90">
-              ZAYNAHSPOS.COM
             </p>
           </div>
         </div>
 
-        <div className="hidden md:block h-7 w-px bg-gray-100 dark:bg-white/5 flex-shrink-0 mx-1" />
+        <div className="hidden md:block h-5 w-px bg-gray-200 dark:border-white/[0.08] flex-shrink-0 mx-1" />
 
-        <div className="hidden md:flex items-center flex-1 min-w-0 relative">
+        <div className="hidden md:flex items-center flex-1 min-w-0 relative mr-2">
           {canScrollLeft && (
-            <Button
-              variant="ghost"
+            <button
+              type="button"
               onClick={() => scrollNav('left')}
-              aria-label="Scroll navigation left"
-              className="!absolute !left-0 !z-10 !w-8 !h-full !min-h-0 !p-0 !rounded-none !justify-center
-                         !bg-gradient-to-r !from-white dark:!from-[#0A0A0A] !to-transparent
-                         !text-gray-600 hover:!text-primary !transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
+              aria-label="Scroll left"
+              className="absolute -left-1 z-30 flex items-center justify-center w-7.5 h-7.5 rounded-full bg-white dark:bg-[#222226] text-neutral-700 dark:text-neutral-200 border border-neutral-300 dark:border-white/20 shadow-md hover:scale-110 hover:border-primary hover:text-primary active:scale-95 transition-all cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+            </button>
           )}
-          <div ref={navRef}
-            className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth w-full snap-x snap-mandatory px-4 lg:px-6"
-            style={{ paddingLeft: canScrollLeft ? 32 : undefined, paddingRight: canScrollRight ? 32 : undefined }}>
+          <div
+            ref={navRef}
+            className={`flex items-center gap-1.5 lg:gap-2 xl:gap-2.5 overflow-x-auto no-scrollbar scrollbar-hide overscroll-x-contain touch-pan-x w-full px-2.5 py-2.5 ${
+              isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
+            }`}
+          >
             {navigationItems.map((item) => {
               const active = location.pathname === '/' + item.id || location.pathname.startsWith('/' + item.id + '/');
               return (
-                <button key={item.id} data-active={active} onClick={() => navigate('/' + item.id)}
-                  className={`relative flex items-center gap-1.5 px-3 py-2 rounded-xl
-                    text-[10px] font-black uppercase tracking-widest whitespace-nowrap flex-shrink-0
-                    transition-all duration-300 group snap-start
-                    ${active
-                      ? 'bg-emerald-50 dark:bg-primary/10 text-primary dark:text-emerald-400'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5'
-                    }`}>
-                  <item.icon className={`w-3.5 h-3.5 flex-shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:rotate-6
-                    ${active ? 'text-primary' : item.color}`} />
+                <button
+                  key={item.id}
+                  data-active={active}
+                  onClick={() => navigate('/' + item.id)}
+                  className={`group relative whitespace-nowrap transition-all duration-150 flex-shrink-0 flex items-center gap-2 px-3 h-8 max-h-8 rounded-full text-[12.5px] font-semibold tracking-[-0.01em] active:scale-95 border cursor-pointer select-none overflow-visible ${
+                    active
+                      ? 'bg-primary text-white font-bold border-primary shadow-xs'
+                      : 'bg-white dark:bg-white/[0.05] text-neutral-900 dark:text-neutral-100 border-neutral-200/90 dark:border-white/[0.08] hover:border-neutral-300 dark:hover:border-white/20 hover:bg-neutral-50 dark:hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <div className="shrink-0 w-7 h-7 flex items-center justify-center overflow-visible transition-transform duration-150 group-hover:scale-110">
+                    <RealIcon name={item.realIcon} size={32} />
+                  </div>
                   <span>{item.label}</span>
-                  {active && (
-                    <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-primary
-                                     shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-                  )}
                 </button>
               );
             })}
           </div>
           {canScrollRight && (
-            <Button
-              variant="ghost"
+            <button
+              type="button"
               onClick={() => scrollNav('right')}
-              aria-label="Scroll navigation right"
-              className="!absolute !right-0 !z-10 !w-8 !h-full !min-h-0 !p-0 !rounded-none !justify-center
-                         !bg-gradient-to-l !from-white dark:!from-[#0A0A0A] !to-transparent
-                         !text-gray-600 hover:!text-primary !transition-colors">
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+              aria-label="Scroll right"
+              className="absolute -right-1 z-30 flex items-center justify-center w-7.5 h-7.5 rounded-full bg-white dark:bg-[#222226] text-neutral-700 dark:text-neutral-200 border border-neutral-300 dark:border-white/20 shadow-md hover:scale-110 hover:border-primary hover:text-primary active:scale-95 transition-all cursor-pointer"
+            >
+              <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+            </button>
           )}
         </div>
+
+        <div className="hidden md:block h-6 w-px bg-neutral-200 dark:border-white/[0.08] flex-shrink-0 mr-2" />
 
         <div className="flex-1 md:hidden" />
 
@@ -222,6 +168,7 @@ export function Header({
           appCurrentUser={appCurrentUser}
           toggleTheme={toggleTheme}
           handleLogout={handleLogout}
+          onLockTerminal={onLockTerminal}
           onShowMobileMenu={onShowMobileMenu}
           forceSync={forceSync}
         />
@@ -236,6 +183,7 @@ export function Header({
           navigationItems={navigationItems}
           toggleTheme={toggleTheme}
           handleLogout={handleLogout}
+          onLockTerminal={onLockTerminal}
         />
       )}
     </header>

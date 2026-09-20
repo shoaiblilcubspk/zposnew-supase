@@ -1,529 +1,912 @@
-FINAL PRODUCTION RBAC + TRANSACTION INTEGRITY IMPLEMENTATION
-============================================================
+# 🔐 LOCAL-FIRST RBAC, USER & TRANSACTION INTEGRITY SPECIFICATION
 
-> **🚨 IMPORTANT UPDATE (SIMPLIFIED RBAC):** 
-> To keep the system fast, simple, and maintainable, the following 6 complex features originally proposed in this spec have been **OFFICIALLY DROPPED** and will NOT be implemented:
-> 1. Async Approval Queue (Pending Requests)
-> 2. Cashier Discount Limits (%)
-> 3. Inventory Adjustment Limits (Amount gating)
-> 4. Supplier Payment High-Value Approval (Amount gating)
-> 5. Expense Reversal Approval workflows
-> 6. Sensitive Customer-Credit adjustment gating
+> **Single Source of Truth for Local Roles, Permissions, User Identity, Device Trust, and Transaction Integrity**
 >
-> Any references to "APPROVAL", "PENDING_APPROVAL", or "Limits" in the document below should be ignored. The system uses strict Role-Based (Admin/Manager/Cashier) binary permissions instead of complex threshold-based async queues> **📡 CLOUD DATA SYNC RULES — ALL DEVICES SAME (MANDATORY)**
->
-> ### Core Principle
-> **Supabase cloud = ONLY source of truth.** Every device must show identical data on every refresh.
-> `localStorage` / IndexedDB (Dexie) = display cache ONLY. NEVER used as source of truth.
->
-> ---
->
-> ### ✅ Tables fetched from cloud on EVERY startup (`useAppLoadData.ts`)
->
-> All 24 tables below are loaded fresh from Supabase on every app start + refresh,
-> written to localDb cache AND Zustand store.
->
-> | # | Table | localDb key | Zustand Store | Purpose |
-> |---|-------|-------------|--------------|---------|
-> | 1 | `products` | `products` | `useProductsStore` | Inventory catalog |
-> | 2 | `customers` | `customers` | `useCustomersStore` | Customer directory |
-> | 3 | `users` | `users` | `useUsersStore` | Staff/login accounts |
-> | 4 | `salesmen` | `salesmen` | `useUsersStore` | Salesman list |
-> | 5 | `categories` | `categories` | `useInventoryStore` | Product groups |
-> | 6 | `discounts` | `discounts` | `useAppStore` | Discount rules |
-> | 7 | `payment_modes` | `paymentModes` | `useSettingsStore` | Cash/Card/Online wallets |
-> | 8 | `payments` | `payments` | `usePaymentsStore` | Payment ledger (for reports) |
-> | 9 | `expenses` | `expenses` | `useExpensesStore` | Expense entries |
-> | 10 | `suppliers` | `suppliers` | `useInventoryStore` | Supplier directory |
-> | 11 | `supplier_transactions` | `supplierTransactions` | `useInventoryStore` | Supplier payment ledger |
-> | 12 | `purchase_records` | `purchaseRecords` | `useInventoryStore` | Stock purchase records |
-> | 13 | `purchase_orders` | `purchaseOrders` | `useInventoryStore` | Pending restock orders |
-> | 14 | `purchase_order_items` | `purchaseOrderItems` | localDb only | PO line items |
-> | 15 | `bundles` | `bundles` | `useAppStore` | Bundle/deal products |
-> | 16 | `bundle_items` | `bundleItems` | localDb only | Bundle product detail |
-> | 17 | `toppings` | `toppings` | localDb only | Restaurant addon toppings |
-> | 18 | `product_addons` | `productAddons` | localDb only | Product cross-sell addons |
-> | 19 | `product_toppings` | _(no localDb table)_ | localDb only (via toppings) | Topping-product mapping |
-> | 20 | `sales` | `sales` | `useSalesStore` | Transaction history (latest 500) |
-> | 21 | `stock_history` | `stockHistory` | localDb only | Product movement history |
-> | 22 | `variant_stock_history` | `variantStockHistory` | localDb only | Variant-level movements |
-> | 23 | `sales_tabs` | `salesTabs` | `useCartStore` | POS cart tabs (per `user_id`) |
-> | 24 | `app_settings` | `appSettings` | `useSettingsStore` | Business configuration |
-> | 25 | `customer_ledger` | `customerLedger` | localDb only | Per-customer debit/credit history |
->
-> ---
->
-> ### ❌ Tables NOT fetched at startup (deliberate exclusions)
->
-> | Table | Reason |
-> |-------|--------|
-> | `customer_ledger` | Append-only ledger; balance derived from `sales` at query time |
-> | `payment_movements` | Written via `apply_payment_movements` RPC only; read via `payments` |
-> | `row_tombstones` | Internal delete-guard tracking; backend only |
-> | `sale_audit_log` | Backend audit trail only; never shown directly in UI |
-> | `stock_mismatches` | Backend reconciliation table; no UI component |
-> | `price_history` | Not yet exposed in frontend UI |
-> | `sessions` | Backend auth session tracking; no frontend use |
->
-> ---
->
-> ### 🖥️ Device-Local ONLY (NEVER written to cloud)
->
-> | Key | Storage | Purpose |
-> |-----|---------|---------|
-> | `pos_local_prefs.theme` | `localStorage` | Dark/Light mode per device |
-> | `pos_local_prefs.posGridColumns` | `localStorage` | POS grid density (1–8) per device |
-> | `pos_active_sales_tab` | `localStorage` | Which POS tab is active on this device |
->
-> ---
->
-> ### 🔒 Hard Rules for Developers
->
-> 1. **NEVER** read business data (sales, products, stock) from `localStorage` — always from Zustand store (populated from cloud).
-> 2. **NEVER** save `theme` or `posGridColumns` to Supabase `app_settings`. Device-only prefs.
-> 3. **NEVER** add a new table without ALSO adding it to `useAppLoadData.ts` AND `localDb` cache write.
-> 4. **ALWAYS** map raw cloud data (snake_case) to application types (camelCase) using `map*` functions (e.g. `mapSettings`, `mapSupplier`) BEFORE inserting into `localDb`. **NEVER insert raw Supabase row objects into Dexie**, as this breaks cross-device syncing and causes missing data fields on refresh.
-> 5. **ALL COLUMNS MUST SYNC:** Ensure every single column in the database schema is accounted for in the `map*` and `toRemote*` functions. No data should be left behind on cloud upload/download.
-> 6. **ALWAYS** `localDb.TABLE.clear()` then `bulkPut()` on startup — prevents stale ghost data from old sessions.
-> 7. **ALWAYS** populate the corresponding Zustand store after fetching from cloud.
-> 8. **Realtime handlers** (`src/context/realtime/handlers-*.ts`) must update BOTH localDb AND Zustand on INSERT/UPDATE/DELETE.
-> 9. `stock_history` and `variant_stock_history` — append-only; never delete from frontend. Only DB triggers write `products.stock`.
-> 10. `sales_tabs` — always filter by `user_id`; never share across users.
-> 11. **New table checklist**: Schema SQL → Migration file → `localDb.ts` table → Mapper functions (`map*`, `toRemote*`) → `useAppLoadData.ts` fetch (with mapper) → localDb persist → Zustand store set → Realtime handler.
+> **Reference:** `docs/LOCAL_FIRST_ARCHITECTURE.md` and `docs/USER & ROLE SETUP — FIRST INSTALL TO DAILY SALES.md`
 
+---
 
-============================================================
-IMPORTANT:
-Do NOT just patch the UI.
-Permanently fix the complete system across:
+# 01 — ARCHITECTURE AUTHORITY
 
-- Database schema
-- Database functions / RPC
-- Server-side authorization
-- API / Edge Functions
-- Frontend permissions
-- Routes
-- Navigation
-- Hooks
-- Modals
-- Forms
-- Actions
-- Inventory
-- Wallets
-- Sales
-- Returns
-- Refunds
-- Expenses
-- Suppliers
-- Customers
-- Users
-- Audit logs
-- Approval workflows
-- Transaction lifecycle
-- Reversal lifecycle
-- Legacy permission systems
+The POS is a genuinely offline-first application.
 
-Do not remove existing working functionality unnecessarily.
-Do not make assumptions that break existing business logic.
-First understand the current implementation, then make the permanent fix.
+```text
+React + Vite + TypeScript
+        ↓
+Tauri / Capacitor
+        ↓
+Local SQLite
+        ↓
+Authorization
+        ↓
+Business Transaction
+        ↓
+Immutable Event
+        ↓
+Outbox
+        ↓
+WebRTC P2P
+        ↓
+Trusted Devices
+```
 
-============================================================
-1. CORE OBJECTIVE
-============================================================
+## Authority Rules
 
-The system must have ONE authoritative RBAC system and ONE reliable transaction/effect system.
+```text
+LOCAL SQLITE
+= Business Data Authority
 
-Every sensitive action must be:
+EVENT LEDGER
+= Change / Replication Authority
 
-1. Permission checked
-2. Server-side authorized
-3. Database/RPC authorized
-4. Validated
-5. Executed atomically
-6. Audited
-7. Linked to all resulting Inventory/Wallet/Ledger effects
+WEBRTC P2P
+= Business Data Synchronization
 
-Frontend permission checks are only for UX.
+SUPABASE
+= Signaling Only
+```
 
-Actual security MUST exist server-side and database/RPC-side.
+Supabase may be used only for:
 
-The client must NEVER be trusted for:
+* WebRTC signaling
+* Presence
+* Offer
+* Answer
+* ICE coordination
 
-- role
-- isAdmin
-- permissions
-- approval status
-- wallet balance
-- inventory balance
-- financial amounts
-- transaction ownership
-- authorization
+Supabase MUST NOT be the authority for:
 
-============================================================
-2. FINAL ROLES
-============================================================
+* Business data
+* Users
+* Roles
+* Permissions
+* Inventory
+* Sales
+* Payments
+* Wallets
+* Customer ledger
+* Supplier ledger
+* Expenses
+* Transactions
+* Reports
+* RBAC
+* Normal POS authentication
+* Business transaction authorization
 
-Use these core roles:
+The normal POS transaction loop must not depend on:
 
+* Supabase JWT
+* Supabase RLS
+* Supabase RPC
+* Supabase Edge Functions
+* Cloud role checks
+* Cloud database availability
+
+---
+
+# 02 — CORE PRINCIPLES
+
+The implementation MUST follow these rules:
+
+1. Local operation must work without internet.
+2. Local SQLite is the operational business-data authority.
+3. RBAC is centralized and local.
+4. Exactly four primary roles exist.
+5. Admin is automatically created during first shop setup.
+6. Manager, Cashier and Salesman are created only when needed.
+7. Every sensitive business action requires authorization.
+8. UI authorization is only UX; business-layer authorization is mandatory.
+9. Unknown authorization state always means DENY.
+10. Financial and inventory transactions are immutable effects.
+11. Financial and inventory data must never use LWW.
+12. Every successful business mutation creates an event.
+13. Business data + effects + event + outbox commit atomically.
+14. Failed transactions produce zero committed effects.
+15. Duplicate events are idempotent.
+16. Users are disabled rather than destructively deleted when historical references exist.
+17. Trusted devices are identified cryptographically.
+18. Revoked devices cannot perform new trusted business synchronization.
+19. Normal sync transfers only missing events/changes.
+20. Initial joining devices receive the required authorized bootstrap.
+21. No fake APIs, fake SQLite, fake P2P or fake security are permitted.
+
+---
+
+# 03 — AUTHORITATIVE ROLES
+
+Exactly these primary roles:
+
+```text
 ADMIN
 MANAGER
 CASHIER
+SALESMAN
+```
 
-Final hierarchy:
+Conceptual responsibility:
 
-ADMIN > MANAGER > CASHIER
+```text
+ADMIN
+= CONTROL
 
-ADMIN = CONTROL
-MANAGER = OPERATE
-CASHIER = SELL
+MANAGER
+= OPERATE
 
-If legacy roles exist, audit them first.
-Do not blindly delete them.
+CASHIER
+= CHECKOUT
 
-If an unused legacy role is confirmed unnecessary:
-- migrate/remove safely
-- update DB constraints
-- update frontend selectors
-- update server checks
-- update tests
+SALESMAN
+= SELL + TRACK SALES
+```
 
-There must be one authoritative role system.
+Role hierarchy is conceptual only.
 
-============================================================
-3. ADMIN — FULL ACCESS
-============================================================
+It MUST NOT automatically grant permissions.
 
-ADMIN has full system/business authority.
+Actual authorization comes from the centralized permission mapping.
 
-ALLOW:
+---
 
-- Dashboard
-- All Reports
-- Sales
-- Sale Create
-- Sale Edit
-- Sale Reverse/Delete
-- Returns
-- Refunds
-- Inventory View
-- Restock
-- Purchase Orders
-- Inventory Adjustments
-- Products View
-- Products Add
-- Products Edit
-- Product Archive/Delete
-- Wallet View
-- Wallet Management
-- Manual Wallet Adjustment
-- Wallet Transfer
-- Expenses
-- Expense Create/Edit/Reverse
-- Suppliers
-- Supplier Ledger
-- Supplier Payments
-- Customers
-- Customer Ledger
-- Customer Credit
-- Customer Payments
-- Users View
-- Create Users
-- Edit Users
-- Disable/Enable Users
-- Roles
-- Permissions
-- Approval Management
-- Audit Logs
-- System Settings
-- Business Settings
-- Security Settings
-- Data Export
-- All sensitive operations
-- All reversals/corrections
+# 04 — FIRST SHOP SETUP
 
-ADMIN does not require approval for normal administrative actions.
+First launch:
 
-============================================================
-4. MANAGER — OPERATIONAL ACCESS
-============================================================
-
-MANAGER has broad daily business access.
-
-ALLOW:
-
+```text
+First Launch
+    ↓
+Create New Shop
+    ↓
+Shop Name
++ Optional Logo
+    ↓
+Generate SHOP_ID
+    ↓
+Generate DEVICE_ID
+    ↓
+Generate Device Keypair
+    ↓
+Initialize SQLite
+    ↓
+Create First Admin
+    ↓
+Admin Name
++ PIN
++ Confirm PIN
+    ↓
+Generate Recovery Code
+    ↓
+Create ADMIN user
+    ↓
 Dashboard
-Reports
-Sales
-Sale Create
-Sale Edit
-Returns
-Normal Refunds
-Inventory View
-Restock
-Purchase Orders
-Stock Receiving
-Products View
-Products Add/Edit/Archive (Only if `canEditProduct` is explicitly enabled)
-Expenses
-Supplier Management
-Supplier Ledger
-Supplier Operations
-Customer Management
-Customer Ledger
-Customer Credit
-Customer Payments
-Operational Wallet View
-Audit Logs View
+```
 
-Manager may perform normal operational actions.
+The system MUST automatically create exactly one initial Admin.
 
-Manager must NOT have:
+It MUST NOT automatically create:
 
-- User creation
-- User editing
-- User disabling/enabling
-- Role management
-- Permission management
-- System settings
-- Security settings
-- Approval-rule configuration
-- Manual wallet adjustment
-- Database/architecture controls
-- Data export
-- Audit log modification/deletion
+* Manager
+* Cashier
+* Salesman
 
-============================================================
-5. MANAGER HIGH-RISK APPROVALS
-============================================================
+---
 
-Manager may REQUEST high-risk actions, but where approval is configured they must not execute the final financial/inventory effect directly.
+# 05 — INITIAL ADMIN
 
-Recommended approval-required actions:
+Required fields:
 
-- Sale Reverse/Delete
-- High-value Refund
-- Large Inventory Adjustment
-- High-value Supplier Payment
-- Sensitive Expense Reverse
-- Other configured high-risk financial corrections
+```text
+USER_ID
+NAME
+ROLE = ADMIN
+PIN_HASH
+STATUS = ACTIVE
+CREATED_AT
+UPDATED_AT
+CREATED_BY
+DEVICE_ID
+```
+
+`USER_ID` is system generated.
+
+The first Admin becomes the initial trusted administrative user.
+
+Admin has full business and security authority.
+
+Another unrestricted Admin should not normally be created through ordinary user creation.
+
+Admin replacement/recovery must use the dedicated secure recovery process.
+
+---
+
+# 06 — USER CREATION
+
+Default rule:
+
+```text
+ADMIN ONLY
+```
 
 Flow:
 
-MANAGER REQUEST
-      ↓
-PENDING_APPROVAL
-      ↓
-ADMIN REVIEW
-      ↓
-APPROVE / REJECT
+```text
+Users
+ ↓
+Add User
+ ↓
+Name
+ ↓
+Role
+ ↓
+PIN
+ ↓
+Confirm PIN
+ ↓
+Save
+```
 
-PENDING_APPROVAL must NOT create:
+Allowed roles:
 
-- Inventory IN
-- Inventory OUT
-- Wallet IN
-- Wallet OUT
-- Customer ledger effect
-- Supplier ledger effect
+```text
+MANAGER
+CASHIER
+SALESMAN
+```
 
-Only APPROVE executes the actual atomic transaction.
+System automatically generates:
 
-REJECT = zero business effect.
+```text
+USER_ID
+CREATED_AT
+UPDATED_AT
+CREATED_BY
+```
 
-ADMIN can execute directly.
+The operation creates:
 
-============================================================
-6. CASHIER — POS ACCESS
-============================================================
+```text
+USER_CREATED
+```
 
-CASHIER is for normal counter/POS operations.
+and the event is added to the local outbox for P2P synchronization.
 
-ALLOW:
+No manual USER_ID is allowed.
 
-- POS
-- Create Sale
-- Search Products
-- View product information needed for POS
-- Process payments
-- Split payments if configured
-- Print receipt
-- Reprint allowed receipts
-- Customers
-- Add Customer
-- Edit basic customer details
-- View Customer
-- Customer Ledger/View
-- Customer Payment
-- Normal Customer Credit according to configured rules
-- Normal Customer Return
-- Limited Refund within configured limit
-- Assigned Wallet/Shift View
-- Own/current shift sales
-- Basic operational dashboard
+---
 
-CASHIER MUST NOT:
+# 07 — USER IDENTITY
 
-- Sale Reverse/Delete
-- Unrestricted historical Sale Edit
-- Inventory Adjustment
-- Manual Stock IN
-- Manual Stock OUT
-- Restock
-- Purchase Order
-- Supplier Management
-- Supplier Payment
-- Manual Wallet Adjustment
-- Wallet Transfer
-- Change Wallet Opening Balance
-- Expenses
-- Product Add/Edit/Delete
-- Product Archive
-- User Management
-- Role Management
-- Permission Management
-- System Settings
-- Security Settings
-- Approval Management
-- Database Export
-- Audit Log Management
-- Modify historical financial records
-- Bypass approvals
-- Change another user's permissions
-- Access sensitive company-wide financial controls
+Every user has:
 
-============================================================
-7. CASHIER DASHBOARD / REPORTS
-============================================================
+```text
+USER_ID
+NAME
+ROLE
+STATUS
+CREATED_AT
+UPDATED_AT
+CREATED_BY
+DEVICE RELATIONSHIP
+```
 
-Cashier may see:
+Every business operation records the authenticated actor where applicable:
 
-- POS/shift dashboard
-- Own sales
-- Current shift totals
-- Assigned wallet/shift information
-- Basic operational statistics
+```text
+USER_ID
+DEVICE_ID
+EVENT_ID
+TIMESTAMP
+```
 
-Cashier must NOT see:
+This provides permanent attribution:
 
-- Company-wide Profit/Loss
-- Sensitive financial reports
-- Full company wallet balances
-- Complete supplier outstanding
-- Complete company expenses
-- Sensitive business analytics
+```text
+WHO
+WHICH DEVICE
+WHEN
+WHAT
+```
 
-Hide unauthorized tabs/buttons/routes from UI.
+Historical transactions must retain their original actor identity.
 
-BUT remember:
+---
 
-UI hiding is NOT security.
-Server/database must still reject unauthorized requests.
+# 08 — USER STATUS
 
-============================================================
-8. CASHIER DISCOUNT
-============================================================
+Users must not be destructively deleted when historical records reference them.
 
-If discount functionality exists:
+Use:
 
-Cashier may apply discount only within configured limit.
+```text
+STATUS = ACTIVE
+STATUS = DISABLED
+```
+
+Disabling creates:
+
+```text
+USER_STATUS_CHANGED
+```
+
+or the final normalized user-status event defined by the event schema.
+
+After a disabled-user state is known locally:
+
+```text
+LOGIN = DENY
+BUSINESS ACTION = DENY
+NEW TRANSACTION = DENY
+```
+
+Historical records remain intact.
+
+---
+
+# 09 — USER ROLE CHANGE
 
 Example:
 
-Cashier discount <= configured percentage/amount:
-ALLOW
+```text
+Ahmed
+SALESMAN
+    ↓
+MANAGER
+```
 
-Above limit:
-REQUIRE APPROVAL
+Create:
 
-Cashier cannot change discount limits.
+```text
+USER_ROLE_UPDATED
+```
 
-Manager/Admin can manage according to their permissions.
+The event synchronizes through the trusted P2P network.
 
-============================================================
-9. FINAL PERMISSION MATRIX
-============================================================
+Each receiving device updates its local authorization state.
 
-Permission                         ADMIN   MANAGER   CASHIER
+No cloud RBAC update is required.
 
-Dashboard                           YES      YES       LIMITED
-Reports                             YES      YES       LIMITED
-Profit/Financial Reports            YES      YES       NO
-Products View                       YES      YES       POS ONLY
-Product Add                         YES      YES       NO
-Product Edit                        YES      YES       NO
-Product Archive/Delete              YES      CONTROL  NO
-Sales Create                        YES      YES       YES
-Sale Edit                           YES      YES       LIMITED
-Sale Reverse/Delete                 YES      APPROVAL NO
-Returns                             YES      YES       YES
-Refunds                             YES      APPROVAL LIMITED
-Inventory View                      YES      YES       LIMITED
-Restock                             YES      YES       NO
-Purchase Orders                     YES      YES       NO
-Inventory Adjustment                YES      APPROVAL NO
-Wallet View                         YES      YES       ASSIGNED
-Manual Wallet Adjustment            YES      NO        NO
-Wallet Transfer                     YES      APPROVAL NO
-Expenses                            YES      YES       NO
-Expense Reverse/Delete              YES      APPROVAL NO
-Supplier Ledger                     YES      YES       NO
-Supplier Payment                    YES      APPROVAL NO
-Customer Ledger                     YES      YES       YES
-Customer Credit                     YES      YES       LIMITED
-Customer Payment                    YES      YES       YES
-Users View                          YES      NO        NO
-Create User                         YES      NO        NO
-Edit User                           YES      NO        NO
-Disable/Enable User                 YES      NO        NO
-Roles Management                   YES      NO        NO
-Permissions Management             YES      NO        NO
-Approval Management                YES      NO        NO
-Audit Logs                          YES      VIEW      NO
-System Settings                     YES      NO        NO
-Security Settings                   YES      NO        NO
-Data Export                         YES      NO        NO
-Database/Architecture Controls      YES      NO        NO
+---
 
-"CONTROL" means operationally allowed but sensitive operations may require approval.
-"APPROVAL" means actual approval workflow, not merely a warning.
+# 10 — PIN SECURITY
 
-============================================================
-10. CENTRAL PERMISSION SYSTEM
-============================================================
+PINs are local authentication secrets.
 
-Create/use ONE centralized permission definition.
+Rules:
 
-Do not scatter permission strings throughout the application.
+* Never store plaintext PIN.
+* Never store plaintext PIN in events.
+* Never send plaintext PIN through WebRTC.
+* Never put plaintext PIN in QR codes.
+* Never expose plaintext PIN in logs.
+* Never place plaintext PIN in audit details.
 
-Use the existing permission architecture where possible, but normalize it.
+Use a strong password/PIN hashing mechanism supported by the application architecture, preferably:
 
-Examples:
+```text
+Argon2id
+```
 
+or an appropriately configured:
+
+```text
+PBKDF2-HMAC-SHA256
+```
+
+with a unique cryptographic salt and strong iteration/work parameters.
+
+The exact production parameters must be selected according to the final platform implementation.
+
+---
+
+# 11 — ADMIN PIN RECOVERY & 24-CHARACTER RECOVERY CODE ROTATION
+
+Admin PIN recovery uses the dedicated 24-character master recovery code mechanism (`XXXX-XXXX-XXXX-XXXX-XXXX-XXXX`).
+
+### Authority & Exclusivity:
+* **ONLY MAIN ADMIN (Root Owner):** Only the Root Admin has access to the 24-character master recovery code.
+* Staff roles (`MANAGER`, `CASHIER`, `SALESMAN`) have zero access to this code and cannot use or view it.
+* Staff PIN resets are performed directly by the Admin in Settings.
+
+### Storage & Transmission Rules:
+* Must never be stored plaintext in normal user records or database.
+* Plaintext exists only offline with the Admin; SQLite stores only salted PBKDF2 hash `master_recovery_hash`.
+* Must never be synced as plaintext over P2P or QR codes.
+* Must never appear in audit logs.
+* Must never be placed directly into P2P events.
+
+### Leak Protection & Rotation (Settings ➔ Security):
+* If the 24-character recovery code is leaked or compromised, **only Main Admin** can rotate/regenerate it by verifying their current Admin PIN.
+* Upon rotation, the old recovery code is immediately and permanently invalidated.
+* A brand new 24-character code is cryptographically generated and committed atomically to local SQLite.
+
+---
+
+# 12 — LOCAL AUTHENTICATION
+
+Authentication flow:
+
+```text
+User selects account
+        ↓
+Enter PIN
+        ↓
+Hash using stored password/PIN parameters
+        ↓
+Compare against local credential verifier
+        ↓
+Success
+        ↓
+Create local authenticated session
+        ↓
+Load permissions
+        ↓
+Allow authorized operations
+```
+
+No internet connection is required.
+
+No Supabase login is required for normal POS operation.
+
+---
+
+# 13 — LOGIN LOCKOUT
+
+Progressive local protection:
+
+```text
+3 failed attempts
+→ 30 second cooldown
+
+5 failed attempts
+→ 5 minute cooldown
+
+10 failed attempts
+→ terminal/account security lock
+```
+
+The exact lock implementation must be platform-safe.
+
+Recovery requires authorized Admin recovery according to the final security design.
+
+Failed attempts must not modify business transactions.
+
+---
+
+# 14 — SESSION LOCK
+
+Support configurable idle locking.
+
+Example:
+
+```text
+2 minutes
+5 minutes
+15 minutes
+Never
+```
+
+Also provide:
+
+```text
+Lock Terminal
+```
+
+Locking returns to the local authentication screen.
+
+Cached non-sensitive application data may remain available for performance, but protected operations require authentication again.
+
+---
+
+# 15 — DEVICE IDENTITY
+
+Every installation receives:
+
+```text
+SHOP_ID
+DEVICE_ID
+DEVICE_PUBLIC_KEY
+DEVICE_PRIVATE_KEY
+```
+
+The private key remains protected locally.
+
+A device must not be able to arbitrarily claim another trusted device identity.
+
+Where platform support exists, private key protection should use secure OS facilities.
+
+---
+
+# 16 — DEVICE TRUST
+
+A device becomes trusted only through the authorized pairing process.
+
+Trusted device state should include appropriate metadata such as:
+
+```text
+DEVICE_ID
+SHOP_ID
+PUBLIC_KEY
+STATUS
+CREATED_AT
+LAST_SEEN
+DEVICE_NAME
+```
+
+Possible status:
+
+```text
+PENDING
+TRUSTED
+REVOKED
+```
+
+Exact schema must follow the existing database architecture.
+
+---
+
+# 17 — DEVICE PAIRING
+
+Admin-only pairing flow:
+
+```text
+Admin
+ ↓
+Devices
+ ↓
+Add / Pair Device
+ ↓
+Generate temporary pairing credential
+ ↓
+New device scans QR
+ ↓
+Admin approves
+ ↓
+Exchange public keys
+ ↓
+Create trusted device
+ ↓
+Initial authorized bootstrap
+ ↓
+Integrity verification
+ ↓
+Device ready
+```
+
+QR credentials must be:
+
+* Temporary
+* Limited in scope
+* Non-reusable
+* Non-sensitive
+* Non-plaintext-PIN based
+
+Never put permanent private keys or plaintext secrets inside pairing QR data.
+
+---
+
+# 18 — DEVICE REVOCATION
+
+Admin-only.
+
+Admin can:
+
+* View devices
+* Rename devices
+* Pair devices
+* Revoke devices
+* View sync state
+* View last seen
+* Request/force synchronization
+
+When a device is revoked:
+
+```text
+REVOKED
+    ↓
+No new trusted P2P business sync
+    ↓
+No new authorized business operations for that shop
+```
+
+Historical local data must not be silently destroyed.
+
+The exact enforcement mechanism must work even when temporarily offline according to the final trust/revocation model.
+
+---
+
+# 19 — ADMIN PERMISSIONS
+
+Admin has full authority over:
+
+* Dashboard
+* POS
+* Sales
+* Returns
+* Refunds
+* Products
+* Categories
+* Pricing
+* Inventory
+* Restock
+* Inventory adjustments
+* Purchases
+* Suppliers
+* Customers
+* Customer payments
+* Wallets
+* Payments
+* Expenses
+* Ledgers
+* Reports
+* Users
+* Roles
+* Permissions
+* Devices
+* Pairing
+* Device revocation
+* Sync controls
+* Backup
+* Restore
+* Settings
+* Security
+* Audit
+* Data export
+* Recovery
+
+No approval queue is required.
+
+---
+
+# 20 — MANAGER PERMISSIONS
+
+Manager is the primary daily operational role.
+
+Default access:
+
+* Dashboard
+* Sales
+* Sale creation
+* Sale editing where permission exists
+* Returns
+* Normal refunds
+* Products
+* Product editing
+* Inventory viewing
+* Restock
+* Purchases
+* Suppliers
+* Customers
+* Customer ledger
+* Customer payments
+* Expenses
+* Operational reports
+* Audit viewing
+* Operational wallet viewing
+
+Manager cannot by default:
+
+* Create users
+* Disable users
+* Change roles
+* Manage permissions
+* Pair devices
+* Revoke devices
+* Change security settings
+* Use root recovery
+* Perform manual wallet adjustment
+* Modify system settings
+* Full data export
+* Modify audit history
+
+---
+
+# 21 — CASHIER PERMISSIONS
+
+Cashier is the checkout role.
+
+Allowed:
+
+* POS
+* Product search
+* Barcode scanning
+* Product information needed for selling
+* Cart management
+* Quantity changes
+* Permitted discounts
+* Customer lookup
+* Customer creation
+* Basic customer editing
+* Payment
+* Split payment
+* Receipt printing
+* Allowed receipt reprint
+* Normal returns
+* Normal customer payments
+* Own/current sales
+* Current shift information if the shift system exists
+
+Cashier cannot by default:
+
+* Product management
+* Product cost modification
+* Inventory adjustment
+* Restock
+* Purchases
+* Supplier payments
+* Manual wallet adjustment
+* Wallet transfer
+* Expenses
+* User management
+* Role management
+* Permission management
+* Device management
+* System settings
+* Security settings
+* Sale reversal/deletion
+* Historical financial manipulation
+* Company-wide sensitive financial reports
+
+---
+
+# 22 — SALESMAN PERMISSIONS
+
+Salesman is responsible for customer selling and sales attribution.
+
+Allowed:
+
+* Customer view
+* Customer creation
+* Basic customer editing
+* Product view
+* Product search
+* Barcode/product lookup
+* Stock availability lookup
+* Sale preparation
+* Cart creation
+* Order/draft creation
+* Assign himself to a sale
+* View his sales
+* Relevant customer history
+* Sales activity
+* Sales tracking
+
+Salesman cannot by default:
+
+* Inventory adjustment
+* Restock
+* Purchases
+* Supplier payments
+* Wallet adjustment
+* Wallet transfer
+* Expenses
+* User management
+* Role management
+* Permission management
+* Device management
+* System settings
+* Security settings
+* Sale reversal
+* Historical financial manipulation
+
+---
+
+# 23 — SALESMAN + CASHIER IDENTITY
+
+Sales must support separate actors:
+
+```text
+SALESMAN_ID
+CASHIER_ID
+CREATED_BY_USER_ID
+DEVICE_ID
+```
+
+Example:
+
+```text
+Ahmed = SALESMAN
+Ali   = CASHIER
+```
+
+Flow:
+
+```text
+Ahmed
+ ↓
+Customer + Products
+ ↓
+Sale
+ ↓
+Ali
+ ↓
+Payment
+ ↓
+Completed
+```
+
+The completed sale preserves both identities.
+
+---
+
+# 24 — SALESMAN SELF CHECKOUT
+
+If the salesman also completes checkout:
+
+```text
+SALESMAN_ID = Ahmed
+CASHIER_ID  = Ahmed
+```
+
+No duplicate account is required.
+
+The application automatically uses the current authenticated user where appropriate.
+
+---
+
+# 25 — SALE ATTRIBUTION
+
+A sale should preserve:
+
+```text
+SALE_ID
+SALESMAN_ID
+CASHIER_ID
+CREATED_BY_USER_ID
+DEVICE_ID
+CREATED_AT
+```
+
+Changing attribution after creation must create a traceable event.
+
+Reports can aggregate by:
+
+* Salesman
+* Cashier
+* User
+* Device
+* Date
+* Product
+* Customer
+
+---
+
+# 26 — CENTRAL PERMISSION MODEL
+
+Permissions must be defined centrally.
+
+Example permissions:
+
+```text
 dashboard.view
 
-reports.view
-reports.financial
+sales.view
+sales.create
+sales.edit
+sales.reverse
+
+returns.create
+refunds.create
 
 products.view
 products.create
 products.edit
 products.archive
 
-sales.create
-sales.view
-sales.edit
-sales.reverse
-
-returns.create
-returns.view
-returns.reverse
-
-refunds.create
-refunds.approve
-
 inventory.view
 inventory.restock
 inventory.adjust
+
+purchases.view
+purchases.create
+
+suppliers.view
+suppliers.manage
+suppliers.payment
+
+customers.view
+customers.create
+customers.edit
+customers.payment
+customers.credit
 
 wallet.view
 wallet.adjust
@@ -534,15 +917,8 @@ expenses.create
 expenses.edit
 expenses.reverse
 
-suppliers.view
-suppliers.manage
-suppliers.payment
-
-customers.view
-customers.create
-customers.edit
-customers.credit
-customers.payment
+reports.view
+reports.financial
 
 users.view
 users.create
@@ -552,1771 +928,2295 @@ users.disable
 roles.manage
 permissions.manage
 
-approvals.create
-approvals.approve
-approvals.reject
-
-audit.view
+devices.view
+devices.pair
+devices.revoke
 
 settings.manage
 security.manage
 
+backup.create
+backup.restore
+
+audit.view
 exports.create
+```
 
-Use exact naming conventions already used by the project where appropriate.
+Permission names must have one canonical definition.
 
-There must be ONE authoritative permission source.
+Do not scatter duplicate permission definitions through components.
 
-============================================================
-11. REMOVE UI BYPASSES
-============================================================
+---
 
-The audit identified hardcoded admin bypasses in areas such as:
+# 27 — ROLE PERMISSION MAPPING
 
-- TransactionDetailModal.body.tsx
-- TransactionsManager.body.tsx
-- useExpenseManagerActions.ts
-- InventoryManager.tsx
-- bundles/index.tsx
-- usePurchaseOrder.ts
-- useSupplierManagerLogic.ts
+Default model:
 
-Remove patterns such as:
+```text
+ADMIN
+→ All permissions
 
-isAdmin = true
+MANAGER
+→ Operational permissions
 
-and any equivalent:
+CASHIER
+→ POS / checkout permissions
 
-- hardcoded admin
-- fake permission
-- single-tenant bypass
-- unconditional action access
-- role spoofing
-- bypass comments
+SALESMAN
+→ Sales / customer permissions
+```
 
-Every action must use centralized permission checks.
+Permissions are binary:
 
-Example concept:
-
-can("sales.reverse")
-
-NOT:
-
-isAdmin === true
-
-============================================================
-12. FRONTEND AUTHORIZATION
-============================================================
-
-Use centralized permission checks for:
-
-- buttons
-- tabs
-- menus
-- routes
-- modals
-- forms
-- action menus
-- hooks
-- navigation
-- mobile navigation
-- desktop navigation
-
-Unauthorized UI should be hidden/disabled.
-
-But never rely on UI for security.
-
-============================================================
-13. SERVER-SIDE AUTHORIZATION
-============================================================
-
-Every sensitive API/Edge Function/RPC must independently check:
-
-1. authenticated user
-2. active user
-3. real role
-4. required permission
-5. approval state if applicable
-6. target/resource access
-7. transaction validity
-
-Do NOT trust client-provided:
-
-role
-isAdmin
-permissions
-approval
-wallet
-balance
-inventory
-amount
-
-Example:
-
-client sends:
-role = "admin"
-
-Server MUST IGNORE IT.
-
-Resolve role from trusted authenticated identity/database.
-
-============================================================
-14. DATABASE/RPC ENFORCEMENT
-============================================================
-
-Sensitive operations must be protected at DB/RPC/server level.
-
-At minimum audit and protect:
-
-create_sale
-edit_sale
-reverse_sale
-delete_sale if applicable
-create_return
-reverse_return
-create_refund
-approve_refund
-restock_inventory
-stock_adjustment
-create_expense
-edit_expense
-reverse_expense
-supplier_payment
-customer_payment
-wallet_adjustment
-wallet_transfer
-user_create
-user_update
-user_disable
-role_update
-permission_update
-settings_update
-data_export
-
-Unauthorized request:
-
-REJECT
-
-No mutation.
-
-No partial effect.
-
-============================================================
-15. STOCK_ADJUSTMENT — CRITICAL
-============================================================
-
-The identified stock_adjustment gap must be permanently fixed.
-
-ADMIN:
-FULL ACCESS
-
-MANAGER:
-CONTROLLED / APPROVAL BASED
-
-CASHIER:
+```text
+ALLOW
 DENY
+```
 
-Direct RPC/API call by cashier:
+No default approval workflow.
 
-DENY
+No amount-based approval thresholds.
+
+No asynchronous approval queues.
 
 No:
 
-Inventory IN
-Inventory OUT
-Stock balance change
-Ledger entry
+```text
+PENDING_APPROVAL
+```
 
-must occur.
+unless explicitly introduced as a future separate requirement.
 
-Permission must be checked before the adjustment transaction starts.
+---
 
-============================================================
-16. MANUAL WALLET ADJUSTMENT
-============================================================
+# 28 — OPTIONAL USER OVERRIDES
 
-ADMIN ONLY.
+The architecture may support explicit per-user permission overrides only if the existing application genuinely requires them.
 
-Manager:
-DENY
+If implemented:
 
-Cashier:
-DENY
+```text
+ROLE DEFAULT
+      +
+OPTIONAL USER OVERRIDE
+      ↓
+FINAL PERMISSION
+```
 
-Manual wallet adjustment requires:
+Keep the model simple.
 
-- permission
-- wallet
-- amount
-- direction
-- reason
-- actor
-- timestamp
-- request ID
-- audit record
+Do not create separate competing permission engines.
 
-Never directly mutate wallet balance with:
+Do not create arbitrary boolean fields such as:
 
-balance = balance + amount
+```text
+isAdmin
+canEverything
+superUser
+```
 
-outside the controlled transaction system.
+as authorization shortcuts.
 
-============================================================
-17. FAIL-CLOSED AUTHORIZATION
-============================================================
+---
 
-Current fail-open behavior must be removed.
+# 29 — AUTHORIZATION SERVICE
 
-If:
+There must be one centralized authorization service.
 
-- permission missing
-- permission unknown
-- role missing
-- role invalid
-- token missing
-- token invalid
-- token expired
-- action hash missing
-- authorization lookup fails
-- user inactive
-- security verification fails
+Conceptually:
+
+```text
+can(userId, permission, context)
+```
+
+The exact implementation may differ.
+
+It must resolve:
+
+```text
+Current User
++
+User Status
++
+Role
++
+Role Permissions
++
+Explicit User Override if supported
++
+Trusted Device
++
+SHOP_ID
+```
 
 Result:
 
+```text
+ALLOW
+or
 DENY
+```
 
-Never ALLOW.
+Unknown state:
 
-Golden rule:
+```text
+DENY
+```
 
-UNKNOWN = DENY
+---
 
-============================================================
-18. ACTION TOKEN SECURITY
-============================================================
+# 30 — UI AUTHORIZATION
 
-Audit and permanently fix action-token verification.
+Use the same authorization service for:
 
-If token/hash is:
+* Sidebar
+* Navigation
+* Routes
+* Buttons
+* Tabs
+* Dropdown actions
+* Forms
+* Modals
+* Context menus
+* Mobile UI
 
-- missing
-- malformed
-- invalid
-- expired
-- mismatched
+Unauthorized UI should normally be hidden or disabled.
+
+But:
+
+```text
+UI ≠ Security Boundary
+```
+
+Direct URL access, modified frontend state or manually triggered actions must still be rejected by the business layer.
+
+---
+
+# 31 — BUSINESS-LAYER AUTHORIZATION
+
+Every sensitive mutation checks authorization before changing data.
+
+Example:
+
+```text
+adjustInventory()
+      ↓
+authorize("inventory.adjust")
+      ↓
+validate
+      ↓
+SQLite transaction
+```
+
+Never rely on:
+
+```text
+Button hidden
+↓
+Therefore secure
+```
+
+The service/domain layer must enforce authorization.
+
+---
+
+# 32 — FAIL-CLOSED SECURITY
+
+Authorization must fail closed.
+
+If any required state is:
+
+* Missing
+* Invalid
+* Unknown
+* Corrupt
+* User inactive
+* Device untrusted
+* Device revoked
+* SHOP_ID mismatched
+* Permission undefined
 
 then:
 
+```text
 DENY
-
-Do not skip authorization because a legacy action_hash is NULL.
-
-Remove legacy fail-open branches.
-
-============================================================
-19. LEGACY PERMISSIONS
-============================================================
-
-Audit existing legacy:
-
-TEXT[] permissions
-
-or any second permission authority.
-
-If centralized RBAC is now authoritative:
-
-1. identify all consumers
-2. migrate them
-3. update frontend
-4. update server
-5. update DB
-6. update types
-7. remove legacy authority
-
-Example identified consumer:
-
-ReportHeader.tsx
-
-must not remain dependent on a separate permission authority.
-
-There must NOT be two systems where:
-
-System A says ALLOW
-System B says DENY
-
-Choose ONE authoritative RBAC system.
-
-============================================================
-20. DEAD AUTHORIZATION CODE
-============================================================
-
-Remove or properly integrate dead code such as:
-
-SERVER_ROLE_GUARD
-
-and any other unused authorization mechanism.
-
-Do not leave confusing duplicate security layers.
-
-Final code should have clear authorization flow.
-
-============================================================
-21. USER MANAGEMENT
-============================================================
-
-ONLY ADMIN:
-
-Create User
-Edit User
-Disable User
-Enable User
-Change Role
-Change Permissions
-Reset permissions
-
-Manager:
-DENY
-
-Cashier:
-DENY
-
-Manager must not be able to:
-
-- promote self
-- promote another user
-- grant Admin
-- grant sensitive permissions
-- change Admin
-- modify role hierarchy
-
-============================================================
-22. ROLE MANAGEMENT
-============================================================
-
-ONLY ADMIN.
-
-Admin controls:
-
-- role definitions
-- role-permission mapping
-- approval rules
-- sensitive security settings
-
-Manager:
-NO
-
-Cashier:
-NO
-
-============================================================
-23. SYSTEM SETTINGS
-============================================================
-
-ONLY ADMIN.
-
-Manager:
-NO
-
-Cashier:
-NO
-
-Sensitive settings include:
-
-- global POS settings
-- inventory policies
-- negative-stock rules
-- wallet configuration
-- approval thresholds
-- security settings
-- permission configuration
-- business-wide settings
-
-============================================================
-24. AUDIT LOGS
-============================================================
-
-ADMIN:
-Full view
-
-MANAGER:
-View only
-
-CASHIER:
-No access
-
-Audit records should be immutable from normal application operations.
-
-Nobody should be able to edit/delete audit history through normal UI/RPC.
-
-Audit sensitive events:
-
-- permission changes
-- role changes
-- user creation
-- user disable
-- sale reverse
-- sale edit
-- refund
-- return
-- inventory adjustment
-- wallet adjustment
-- wallet transfer
-- expense reverse
-- supplier payment
-- customer payment
-- approval
-- rejection
-- settings changes
-- export
-
-Store:
-
-- actor
-- actor role
-- action
-- target
-- before state where appropriate
-- after state where appropriate
-- timestamp
-- request ID
-- approval ID if applicable
-
-============================================================
-25. TRANSACTION INTEGRITY
-============================================================
-
-This is equally important as RBAC.
-
-Every real business action must create its complete effects atomically.
-
-Example Sale:
-
-Sale successfully committed
-+
-Inventory OUT
-+
-Wallet IN
-+
-Customer/Supplier effect if applicable
-+
-Audit
-
-All linked.
-
-No independent orphan records.
-
-============================================================
-26. REAL IN/OUT RULE
-============================================================
-
-NO REAL BUSINESS ACTION
-=
-NO INVENTORY/WALLET IN/OUT
-
-If Sale fails:
-
-Inventory = NO MOVEMENT
-Wallet = NO MOVEMENT
-
-If Return fails:
-
-Inventory = NO MOVEMENT
-Wallet = NO MOVEMENT
-
-If Refund fails:
-
-Wallet = NO MOVEMENT
-
-If transaction rolls back:
-
-ALL effects roll back.
-
-============================================================
-27. ATOMIC TRANSACTIONS
-============================================================
-
-All required effects must commit together.
-
-Example:
-
-Sale
-Inventory
-Wallet
-Customer Ledger
-Audit
-
-must be inside one reliable transaction boundary.
-
-If any required operation fails:
-
-ROLLBACK ALL
-
-Never:
-
-Sale SUCCESS
-Inventory SUCCESS
-Wallet FAILED
-
-with partial records remaining.
+```
 
 Golden rule:
 
-ALL EFFECTS COMMIT
-OR
-ZERO EFFECTS COMMIT
+```text
+UNKNOWN = DENY
+```
+
+---
+
+# 33 — NO FRONTEND SECURITY BYPASS
+
+Never trust frontend-supplied:
+
+```text
+role = "ADMIN"
+isAdmin = true
+permissions = [...]
+userId = arbitrary
+deviceId = arbitrary
+```
 
-============================================================
-28. SALE FLOW
-============================================================
+The application must derive authorization from trusted local state and authenticated local identity.
 
-Normal cash sale:
+---
 
-Sale = SUCCESS
-Inventory = OUT
-Cash Wallet = IN
+# 34 — BUSINESS ACTION PIPELINE
 
-Bank sale:
+Every sensitive business action follows:
 
-Sale = SUCCESS
-Inventory = OUT
-Bank Wallet = IN
+```text
+Current User
+      ↓
+User Active?
+      ↓
+Device Trusted?
+      ↓
+SHOP_ID Valid?
+      ↓
+Permission?
+      ↓
+Business Validation
+      ↓
+SQLite Transaction
+      ↓
+Main Transaction
+      ↓
+Effects
+      ↓
+Audit
+      ↓
+Event
+      ↓
+Outbox
+      ↓
+COMMIT
+```
 
-Split payment:
+If authorization or validation fails:
 
-Inventory = OUT
-Cash = IN
-Bank = IN
-Card = IN
+```text
+ZERO BUSINESS EFFECT
+```
 
-according to actual amounts.
+---
 
-Credit sale:
+# 35 — EVENT IDENTITY
 
-Inventory = OUT
-Wallet = NO MOVEMENT
-Customer Receivable = INCREASE
+Every business mutation event must contain the canonical event identity required by the event schema.
 
-Partial credit:
+Minimum conceptual fields:
 
-Inventory = OUT
-Actual payment wallet = IN
-Remaining receivable = INCREASE
+```text
+EVENT_ID
+SHOP_ID
+DEVICE_ID
+USER_ID
+SEQUENCE
+EVENT_TYPE
+ENTITY_TYPE
+ENTITY_ID
+PAYLOAD
+CREATED_AT
+```
 
-============================================================
-29. SALE REVERSE/DELETE
-============================================================
+Security metadata may additionally include:
 
-"Delete Sale" must NOT mean simply deleting the sale row.
+```text
+EVENT_HASH
+SIGNATURE
+KEY_ID
+PARENT / CAUSAL REFERENCES
+```
 
-It means:
+according to the final event-security architecture.
 
-COMPLETE REVERSAL
+`EVENT_ID` must be globally unique within the shop.
 
-Original:
+---
 
-Inventory OUT
-Cash IN
+# 36 — EVENT IMMUTABILITY
 
-Reverse:
+Events are append-only.
 
-Inventory IN
-Cash OUT
+Do not:
 
-Original:
+* Rewrite historical events
+* Modify financial event meaning
+* Delete committed business events
+* Replace one financial event with another
 
-Inventory OUT
-Cash IN
-Bank IN
-Receivable increase
+Corrections are represented through new events/transactions.
 
-Reverse:
+---
 
-Inventory IN
-Cash OUT
-Bank OUT
-Receivable decrease
+# 37 — OUTBOX ATOMICITY
 
-Every original effect must have its exact opposite.
+A successful local business mutation must commit:
 
-Original transaction must remain traceable.
-
-Create a reversal relationship.
-
-Do not silently destroy financial history.
-
-============================================================
-30. REVERSAL BASED ON ORIGINAL EFFECTS
-============================================================
-
-Never calculate reversal from guessed/current values.
-
-Retrieve actual committed effects from the original transaction.
-
-Example:
-
-Original:
-
-Inventory OUT 5
-Cash IN 2,000
-Bank IN 3,000
-Receivable +1,000
-
-Reverse:
-
-Inventory IN 5
-Cash OUT 2,000
-Bank OUT 3,000
-Receivable -1,000
-
-Exact opposite.
-
-============================================================
-31. PREVENT DOUBLE REVERSAL
-============================================================
-
-A transaction cannot be reversed twice.
-
-If already reversed:
-
-REJECT
-
-No duplicate:
-
-- inventory reversal
-- wallet reversal
-- ledger reversal
-
-must be created.
-
-============================================================
-32. EDIT BILL
-============================================================
-
-Bill edit is NOT simple row overwrite.
-
-Compare:
-
-ORIGINAL COMMITTED STATE
-vs
-NEW STATE
-
-Calculate exact delta for:
-
-- Inventory
-- Cash
-- Bank
-- Card
-- Online Wallet
-- Customer Receivable
-- Supplier Payable
-- Discount
-- Other effects
-
-Example:
-
-Original Qty = 2
-New Qty = 1
-
-Required:
-
-Inventory IN 1
-
-Original Cash IN = 5,000
-New Cash IN = 3,000
-
-Required:
-
-Cash OUT 2,000
-
-Original Cash IN = 5,000
-New Bank IN = 5,000
-
-Required:
-
-Cash OUT 5,000
-Bank IN 5,000
-
-Never simply overwrite the old ledger.
-
-============================================================
-33. RETURN
-============================================================
-
-Normal return:
-
-Inventory IN
-
-Return + refund:
-
-Inventory IN
-Wallet OUT
-
-Return without refund:
-
-Inventory IN
-Wallet NO MOVEMENT
-
-Refund without physical return:
-
-Inventory NO MOVEMENT
-Wallet OUT
-
-============================================================
-34. RETURN REVERSAL
-============================================================
-
-If original return:
-
-Inventory IN 1
-Cash OUT 2,000
-
-Reverse return:
-
-Inventory OUT 1
-Cash IN 2,000
-
-Exact opposite.
-
-============================================================
-35. RESTOCK
-============================================================
-
-Original restock:
-
-Inventory IN
-
-If payment exists:
-
-actual wallet/payment effect
-
-Reverse restock:
-
-Inventory OUT
+```text
+Business Data
 +
-exact opposite financial effect if applicable
+Effects
++
+Audit
++
+Event
++
+Outbox
+```
 
-All linked.
+inside the same SQLite transaction.
 
-============================================================
-36. EXPENSE
-============================================================
+Therefore:
 
-Original:
+```text
+SUCCESS
+→ all required records committed
 
-Cash OUT 5,000
+FAILURE
+→ none committed
+```
 
-Reverse:
+Never create business data without its event.
 
-Cash IN 5,000
+Never create a committed event for a failed transaction.
 
-Do not delete financial history without reversal.
+Never create an outbox record for a transaction that did not commit.
 
-============================================================
-37. CUSTOMER PAYMENT
-============================================================
+---
 
-Original:
+# 38 — IDEMPOTENCY
 
-Wallet IN 5,000
-Customer Receivable DECREASE 5,000
-
-Reverse:
-
-Wallet OUT 5,000
-Customer Receivable INCREASE 5,000
-
-Both effects must reverse.
-
-============================================================
-38. SUPPLIER PAYMENT
-============================================================
-
-Original:
-
-Wallet OUT 10,000
-Supplier Payable DECREASE 10,000
-
-Reverse:
-
-Wallet IN 10,000
-Supplier Payable INCREASE 10,000
-
-Both effects must reverse.
-
-============================================================
-39. WALLET TRANSFER
-============================================================
-
-Example:
-
-Cash OUT 10,000
-Bank IN 10,000
-
-Both must commit atomically.
-
-Reverse:
-
-Cash IN 10,000
-Bank OUT 10,000
-
-If one side fails:
-
-ROLLBACK BOTH
-
-============================================================
-40. INVENTORY ADJUSTMENT
-============================================================
-
-Inventory Plus:
-
-Inventory IN
-
-Inventory Minus:
-
-Inventory OUT
-
-Every adjustment requires:
-
-- authorization
-- reason
-- actor
-- timestamp
-- reference/request ID
-- audit
-
-Reverse:
-
-Exact opposite movement.
-
-============================================================
-41. NO ORPHAN LEDGER RECORDS
-============================================================
-
-Every Inventory IN/OUT must reference a valid committed source transaction.
-
-Every Wallet IN/OUT must reference a valid committed source transaction.
-
-Every reversal must reference original transaction.
-
-Every effect must have:
-
-- transaction_id
-- source_type
-- source_id/reference
-- actor/user
-- timestamp
-- request context
-
-No orphan record.
-
-============================================================
-42. ERROR HANDLING
-============================================================
-
-If an error happens anywhere:
-
-NO partial business effect.
-
-Example:
-
-Sale inserted
-Inventory inserted
-Wallet insertion fails
-
-Result:
-
-Sale = rollback
-Inventory = rollback
-Wallet = no record
-
-Example:
-
-Return created
-Inventory IN created
-Refund Wallet OUT fails
-
-Result:
-
-Return = rollback
-Inventory IN = rollback
-Wallet OUT = no record
-
-User may see an error.
-
-Database must remain clean.
-
-============================================================
-43. RETRY / DUPLICATE PROTECTION
-============================================================
+Every business operation must have appropriate unique transaction/request identity.
 
 Protect against:
 
-- double click
-- duplicate request
-- network retry
-- timeout retry
-- two devices
-- repeated API call
+* Double click
+* Retry
+* App restart
+* Connection interruption
+* Duplicate WebRTC delivery
+* Repeated request
+* User retry after timeout
 
-Use idempotency/request identifiers where appropriate.
+The same logical operation must never create duplicate financial or inventory effects.
 
-Same request must NOT create duplicate:
+---
 
-- Sale
-- Inventory IN/OUT
-- Wallet IN/OUT
-- Refund
-- Return
-- Payment
-- Reversal
+# 39 — INCOMING P2P EVENT VALIDATION
 
-============================================================
-44. CONCURRENCY
-============================================================
+Incoming event flow:
 
-Protect inventory and wallet from race conditions.
+```text
+Receive
+ ↓
+Validate SHOP_ID
+ ↓
+Validate trusted DEVICE_ID
+ ↓
+Validate device status
+ ↓
+Validate cryptographic identity/signature where required
+ ↓
+Validate event schema
+ ↓
+Validate actor/user
+ ↓
+Validate authorization context where applicable
+ ↓
+Check EVENT_ID
+ ↓
+Validate sequence/version rules
+ ↓
+Apply transactionally
+ ↓
+Record inbox/event
+ ↓
+ACK
+```
 
-Two simultaneous operations must not corrupt:
+Invalid event:
 
-- stock
-- wallet balance
-- transaction state
+```text
+REJECT
+```
 
-Use proper database transaction/locking/constraints according to existing architecture.
+No business mutation is allowed.
 
-Never solve race conditions only in frontend.
+---
 
-============================================================
-45. TRANSACTION GRAPH
-============================================================
+# 40 — DUPLICATE EVENT HANDLING
 
-Every business action must form a complete linked transaction graph:
+Before applying an incoming event:
 
-MAIN TRANSACTION
-+
-INVENTORY EFFECTS
-+
-WALLET EFFECTS
-+
-CUSTOMER/SUPPLIER EFFECTS
-+
-AUDIT
-+
-APPROVAL if applicable
-+
-REVERSAL relationship if reversed
+```text
+EVENT_ID exists?
+```
 
-System must be able to answer:
+If yes:
 
-"Exactly which Inventory/Wallet/Ledger records were created by this transaction?"
+```text
+DO NOT APPLY AGAIN
+ACK
+```
 
-and:
+This protects against:
 
-"Exactly which original effects were reversed?"
+* Duplicate packet
+* Retry
+* Reconnect
+* Double delivery
+* Device restart
 
-============================================================
-46. APPROVAL WORKFLOW
-============================================================
+---
 
-Approval record should contain:
+# 41 — P2P SYNC
 
-- approval_id
-- source_transaction_id
-- source_type
-- requested_by
-- requested_role
-- approved_by
-- status
-- reason
-- created_at
-- approved_at/rejected_at
+Normal synchronization:
 
-Statuses:
+```text
+Supabase signaling
+        ↓
+WebRTC connection
+        ↓
+Exchange sync checkpoints
+        ↓
+Determine missing events
+        ↓
+Transfer missing events
+        ↓
+Validate
+        ↓
+Apply transactionally
+        ↓
+ACK
+```
 
-PENDING
-APPROVED
-REJECTED
-CANCELLED
+Supabase must not store or become authoritative for the business transaction.
 
-PENDING must create ZERO actual business effects.
+---
 
-APPROVED executes atomic action.
+# 42 — INITIAL BOOTSTRAP
 
-REJECTED creates ZERO business effect.
+Only a newly joining authorized device requires the initial bootstrap.
 
-============================================================
-47. PERMISSION CHECK ORDER
-============================================================
+Bootstrap may include the required authorized dataset:
 
-Sensitive action flow:
+```text
+Shop
+Users
+Roles
+Permissions
+Products
+Images
+Inventory state/history required
+Customers
+Suppliers
+Sales
+Payments
+Expenses
+Wallets
+Ledgers
+Settings
+Audit
+Sync metadata
+```
 
-AUTHENTICATE
-↓
-VERIFY ACTIVE USER
-↓
-RESOLVE REAL ROLE
-↓
-CHECK PERMISSION
-↓
-CHECK APPROVAL REQUIREMENT
-↓
-VALIDATE BUSINESS DATA
-↓
-START ATOMIC TRANSACTION
-↓
-CREATE MAIN TRANSACTION
-↓
-CREATE ALL EFFECTS
-↓
-VALIDATE FINAL STATE
-↓
-AUDIT
-↓
-COMMIT
+The exact bootstrap dataset must follow the final database architecture and authorization rules.
 
-Never create Inventory/Wallet effect before authorization and transaction validation.
+---
 
-============================================================
-48. DATABASE SCHEMA AUDIT
-============================================================
+# 43 — NORMAL SYNC RULE
 
-Audit schema for:
+After bootstrap:
 
-- duplicate role systems
-- duplicate permission systems
-- legacy TEXT[] permissions
-- duplicate authorization columns
-- unused roles
-- dead permission records
-- old action-token logic
-- old server guard logic
-- orphan ledger rows
-- missing transaction references
-- missing reversal references
-- missing approval references
+```text
+NEVER send the complete database on every sync.
+```
 
-Do NOT blindly delete schema.
+Instead:
 
-Process:
+```text
+Exchange checkpoints
+ ↓
+Find missing events/changes
+ ↓
+Transfer only missing data
+ ↓
+Validate
+ ↓
+Apply
+ ↓
+ACK
+```
 
-IDENTIFY
-↓
-VERIFY USAGE
-↓
-MIGRATE
-↓
-TEST
-↓
-REMOVE LEGACY
-↓
-MIGRATION VERIFY
+This prevents unnecessary whole-database transfers.
 
-Final database must have ONE authoritative RBAC system.
+---
 
-============================================================
-49. CODE AUDIT
-============================================================
+# 44 — RBAC SYNC
 
-Search entire codebase for:
+RBAC changes are themselves business/security state changes.
 
-- isAdmin
-- role checks
-- permission checks
-- admin bypasses
-- hardcoded true
-- hardcoded role
-- legacy permissions
-- action token verification
-- stock adjustment
-- wallet adjustment
-- sale delete
-- sale reverse
-- refund
-- return
-- expense
-- supplier payment
-- user management
-- settings
+Examples:
 
-Do not only inspect obvious files.
+```text
+USER_CREATED
+USER_UPDATED
+USER_ROLE_UPDATED
+USER_STATUS_CHANGED
+USER_PIN_RESET
+ROLE_PERMISSION_UPDATED
+USER_PERMISSION_UPDATED
+```
 
-Search all:
+Only the event types actually required by the final schema should be implemented.
 
-- components
-- hooks
-- services
-- utilities
-- RPC wrappers
-- API routes
-- Edge Functions
-- server actions
-- DB migrations
-- SQL functions
-- policies
-- types
+Sensitive credentials must never be synchronized as plaintext.
 
-============================================================
-50. DO NOT CREATE SECOND AUTH SYSTEM
-============================================================
+---
 
-If current permission infrastructure already exists and is valid:
+# 45 — CONFLICT MODEL
 
-USE IT.
+Not every field uses the same conflict strategy.
 
-Improve/fix it.
+## Safe ordinary fields
 
-Do not create an unrelated second RBAC architecture.
+Deterministic versioning/LWW may be used where appropriate.
 
-Goal:
+Examples:
 
-ONE SOURCE OF TRUTH.
+```text
+Product name
+Product description
+Display settings
+Non-financial metadata
+```
 
-============================================================
-51. DATA MIGRATION
-============================================================
+## Never LWW
 
-If existing permissions/roles need migration:
+Never use LWW to resolve:
 
-- preserve legitimate existing users
-- preserve admin
-- preserve business data
-- preserve sales
-- preserve inventory history
-- preserve wallet history
-- preserve audit history
+```text
+Inventory
+Sales
+Payments
+Refunds
+Returns
+Wallet
+Customer ledger
+Supplier ledger
+Expenses
+Financial transactions
+```
 
-Do not reset production data.
+These use immutable transactions/effects/events.
 
-Do not delete transaction history merely to implement RBAC.
+---
 
-============================================================
-52. HARD DELETE POLICY
-============================================================
+# 46 — INVENTORY INTEGRITY
 
-Financial/business transactions should generally NOT be physically deleted.
+Inventory is transaction-based.
 
-Use:
+Never do:
 
-- reverse
-- void
-- cancel
-- archive
-- soft-delete where appropriate
+```text
+Device A = stock 5
+Device B = stock 2
 
-while preserving audit/history.
+LAST WRITE WINS
+```
 
-Products may be archived rather than hard-deleted if referenced by historical transactions.
+Instead preserve all valid movements.
 
-Historical transactions must remain traceable.
+Example:
 
-============================================================
-53. BALANCE INTEGRITY
-============================================================
+```text
+Opening = 6
 
-Inventory:
+Device A sells 5
+Device B sells 4
+```
 
+Calculated stock:
+
+```text
+6 - 5 - 4 = -3
+```
+
+The system may report:
+
+```text
+Oversold = 3
+```
+
+Never delete or overwrite one valid sale to hide the conflict.
+
+---
+
+# 47 — WALLET INTEGRITY
+
+Wallet balances are derived from immutable movements.
+
+```text
 Opening
 +
-valid IN
+IN
 -
-valid OUT
+OUT
 =
-Current Inventory
+Balance
+```
 
-Wallet:
+Do not overwrite a wallet balance merely because another device has a newer value.
 
-Opening
-+
-valid IN
--
-valid OUT
-=
-Current Wallet
+Every wallet movement must remain traceable.
 
-Customer:
+---
 
+# 48 — CUSTOMER LEDGER INTEGRITY
+
+Customer receivable:
+
+```text
 Opening Receivable
 +
 Credit
 -
 Payments
--
-valid adjustments
 =
 Current Receivable
+```
 
-Supplier:
+Payments and credit effects are immutable transactions.
 
+Never use LWW to hide conflicting ledger movements.
+
+---
+
+# 49 — SUPPLIER LEDGER INTEGRITY
+
+Supplier payable:
+
+```text
 Opening Payable
 +
 Purchases
 -
 Payments
--
-valid adjustments
 =
 Current Payable
+```
 
-Do not hide discrepancies using fake clamps such as:
+All movements remain traceable.
 
-Math.max(0, balance)
+---
 
-unless explicitly required by an actual business rule.
+# 50 — FINANCIAL INTEGRITY
 
-Real discrepancy must be detectable.
+Never use LWW for:
 
-============================================================
-54. AUTOMATIC DATA INTEGRITY CHECKS
-============================================================
+* Sales
+* Payments
+* Refunds
+* Returns
+* Expenses
+* Wallet movements
+* Customer ledger
+* Supplier ledger
+* Financial transactions
 
-Implement/check:
+Corrections must be represented as explicit transactions/effects.
 
-1. Every inventory row has valid source transaction.
-2. Every wallet row has valid source transaction.
-3. Every reversal has original transaction.
-4. Every original transaction can identify its effects.
-5. Reversal cannot happen twice.
-6. Failed transaction leaves zero effects.
-7. Successful transaction has all mandatory effects.
-8. Inventory-derived balance matches actual inventory.
-9. Wallet-derived balance matches actual wallet.
-10. Customer ledger matches receivable.
-11. Supplier ledger matches payable.
-12. No orphan effects.
-13. No duplicate effects.
-14. No unauthorized effects.
+---
 
-============================================================
-55. PERMISSION BEFORE EFFECT
-============================================================
+# 51 — SALE TRANSACTION
 
-This is NON-NEGOTIABLE.
+A successful sale may create:
+
+```text
+SALE
++
+SALE ITEMS
++
+INVENTORY OUT
++
+PAYMENT EFFECTS
++
+CUSTOMER EFFECT if applicable
++
+AUDIT
++
+EVENT
++
+OUTBOX
+```
+
+All required effects commit atomically.
+
+---
+
+# 52 — CASH SALE
 
 Example:
 
-Cashier attempts stock adjustment.
+```text
+Sale = Rs 5,000
+```
 
-Correct:
+Effects:
 
-Permission check
-→ DENIED
-→ ZERO inventory movement
-
-Wrong:
-
+```text
 Inventory OUT
-→ permission error
+Cash IN 5,000
+```
+
+---
+
+# 53 — BANK / CARD / ONLINE SALE
 
 Example:
 
-Cashier attempts wallet adjustment.
+```text
+Inventory OUT
+Bank/Card/Online IN
+```
 
-Correct:
+The payment effect must match the actual selected payment method.
 
-Permission check
-→ DENIED
-→ ZERO wallet movement
+---
 
-No unauthorized request may create a ledger record.
+# 54 — SPLIT PAYMENT
 
-============================================================
-56. UI ROUTES / NAVIGATION
-============================================================
+Example:
 
-Route guards must match centralized permissions.
+```text
+Total = Rs 10,000
 
-Navigation must be filtered according to role/permission.
+Cash = Rs 4,000
+Bank = Rs 6,000
+```
 
-Check:
+Effects:
 
-- desktop nav
-- mobile nav
-- bottom nav
-- nested routes
-- direct URL access
-- modals
-- action menus
+```text
+Inventory OUT
 
-A user must not gain access by manually typing a protected URL.
+Cash IN 4,000
+Bank IN 6,000
+```
 
-Route guard alone is still not enough; server/database must enforce.
+All belong to the same sale transaction.
 
-============================================================
-57. DIRECT ACCESS TEST
-============================================================
+---
 
-Test unauthorized users by direct:
+# 55 — CREDIT SALE
 
-- route
-- API
-- RPC
-- server action
-- browser request
-- manually crafted payload
+Example:
 
-Expected:
+```text
+Total = Rs 10,000
+Paid = Rs 3,000
+Credit = Rs 7,000
+```
 
-DENIED
+Effects:
 
-No business data mutation.
+```text
+Inventory OUT
+Payment Wallet IN 3,000
+Customer Receivable +7,000
+```
 
-============================================================
-58. ROLE TESTING
-============================================================
+---
 
-ADMIN:
+# 56 — PARTIAL CREDIT
 
-Every authorized operation succeeds.
+Partial credit must be represented as:
 
-MANAGER:
+```text
+Total Sale
+-
+Actual Payments
+=
+Receivable
+```
 
-Allowed operations succeed.
+The resulting customer ledger effect must equal the unpaid amount.
 
-Restricted operations:
-DENIED or APPROVAL.
+---
 
-CASHIER:
+# 57 — SALE EDIT
 
-POS operations succeed.
+Never blindly overwrite committed financial history.
 
-Restricted operations:
-DENIED.
+Compute:
 
-Test every permission against every role.
+```text
+Original committed state
+        ↓
+New requested state
+        ↓
+Exact delta
+        ↓
+Required adjustment effects
+```
 
-============================================================
-59. REQUIRED PRODUCTION TESTS
-============================================================
+Example:
 
-Test:
+```text
+Original Qty = 2
+New Qty = 1
+```
 
-- normal sale
-- cash sale
-- bank sale
-- card sale
-- split sale
-- credit sale
-- partial credit sale
-- sale edit quantity
-- sale edit amount
-- sale edit payment
-- sale payment-wallet change
-- sale reverse
-- sale reverse after split payment
-- return
-- return with refund
-- return without refund
-- refund without return
-- return reversal
-- restock
-- restock reversal
-- inventory plus
-- inventory minus
-- inventory adjustment reversal
-- expense
-- expense reversal
-- customer payment
-- customer payment reversal
-- supplier payment
-- supplier payment reversal
-- wallet transfer
-- wallet transfer reversal
-- failed transaction
-- timeout
-- retry
-- double click
-- duplicate request
-- concurrent operations
-- unauthorized RPC
-- unauthorized API
-- unauthorized direct URL
-- manager approval
-- manager rejection
-- cashier restricted actions
-- permission changes
-- role changes
+Required inventory correction:
 
-============================================================
-60. CRITICAL FAILURE CASES THAT MUST NEVER HAPPEN
-============================================================
+```text
+Inventory IN 1
+```
 
-NEVER:
+All adjustments must remain traceable.
 
-Sale fails but Inventory OUT exists.
+---
 
-Sale fails but Wallet IN exists.
+# 58 — SALE REVERSAL
 
-Return fails but Inventory IN exists.
+Never delete the original sale.
 
-Refund fails but Wallet OUT exists.
+Create a reversal transaction.
 
-Sale reverse happens but Inventory remains OUT.
+Original:
 
-Sale reverse happens but Cash remains IN.
+```text
+Inventory OUT 5
+Cash IN 5,000
+```
 
-Split payment reverse misses one wallet.
+Reversal:
 
-Bill edit changes sale but does not update inventory.
+```text
+Inventory IN 5
+Cash OUT 5,000
+```
 
-Bill edit changes payment but old wallet effect remains.
+The original transaction remains permanently traceable.
 
-Return deletion removes return but leaves refund.
+---
 
-Expense deletion removes expense but leaves Wallet OUT.
+# 59 — DOUBLE REVERSAL
 
-Customer payment reverse changes wallet but not receivable.
+If a transaction has already been fully reversed:
 
-Supplier payment reverse changes wallet but not payable.
+```text
+REJECT
+```
 
-Unauthorized user creates inventory movement.
+Do not create another reversal.
 
-Unauthorized user creates wallet movement.
+The system must enforce this through transaction state/constraints, not only UI logic.
 
-Unauthorized user creates ledger entry.
+---
 
-Approval pending creates actual financial effect.
+# 60 — RETURNS
 
-Failed authorization creates any business record.
+Return without refund:
 
-Duplicate request creates duplicate movement.
+```text
+Inventory IN
+```
 
-============================================================
-61. FINAL ROLE RULES
-============================================================
+Return with refund:
 
-ADMIN:
+```text
+Inventory IN
+Wallet OUT
+```
 
-FULL CONTROL.
+Refund without physical return:
 
-MANAGER:
+```text
+Wallet OUT
+```
 
-DAILY BUSINESS OPERATIONS.
+No inventory movement is created when no physical inventory is returned.
 
-MANAGER CANNOT:
+---
 
-- manage users
-- manage roles
-- manage permissions
-- change system/security settings
-- manually adjust wallet
-- export sensitive database/business data
-- modify audit history
-- bypass configured approvals
+# 61 — RESTOCK
 
-CASHIER:
+Restock creates:
 
-POS / CUSTOMER / NORMAL PAYMENT OPERATIONS.
+```text
+Inventory IN
+```
 
-CASHIER CANNOT:
+If supplier payment is made:
 
-- control inventory
-- control wallets
-- manage suppliers
-- manage expenses
-- reverse/delete sales
-- manage users
-- manage permissions
-- manage settings
-- access sensitive financial reports
+```text
+Wallet OUT
+Supplier Payable DECREASE
+```
 
-============================================================
-62. FINAL GOLDEN RBAC RULE
-============================================================
+The purchase/restock/payment relationship must remain traceable.
 
+---
+
+# 62 — EXPENSE
+
+Expense:
+
+```text
+Wallet OUT
+```
+
+Reversal:
+
+```text
+Wallet IN
+```
+
+The original expense remains traceable.
+
+---
+
+# 63 — CUSTOMER PAYMENT
+
+Customer payment:
+
+```text
+Wallet IN
+Customer Receivable DECREASE
+```
+
+Reversal:
+
+```text
+Wallet OUT
+Customer Receivable INCREASE
+```
+
+Both remain traceable.
+
+---
+
+# 64 — SUPPLIER PAYMENT
+
+Supplier payment:
+
+```text
+Wallet OUT
+Supplier Payable DECREASE
+```
+
+Reversal:
+
+```text
+Wallet IN
+Supplier Payable INCREASE
+```
+
+---
+
+# 65 — WALLET TRANSFER
+
+Example:
+
+```text
+Cash OUT 10,000
+Bank IN 10,000
+```
+
+Both effects must commit atomically.
+
+If transaction fails:
+
+```text
+ROLLBACK BOTH
+```
+
+Never allow only one side of the transfer to commit.
+
+---
+
+# 66 — INVENTORY ADJUSTMENT
+
+Default:
+
+```text
+ADMIN = ALLOW
+MANAGER = DENY unless explicitly granted
+CASHIER = DENY
+SALESMAN = DENY
+```
+
+No approval queue.
+
+No amount threshold.
+
+No asynchronous approval.
+
+An adjustment must include:
+
+```text
+Reason
+Actor
+Device
+Timestamp
+Reference
+Event
+```
+
+The final authorization is simply:
+
+```text
+Permission exists → ALLOW
+Permission absent → DENY
+```
+
+---
+
+# 67 — NO PARTIAL TRANSACTIONS
+
+Golden rule:
+
+```text
+ALL REQUIRED EFFECTS COMMIT
+
+OR
+
+ZERO EFFECTS COMMIT
+```
+
+Example:
+
+```text
+Sale creation fails
+    ↓
+NO committed sale
+NO inventory OUT
+NO wallet IN
+NO ledger effect
+NO committed business event
+NO outbox record
+```
+
+---
+
+# 68 — TRANSACTION GRAPH
+
+Each business transaction must be traceable:
+
+```text
+MAIN TRANSACTION
+    ├── Inventory Effects
+    ├── Wallet Effects
+    ├── Customer/Supplier Effects
+    ├── Audit
+    └── Event
+```
+
+Reversal:
+
+```text
+Original Transaction
+        ↓
+Original Effects
+        ↓
+Reversal Transaction
+        ↓
+Exact Opposite Effects
+```
+
+---
+
+# 69 — AUDIT LOG
+
+Audit records are append-only.
+
+Conceptual fields:
+
+```text
+AUDIT_ID
+SHOP_ID
+USER_ID
+DEVICE_ID
+ACTION
+ENTITY_TYPE
+ENTITY_ID
+TIMESTAMP
+DETAILS
+EVENT_ID
+```
+
+Audit history must not be editable/deletable by normal users.
+
+Audit details must not contain plaintext secrets.
+
+---
+
+# 70 — REPORTING
+
+Reports query local SQLite.
+
+```text
+SQLite
+ ↓
+Query
+ ↓
+Aggregation
+ ↓
+Report
+```
+
+No cloud query is required.
+
+Supported reporting dimensions may include:
+
+```text
+Sales by salesman
+Sales by cashier
+Sales by device
+Sales by date
+Sales by product
+Sales by customer
+```
+
+Manager receives operational reporting.
+
+Admin receives full reporting.
+
+Cashier/Salesman receive only permitted reports.
+
+---
+
+# 71 — UI ROLE VISIBILITY
+
+The UI should automatically reflect permissions.
+
+Cashier should not normally see:
+
+```text
+Users
+Devices
+Settings
+Inventory Adjustment
+Expenses
+Suppliers
+```
+
+Salesman should not normally see:
+
+```text
+Users
+Devices
+Wallet Management
+Inventory Adjustment
+Settings
+Expenses
+```
+
+Manager should not normally see:
+
+```text
+User Administration
+Device Management
+Security
+Root Recovery
+```
+
+However, hiding navigation is not sufficient.
+
+Direct actions must still be rejected by the business layer.
+
+---
+
+# 72 — HARD DELETE POLICY
+
+## Users
+
+```text
+Disable
+```
+
+rather than destructive deletion when historical references exist.
+
+## Products
+
+```text
+Archive
+```
+
+when historical transactions reference them.
+
+## Financial Transactions
+
+```text
+Reverse / Void
+```
+
+rather than destructive deletion.
+
+## Audit
+
+```text
+Append-only
+```
+
+---
+
+# 73 — LOCAL OFFLINE OPERATION
+
+Normal POS must continue working when:
+
+```text
+Internet = OFF
+Supabase = OFF
+Other Devices = OFF
+```
+
+Users must still be able to perform authorized local operations such as:
+
+* Local login
+* Sales
+* Returns
+* Customer payments
+* Permitted data changes
+* Inventory movements
+* Financial transactions
+* Event creation
+* Outbox queuing
+
+---
+
+# 74 — RECONNECT
+
+When connectivity returns:
+
+```text
+Supabase signaling
+ ↓
+WebRTC connection
+ ↓
+Sync checkpoints
+ ↓
+Missing events
+ ↓
+P2P transfer
+ ↓
+Validation
+ ↓
+Transactional apply
+ ↓
+ACK
+```
+
+No business transaction is uploaded to Supabase as the business source of truth.
+
+---
+
+# 75 — DATA CONVERGENCE
+
+Example:
+
+```text
+Device A offline
+→ Sale A
+
+Device B offline
+→ Sale B
+```
+
+After synchronization:
+
+```text
+Device A
+→ Sale A
+→ Sale B
+
+Device B
+→ Sale A
+→ Sale B
+```
+
+Valid independent transactions must both survive.
+
+The system must not overwrite one transaction merely because another transaction has a newer timestamp.
+
+---
+
+# 76 — REQUIRED INTEGRITY CHECKS
+
+The system must detect:
+
+* Orphan inventory effect
+* Orphan wallet effect
+* Duplicate effect
+* Missing source transaction
+* Missing reversal
+* Double reversal
+* Invalid event
+* Unauthorized event
+* Broken ledger relationship
+* Incorrect calculated balance
+* Missing event
+* Duplicate event
+* Invalid device
+* Revoked device event
+* SHOP_ID mismatch
+* Invalid actor
+* Invalid event sequence
+* Corrupt event payload
+
+Detected corruption must not be silently hidden.
+
+---
+
+# 77 — SECURITY CHECKS
+
+Search the entire codebase for:
+
+```text
+isAdmin
+role ===
+role ==
+admin
+permission
+permissions
+can(
+authorize
+auth
+supabase
+rpc
+RLS
+JWT
+action_hash
+approval
+PENDING_APPROVAL
+```
+
+Audit every result.
+
+Remove or migrate:
+
+* Hardcoded admin bypasses
+* Duplicate permission systems
+* Frontend-only authorization
+* Supabase-only authorization
+* JWT role assumptions
+* Cloud transaction authority
+* Legacy approval workflows
+* Fail-open logic
+* Hidden cloud dependencies
+
+Do not blindly delete working code.
+
+Inspect first, then migrate.
+
+---
+
+# 78 — REMOVE LEGACY SUPABASE RBAC
+
+Completely remove business authorization dependency on:
+
+```text
+Supabase Auth role authority
+Supabase RLS
+Supabase RPC authorization
+Supabase Edge Function authorization
+Cloud permission authority
+Cloud user authority
+JWT role claims
+Cloud transaction authority
+```
+
+Required replacement:
+
+```text
+Local SQLite
++
+Local Authorization Service
++
+Immutable Event Ledger
++
+P2P Synchronization
+```
+
+Supabase remains signaling-only.
+
+---
+
+# 79 — NO FAKE SECURITY
+
+The implementation must never pretend security exists when it does not.
+
+Do not trust:
+
+```text
+role = "ADMIN"
+isAdmin = true
+permissions = [...]
+```
+
+from client-controlled payloads.
+
+Do not implement fake:
+
+```text
+P2P
+SQLite
+authorization
+sync
+signatures
+device trust
+```
+
+that only simulate functionality.
+
+All production paths must connect to the real implementation.
+
+---
+
+# 80 — ROLE × BUSINESS MATRIX
+
+| Capability          | ADMIN |      MANAGER      |   CASHIER   |    SALESMAN    |
+| ------------------- | :---: | :---------------: | :---------: | :------------: |
+| Dashboard           |  Full |        Yes        |   Limited   |     Limited    |
+| POS                 |  Yes  |        Yes        |     Yes     |       Yes      |
+| Sales Create        |  Yes  |        Yes        |     Yes     |       Yes      |
+| Sale Tracking       |  All  |        All        | Own/Allowed |       Own      |
+| Sale Edit           |  Yes  |      Allowed      |   Allowed   |    Draft/Own   |
+| Sale Reverse        |  Yes  |        Yes        |      No     |       No       |
+| Returns             |  Yes  |        Yes        |     Yes     |   Yes/Allowed  |
+| Refunds             |  Yes  |        Yes        |    Normal   |       No       |
+| Products View       |  Yes  |        Yes        |     POS     |       Yes      |
+| Product Create/Edit |  Yes  |        Yes        |      No     |       No       |
+| Inventory View      |  Yes  |        Yes        |   Limited   |     Limited    |
+| Restock             |  Yes  |        Yes        |      No     |       No       |
+| Inventory Adjust    |  Yes  | Optional Explicit |      No     |       No       |
+| Purchases           |  Yes  |        Yes        |      No     |       No       |
+| Suppliers           |  Yes  |        Yes        |      No     |       No       |
+| Supplier Payment    |  Yes  |        Yes        |      No     |       No       |
+| Expenses            |  Yes  |        Yes        |      No     |       No       |
+| Wallet View         |  Full |    Operational    |   Assigned  |       No       |
+| Wallet Adjust       |  Yes  |         No        |      No     |       No       |
+| Wallet Transfer     |  Yes  |         No        |      No     |       No       |
+| Customers           |  Yes  |        Yes        |     Yes     |       Yes      |
+| Customer Payment    |  Yes  |        Yes        |     Yes     |   No/Allowed   |
+| Users               |  Yes  |         No        |      No     |       No       |
+| Roles               |  Yes  |         No        |      No     |       No       |
+| Permissions         |  Yes  |         No        |      No     |       No       |
+| Devices             |  Yes  |         No        |      No     |       No       |
+| Device Pairing      |  Yes  |         No        |      No     |       No       |
+| Device Revocation   |  Yes  |         No        |      No     |       No       |
+| Sync Status         |  Full |        View       |     View    |      View      |
+| Reports             |  Full |    Operational    |  Own/Basic  |    Own/Basic   |
+| Financial Reports   |  Yes  |        Yes        |      No     |       No       |
+| Settings            |  Yes  |         No        |      No     |       No       |
+| Security            |  Yes  |         No        |      No     |       No       |
+| Backup              |  Yes  |         No        |      No     |       No       |
+| Restore             |  Yes  |         No        |      No     |       No       |
+| Audit               |  Full |        View       |      No     | Own if allowed |
+| Data Export         |  Yes  |         No        |      No     |       No       |
+| Recovery            |  Yes  |         No        |      No     |       No       |
+
+The exact final permission matrix must be implemented through the centralized permission definitions, not hardcoded directly into individual UI components.
+
+---
+
+# 81 — COMMON USER SCREEN
+
+User management should display:
+
+```text
+Name
+User ID
+Role
+Status
+Created At
+Last Activity
+```
+
+PIN input is only shown where required for:
+
+* Initial creation
+* PIN change/reset
+
+Never display the stored PIN verifier.
+
+System-generated fields:
+
+```text
+USER_ID
+CREATED_BY
+CREATED_AT
+UPDATED_AT
+```
+
+---
+
+# 82 — USER EVENT RULES
+
+User creation:
+
+```text
+USER_CREATED
+```
+
+User update:
+
+```text
+USER_UPDATED
+```
+
+Role change:
+
+```text
+USER_ROLE_UPDATED
+```
+
+Status change:
+
+```text
+USER_STATUS_CHANGED
+```
+
+PIN reset:
+
+```text
+USER_PIN_RESET
+```
+
+Permission change:
+
+```text
+ROLE_PERMISSION_UPDATED
+```
+
+or:
+
+```text
+USER_PERMISSION_UPDATED
+```
+
+Only canonical event types defined by the final event schema should be used.
+
+All events:
+
+```text
+SQLite
+ ↓
+Outbox
+ ↓
+WebRTC
+ ↓
+Trusted Devices
+```
+
+---
+
+# 83 — SALE IDENTITY RULE
+
+At sale creation, automatically capture:
+
+```text
+USER_ID
+DEVICE_ID
+SALESMAN_ID
+CASHIER_ID
+```
+
+Do not require users to manually type their own identity.
+
+If a separate salesman is selected, only the appropriate authorized user-selection control is exposed.
+
+The authenticated current user remains the authoritative actor.
+
+---
+
+# 84 — BUSINESS TRANSACTION AUTHORIZATION ORDER
+
+Every sensitive operation:
+
+```text
+Current User
+ ↓
+Active?
+ ↓
+Trusted Device?
+ ↓
+Correct SHOP_ID?
+ ↓
+Permission?
+ ↓
+Validate Input
+ ↓
+Validate Business Rules
+ ↓
+SQLite Transaction
+ ↓
+Business Rows
+ ↓
+Effects
+ ↓
+Audit
+ ↓
+Event
+ ↓
+Outbox
+ ↓
+Commit
+```
+
+Failure at any point before commit:
+
+```text
+ZERO BUSINESS EFFECT
+```
+
+---
+
+# 85 — CRITICAL TRANSACTION TESTS
+
+Must test at minimum:
+
+### Sales
+
+* Cash sale
+* Card sale
+* Bank sale
+* Online sale
+* Split payment
+* Credit sale
+* Partial credit
+* Sale edit
+* Sale reversal
+* Double reversal rejection
+
+### Returns / Refunds
+
+* Return
+* Return + refund
+* Refund without return
+
+### Inventory
+
+* Restock
+* Inventory adjustment
+* Concurrent/offline inventory movements
+
+### Financial
+
+* Expense
+* Expense reversal
+* Customer payment
+* Customer payment reversal
+* Supplier payment
+* Supplier payment reversal
+* Wallet transfer
+
+### Reliability
+
+* Failed transaction
+* Double click
+* Duplicate request
+* Retry
+* App restart
+* Offline transaction
+* Reconnect
+* P2P duplicate event
+* P2P missing event
+* P2P invalid event
+
+### Security
+
+* Device revoke
+* Untrusted device
+* User disable
+* Role change
+* Permission change
+* Cashier unauthorized action
+* Salesman unauthorized action
+* Manager unauthorized action
+* Unknown permission
+* Invalid SHOP_ID
+* Invalid event
+* Invalid actor
+
+---
+
+# 86 — ZERO PARTIAL EFFECT TEST
+
+A failed sale must result in:
+
+```text
+NO Sale
++
+NO Inventory OUT
++
+NO Wallet IN
++
+NO Customer Ledger Effect
++
+NO Committed Business Event
++
+NO Outbox Record
+```
+
+The same principle applies to every atomic business transaction.
+
+---
+
+# 87 — P2P CONVERGENCE TEST
+
+Two offline devices:
+
+```text
+Device A
+→ Sale A
+
+Device B
+→ Sale B
+```
+
+After synchronization:
+
+```text
+Device A
+→ A + B
+
+Device B
+→ A + B
+```
+
+No valid transaction may disappear because another device had a later timestamp.
+
+Financial/inventory events must remain additive and traceable.
+
+---
+
+# 88 — DEVICE REVOCATION TEST
+
+After Admin revokes a device:
+
+```text
+Device status
+→ REVOKED
+```
+
+The system must enforce:
+
+```text
+No trusted business sync
+No new authorized business operation
+```
+
+according to the final offline revocation/security model.
+
+Historical local records remain intact.
+
+---
+
+# 89 — ACCEPTANCE CRITERIA
+
+Implementation is complete only when all are true:
+
+```text
+[ ] Admin automatically created on first setup
+[ ] Manager created only when needed
+[ ] Cashier created only when needed
+[ ] Salesman created only when needed
+
+[ ] Sale tracks salesman
+[ ] Sale tracks cashier
+[ ] Sale tracks authenticated user
+[ ] Sale tracks device
+
+[ ] Local SQLite is business-data authority
+[ ] Local SQLite is RBAC authority
+[ ] Event ledger is change authority
+[ ] WebRTC is P2P business synchronization
+[ ] Supabase is signaling only
+
+[ ] No Supabase RPC/RLS dependency in core POS loop
+[ ] No cloud business-data authority remains
+[ ] No cloud RBAC authority remains
+
+[ ] User creation syncs
+[ ] User updates sync
+[ ] User disable syncs
+[ ] Role changes sync
+[ ] Permission changes sync
+
+[ ] Device identity verified
+[ ] Device trust enforced
+[ ] Revoked device rejected
+[ ] SHOP_ID validated
+
+[ ] PIN plaintext never stored
+[ ] PIN plaintext never synced
+[ ] PIN plaintext never logged
+
+[ ] Central authorization service exists
+[ ] UI authorization works
+[ ] Business-layer authorization works
+[ ] Unknown permission = DENY
+[ ] Unauthorized action = ZERO EFFECT
+[ ] No hardcoded admin bypass
+
+[ ] Inventory uses immutable effects
+[ ] Wallet uses immutable effects
+[ ] Sales use immutable transactions/events
+[ ] Financial data never uses LWW
+[ ] Inventory never uses LWW
+
+[ ] Sale reversal reverses actual committed effects
+[ ] Double reversal impossible
+[ ] Failed transactions produce zero effects
+[ ] Duplicate operations are idempotent
+[ ] Duplicate events are idempotent
+
+[ ] Offline POS works
+[ ] Initial bootstrap works
+[ ] Normal incremental sync works
+[ ] Only missing events/changes are transferred
+[ ] P2P invalid events are rejected
+[ ] P2P duplicate events are safely ignored
+
+[ ] Reports use local SQLite
+[ ] Audit is append-only
+[ ] Historical user identity preserved
+[ ] Financial history is not destructively deleted
+[ ] Products with history are archived
+
+[ ] No legacy competing RBAC remains
+[ ] No fake P2P remains
+[ ] No fake SQLite remains
+[ ] No fake authorization remains
+[ ] No hidden Supabase business dependency remains
+```
+
+---
+
+# 90 — IMPLEMENTATION RULES
+
+Before changing code:
+
+```text
+1. Inspect complete existing codebase.
+2. Inspect package/dependency structure.
+3. Inspect SQLite/database implementation.
+4. Inspect schema and migrations.
+5. Inspect current authentication.
+6. Inspect current RBAC.
+7. Inspect all permission checks.
+8. Inspect business services.
+9. Inspect transaction handling.
+10. Inspect inventory effects.
+11. Inspect wallet/ledger effects.
+12. Inspect audit system.
+13. Inspect event/outbox system.
+14. Inspect P2P synchronization.
+15. Inspect Supabase references.
+16. Inspect existing tests.
+```
+
+Do not create a parallel architecture.
+
+Do not blindly delete existing functionality.
+
+Migrate existing working functionality into the authoritative architecture.
+
+---
+
+# 91 — LEGACY CODE MIGRATION
+
+For every old RBAC/auth/data path:
+
+```text
+DISCOVER
+ ↓
+CLASSIFY
+ ↓
+VERIFY CURRENT USAGE
+ ↓
+MIGRATE
+ ↓
+TEST
+ ↓
+REMOVE ONLY WHEN SAFE
+```
+
+Classify legacy code as:
+
+```text
+KEEP
+REFACTOR
+MIGRATE
+REMOVE
+```
+
+Do not remove code simply because it references Supabase.
+
+First determine whether it performs:
+
+* Signaling
+* Presence
+* Business data
+* Authentication
+* Authorization
+* Sync
+* Storage
+* UI functionality
+
+Supabase signaling functionality may remain.
+
+Supabase business authority must not remain.
+
+---
+
+# 92 — NO DUPLICATE ARCHITECTURE
+
+There must not be:
+
+```text
+Local RBAC
++
+Supabase RBAC
+```
+
+or:
+
+```text
+Local transaction ledger
++
+Cloud transaction ledger
+```
+
+or:
+
+```text
+Real P2P
++
+Fake sync layer
+```
+
+or:
+
+```text
+Two competing permission services
+```
+
+There must be one authoritative implementation for each responsibility.
+
+---
+
+# 93 — FINAL RESPONSIBILITY MODEL
+
+```text
+┌──────────────────────────────────────────────┐
+│                  POS APP                     │
+├──────────────────────────────────────────────┤
+│ React + Vite + TypeScript                    │
+│ UI + Domain + Business Services              │
+├──────────────────────────────────────────────┤
+│ Local Authorization Service                  │
+│ Users + Roles + Permissions + Device Trust   │
+├──────────────────────────────────────────────┤
+│ Local SQLite                                 │
+│ Business Data + Transactions + Audit         │
+├──────────────────────────────────────────────┤
+│ Event Ledger + Outbox + Inbox                │
+│ Durable Change / Sync State                  │
+├──────────────────────────────────────────────┤
+│ WebRTC P2P                                   │
+│ Business Data Synchronization                │
+├──────────────────────────────────────────────┤
+│ Supabase                                     │
+│ Signaling / Presence ONLY                    │
+└──────────────────────────────────────────────┘
+```
+
+---
+
+# 94 — FINAL GOLDEN RULES
+
+```text
 ADMIN = CONTROL
 
 MANAGER = OPERATE
 
-CASHIER = SELL
+CASHIER = CHECKOUT
 
-============================================================
-63. FINAL GOLDEN TRANSACTION RULE
-============================================================
+SALESMAN = SELL + TRACK SALES
+```
 
-NO REAL BUSINESS ACTION
+```text
+LOCAL SQLITE
+= BUSINESS DATA AUTHORITY
+```
+
+```text
+LOCAL AUTHORIZATION SERVICE
+= RBAC AUTHORITY
+```
+
+```text
+EVENT LEDGER
+= CHANGE AUTHORITY
+```
+
+```text
+WEBRTC P2P
+= BUSINESS DATA SYNC
+```
+
+```text
+SUPABASE
+= SIGNALING ONLY
+```
+
+```text
+UI CHECK
+= UX
+```
+
+```text
+BUSINESS-LAYER CHECK
+= SECURITY
+```
+
+```text
+UNKNOWN AUTHORIZATION
+= DENY
+```
+
+```text
+BUSINESS ACTION
 =
-NO REAL IN/OUT
+AUTHORIZATION
++
+VALIDATION
++
+TRANSACTION
++
+EFFECTS
++
+AUDIT
++
+EVENT
++
+OUTBOX
+```
 
-REAL SUCCESSFUL ACTION
+```text
+SUCCESS
 =
-ALL REQUIRED EFFECTS
+ALL REQUIRED EFFECTS COMMIT
+```
 
-EDIT
+```text
+FAILURE
 =
-EXACT DELTA
+ZERO EFFECTS
+```
 
+```text
 REVERSE
 =
-EXACT OPPOSITE OF ORIGINAL EFFECTS
+EXACT OPPOSITE EFFECTS
+```
 
-ERROR
+```text
+DUPLICATE EVENT
 =
-ZERO COMMITTED EFFECTS
+APPLY ONCE
+```
 
-APPROVAL PENDING
+```text
+INVENTORY / FINANCE
 =
-ZERO BUSINESS EFFECTS
+NEVER LWW
+```
 
-APPROVAL APPROVED
+```text
+USER HISTORY
 =
-ATOMIC BUSINESS EFFECTS
+PRESERVE
+```
 
-============================================================
-64. FINAL SECURITY RULE
-============================================================
-
-UI HIDE
+```text
+FINANCIAL HISTORY
 =
-UX ONLY
+REVERSE, NEVER DESTRUCTIVELY DELETE
+```
 
-SERVER CHECK
+```text
+NORMAL SYNC
 =
-SECURITY
+MISSING CHANGES ONLY
+```
 
-DATABASE/RPC CHECK
+```text
+INITIAL JOIN
 =
-FINAL AUTHORITY
+AUTHORIZED BOOTSTRAP
+```
 
-Never trust frontend role or permission values.
+---
 
-============================================================
-65. FINAL IMPLEMENTATION REQUIREMENT
-============================================================
+# 95 — FINAL IMPLEMENTATION COMMAND
+
+The implementation MUST modify the existing POS architecture.
 
-Implement this permanently in:
+It MUST NOT create a parallel POS, RBAC, transaction, database, or synchronization system.
 
-- code
-- database
-- schema
-- SQL/RPC
-- server
-- Edge Functions
-- API
-- frontend
-- routes
-- navigation
-- hooks
-- actions
-- modals
-- permission definitions
-- approval system
-- transaction system
-- audit system
+First inspect the complete existing implementation.
 
-Do not merely change labels or hide buttons.
+Then:
 
-Do not only fix the currently reported files.
+```text
+INSPECT
+ ↓
+PLAN
+ ↓
+MIGRATE
+ ↓
+IMPLEMENT
+ ↓
+TEST
+ ↓
+RECONCILE
+ ↓
+VERIFY
+ ↓
+REPORT
+```
 
-Search the COMPLETE codebase and database for all affected paths.
+Every change must preserve existing valid business functionality while moving authority to the final local-first architecture.
+
+The final application must be:
+
+```text
+OFFLINE-FIRST
+LOCAL-AUTHORITATIVE
+P2P-SYNCHRONIZED
+TRANSACTION-SAFE
+RBAC-CENTRALIZED
+AUDITABLE
+IDEMPOTENT
+FAIL-CLOSED
+```
 
-Do not leave:
+There must be no fake security, fake synchronization, fake database behavior, hidden cloud authority, duplicate RBAC, partial financial transactions, destructive financial history deletion, or LWW-based financial/inventory reconciliation.
 
-- hardcoded admin bypass
-- fail-open authorization
-- unguarded stock adjustment
-- unguarded wallet adjustment
-- legacy permission authority
-- dead role guards
-- unauthorized RPC
-- unauthorized API
-- orphan ledger records
-- partial transaction effects
-- missing reversals
-- missing approval enforcement
+---
 
-============================================================
-66. FINAL ACCEPTANCE CRITERIA
-============================================================
-
-The implementation is COMPLETE only if ALL are true:
-
-[ ] Admin has full intended access.
-
-[ ] Manager has operational access only.
-
-[ ] Cashier has POS-level access only.
-
-[ ] User creation is Admin-only.
-
-[ ] User management is Admin-only.
-
-[ ] Roles are Admin-only.
-
-[ ] Permissions are Admin-only.
-
-[ ] System settings are Admin-only.
-
-[ ] Database/data export is Admin-only.
-
-[ ] Manual wallet adjustment is Admin-only.
-
-[ ] Stock adjustment is protected.
-
-[ ] Cashier cannot adjust inventory.
-
-[ ] Cashier cannot adjust wallet.
-
-[ ] Cashier cannot reverse/delete sales.
-
-[ ] Manager high-risk actions use approval where configured.
-
-[ ] High-value refunds use approval where configured.
-
-[ ] Supplier payment approval works where configured.
-
-[ ] Wallet transfer approval works where configured.
-
-[ ] Frontend bypasses removed.
-
-[ ] Hardcoded isAdmin bypasses removed.
-
-[ ] Legacy permission authority removed.
-
-[ ] Fail-open authorization removed.
-
-[ ] Action token verification fails closed.
-
-[ ] Every sensitive RPC is protected.
-
-[ ] Every sensitive API/server action is protected.
-
-[ ] Direct unauthorized calls are rejected.
-
-[ ] Unauthorized actions create ZERO business effects.
-
-[ ] Every successful sale has correct Inventory/Wallet effects.
-
-[ ] Every return has correct Inventory/Wallet effects.
-
-[ ] Every refund has correct Wallet effect.
-
-[ ] Every edit creates exact delta.
-
-[ ] Every reversal creates exact opposite effects.
-
-[ ] Every approval is enforced server-side.
-
-[ ] Pending approval creates no financial/inventory effect.
-
-[ ] Failed transactions leave zero partial effects.
-
-[ ] Duplicate requests do not duplicate effects.
-
-[ ] Concurrent transactions cannot corrupt balances.
-
-[ ] No orphan inventory ledger records.
-
-[ ] No orphan wallet ledger records.
-
-[ ] No missing reversal records.
-
-[ ] No duplicate reversal.
-
-[ ] Customer ledger remains accurate.
-
-[ ] Supplier ledger remains accurate.
-
-[ ] Inventory balance remains accurate.
-
-[ ] Wallet balance remains accurate.
-
-[ ] Audit logs capture sensitive actions.
-
-[ ] Audit logs cannot be modified normally.
-
-[ ] Existing legitimate functionality remains working.
-
-[ ] Typecheck passes.
-
-[ ] Lint passes.
-
-[ ] Build passes.
-
-[ ] Database migrations pass.
-
-[ ] RPC tests pass.
-
-[ ] Role × permission tests pass.
-
-[ ] Production security tests pass.
-
-============================================================
-FINAL NON-NEGOTIABLE STATEMENT
-============================================================
-
-DO NOT CONSIDER THIS TASK COMPLETE JUST BECAUSE THE UI LOOKS CORRECT.
-
-The final system must remain secure even if a user:
-
-- bypasses the UI
-- manually calls an API
-- directly calls an RPC
-- changes request payload
-- sends role="admin"
-- sends isAdmin=true
-- modifies frontend JavaScript
-- directly opens a protected URL
-- repeats the request
-- double-clicks
-- retries after timeout
-
-The server/database must still enforce the correct permissions.
-
-AND:
-
-NO unauthorized action may create:
-
-- Inventory IN
-- Inventory OUT
-- Wallet IN
-- Wallet OUT
-- Customer Ledger movement
-- Supplier Ledger movement
-- Financial movement
-- Partial business transaction
-
-Every legitimate business action must create its complete linked effects atomically.
-
-EVERY EFFECT MUST HAVE A REAL SOURCE.
-
-EVERY REVERSAL MUST REVERSE THE ACTUAL ORIGINAL EFFECTS.
-
-EVERY HIGH-RISK ACTION MUST REQUIRE THE CORRECT AUTHORIZATION/APPROVAL.
-
-EVERY UNKNOWN/INVALID AUTHORIZATION MUST FAIL CLOSED.
-
-ONE RBAC.
-ONE SOURCE OF TRUTH.
-NO BYPASSES.
-NO ORPHAN EFFECTS.
-NO PARTIAL TRANSACTIONS.
-NO FAKE IN/OUT RECORDS.
-NO MISSING REVERSALS.
-NO UNAUTHORIZED FINANCIAL OR INVENTORY MOVEMENT.
-
-ADMIN CONTROLS.
-MANAGER OPERATES.
-CASHIER SELLS.
-
-============================================================
-67. CLOUD COLUMN COMPLETENESS — IDENTICAL DATA ON ALL DEVICES
-============================================================
-
-Supabase cloud is the ONLY source of truth. Every column of every business
-table MUST live in the cloud and be fully synced to every device.
-
-MANDATORY:
-
-- Every column defined in `SUPER_MASTER_SCHEMA.sql` MUST be stored in the cloud.
-  No business column may be device-local-only.
-- Every device, on every refresh, MUST receive the COMPLETE row — all columns,
-  no truncation, no client-side column filtering.
-- Mappers (`map*`, `toRemote*`) MUST account for every column. A column missing
-  from a mapper is a bug (extends Hard Rule #5).
-- A business column MUST NEVER be "hidden" from sync to save bandwidth or simplify UI.
-- Two devices refreshing at the same moment MUST show byte-identical business data.
-- If a column genuinely cannot be cloud-synced, it MUST be device-local ONLY and
-  explicitly listed (e.g. `pos_local_prefs.*`) — never a business column.
-- ALL COLUMNS IN = ALL COLUMNS OUT. No partial column sync.
-
-This reinforces CLOUD DATA SYNC RULES (lines 13–92) and §54 integrity checks.
+# CREDIT / UDHAR SYSTEM — Complete RBAC & Flow Reference
+
+## Credit System Overview
+
+Credit (Udhar) allows customers to take goods without immediate payment. The outstanding balance is tracked as a receivable in `customer_ledger` and `customers.current_balance`.
+
+## Global Settings (Settings → General)
+
+| Setting | Key | Scope | P2P |
+|---|---|---|---|
+| Enable Credit Sales | `enableCreditSales` | Global toggle | ✅ SHAREABLE |
+| Cashier Can Give Credit | `cashierCanCredit` | Restrict by role | ✅ SHAREABLE |
+
+Both settings are SHAREABLE — they sync to all devices via P2P outbox.
+
+## RBAC Permission Matrix
+
+| Action | Admin | Manager | Cashier | Salesman |
+|---|---|---|---|---|
+| Enable Credit Sales (setting) | ✅ | ❌ | ❌ | ❌ |
+| Cashier Can Give Credit (setting) | ✅ | ❌ | ❌ | ❌ |
+| Create Credit Sale | ✅ | ✅ | ✅ (if cashierCanCredit=ON) | ✅ (if cashierCanCredit=ON) |
+| Receive Customer Payment | ✅ | ✅ | ❌ | ❌ |
+| View Customer Ledger | ✅ | ✅ | ✅ (own sales) | ❌ |
+| View Credit in Financial Report | ✅ | ✅ | ❌ | ❌ |
+
+## Credit Button Visibility Rules
+
+```text
+isCreditAllowed = true IF:
+  1. appSettings.enableCreditSales === true
+  2. customer is selected (appSelectedCustomer?.id is set)
+  3. role !== 'cashier' OR appSettings.cashierCanCredit === true
+```
+
+Credit button appears in Settlement modal ONLY when all 3 conditions are met.
+
+## Credit Sale Flow (Day 1)
+
+```text
+Cashier selects customer → opens Settlement modal
+  → selects "Credit" payment method
+  → clicks Process Payment
+
+System executes atomic SQLite transaction:
+  1. INSERT sales (payment_method = 'credit', status = 'completed')
+  2. INSERT sale_items
+  3. INSERT inventory_transactions (INVENTORY_OUT) per item
+  4. UPDATE products.stock (recomputed from ledger)
+  5. INSERT payments (mode_id = 'credit', sale_id = sale.id)
+  6. ⚡ payment_modes.balance NOT updated (credit ≠ physical cash)
+  7. INSERT customer_ledger (type = 'sale', amount = total, balance_after = new_balance)
+  8. UPDATE customers.current_balance += total
+  9. INSERT sync_outbox (entityType = 'SALE', payload includes paymentMethod='credit')
+```
+
+P2P: Remote device receives SALE event → salesEventHandlers.ts applies steps 1-8 identically.
+
+## Credit Repayment Flow (Day N)
+
+```text
+Admin/Manager → Customers page → Customer card → "Receive Payment"
+  → enters amount + payment mode (cash/card/online)
+  → submits
+
+System executes atomic SQLite transaction:
+  1. INSERT customer_ledger (type = 'payment', amount = repayment, balance_after = new_balance)
+  2. UPDATE customers.current_balance -= repayment
+  3. INSERT payments (sale_id = NULL, mode_id = repayment_mode, customer_id = customer.id)
+  4. UPDATE payment_modes.balance += repayment (for actual payment mode)
+  5. INSERT sync_outbox (entityType = 'CUSTOMER_LEDGER', eventType = 'CUSTOMER_PAYMENT')
+```
+
+P2P: Remote device receives CUSTOMER_LEDGER event → customerEventHandlers.ts applies steps 1-4.
+
+## Financial Report Credit Display
+
+| Report Section | What Shows | Day |
+|---|---|---|
+| Sales page "Payment: Credit" filter | All credit sales | Sale day |
+| Financial → Credit wallet card | Credit Given (total receivables) | Sale day |
+| Financial → Cash wallet card | Credit Received (repayments received in cash) | Repayment day |
+| Customers → Ledger tab | Full debit/credit history | Both days |
+| Overview → Total Revenue | Credit sales included | Sale day |
+
+## Wallet Balance Rules
+
+```text
+Credit sale:         Cash wallet = 0 change, Credit receivable +amount
+Credit repayment:    Cash wallet +repayment_amount, Credit receivable -repayment_amount
+```
+
+Credit wallet balance = Σ(credit sales) − Σ(credit repayments) = Outstanding receivable
+
+## P2P Sync Verification Checklist
+
+After any credit-related change, verify:
+- [ ] Credit sale on Device A → Device B shows customer balance updated
+- [ ] Credit sale on Device A → Device B customer_ledger has entry
+- [ ] Credit repayment on Device A → Device B customer balance decreases
+- [ ] Credit repayment on Device A → Device B payments table has entry (sale_id NULL)
+- [ ] Financial report: Credit wallet shows correct amount on both devices
+- [ ] Sales filter: "Credit" option visible when enableCreditSales = ON

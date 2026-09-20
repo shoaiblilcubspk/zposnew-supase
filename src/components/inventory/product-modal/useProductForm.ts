@@ -23,6 +23,8 @@ export type ProductFormData = {
   isService: boolean;
   requireSerial: boolean;
   productType: 'simple' | 'variable';
+  expiryDate: string;
+  expiryAlertDays: string;
 };
 
 export function useProductForm(product: Product | null) {
@@ -50,6 +52,8 @@ export function useProductForm(product: Product | null) {
     isService: false,
     requireSerial: false,
     productType: 'simple',
+    expiryDate: '',
+    expiryAlertDays: '90',
   });
 
   const [variants, setVariants] = useState<ProductVariant[]>([]);
@@ -78,6 +82,8 @@ export function useProductForm(product: Product | null) {
         isService: product.isService ?? false,
         requireSerial: product.requireSerial ?? false,
         productType: (product.productType === 'variable') ? 'variable' : 'simple',
+        expiryDate: product.expiryDate || '',
+        expiryAlertDays: (product.expiryAlertDays !== undefined ? product.expiryAlertDays : 90).toString(),
       });
       setVariants((product.variants || []).map(v => ({ ...v, optionsRaw: '' })));
       setVariantData(product.variantData || []);
@@ -103,6 +109,8 @@ export function useProductForm(product: Product | null) {
         isService: false,
         requireSerial: false,
         productType: 'simple',
+        expiryDate: '',
+        expiryAlertDays: '90',
       });
       setVariants([]);
       setVariantData([]);
@@ -208,20 +216,40 @@ export function useProductForm(product: Product | null) {
   };
 
   const handleAddCategory = async () => {
-    const result = await sonner.input('New Category', 'Category Name');
+    const result = await sonner.input('New Category', 'Enter category name:');
     if (result.isConfirmed && result.value) {
       const catName = result.value.trim().toUpperCase();
-      setFormData(prev => ({ ...prev, category: catName }));
-      sonner.success(`Category "${catName}" added to form.`);
+      try {
+        const { categoriesService } = await import('../../../lib/services');
+        const created = await categoriesService.create(catName);
+        useInventoryStore.getState().addCategory(created);
+        setFormData(prev => ({ ...prev, category: catName }));
+        sonner.success(`Category "${catName}" saved.`);
+      } catch (err: any) {
+        setFormData(prev => ({ ...prev, category: catName }));
+        sonner.error(err?.message || 'Failed to save category');
+      }
     }
   };
 
   const handleAddSupplier = async () => {
-    const result = await sonner.input('New Supplier', 'Supplier Name');
+    const result = await sonner.input('New Supplier', 'Enter supplier name:');
     if (result.isConfirmed && result.value) {
       const supName = result.value.trim().toUpperCase();
-      setFormData(prev => ({ ...prev, supplier: supName }));
-      sonner.success(`Supplier "${supName}" added to form.`);
+      try {
+        const { suppliersService } = await import('../../../lib/services');
+        const created = await suppliersService.create({
+          name: supName,
+          email: '', phone: '', address: '', businessType: 'General',
+          paymentTerms: '', openingBalance: 0, rating: 0
+        });
+        useInventoryStore.getState().addSupplier(created);
+        setFormData(prev => ({ ...prev, supplier: supName }));
+        sonner.success(`Supplier "${supName}" saved.`);
+      } catch (err: any) {
+        setFormData(prev => ({ ...prev, supplier: supName }));
+        sonner.error(err?.message || 'Failed to save supplier');
+      }
     }
   };
 

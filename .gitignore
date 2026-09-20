@@ -16,5 +16,12 @@ tmp/
 temp/
 .env*
 verify_deploys.sh
-env_backups/
 delet/
+src-tauri/target/
+android/.gradle/
+android/app/build/
+android/build/
+ios/App/build/
+ios/App/DerivedData/
+ios/App/Pods/
+*.tsbuildinfo

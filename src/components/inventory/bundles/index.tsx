@@ -82,16 +82,17 @@ export function BundleManager() {
       {!showForm && (
         <div className="space-y-4 animate-in fade-in duration-300">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pb-1 border-b border-neutral-200 dark:border-white/[0.08]">
             <div>
-              <h2 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{"Bundles & Deals"}</h2>
-              <p className="text-[10px] text-gray-500 mt-0.5">
-                {"{count} bundles · Access from \"Bundles\" chip in POS".replace('{count}', String(bundles.length))}
+              <h2 className="text-base font-semibold text-neutral-900 dark:text-white tracking-[-0.01em]">{"Bundles & Deals"}</h2>
+              <p className="text-[12px] text-neutral-500 font-normal mt-0.5 leading-normal">
+                <span className="font-mono font-medium text-neutral-700 dark:text-neutral-300">{bundles.length}</span> bundles · Access from "Bundles" chip in POS
               </p>
             </div>
             {canManage && (
               <Button
-                size="md"
+                size="sm"
+                variant="primary"
                 icon={<Plus className="h-3.5 w-3.5" />}
                 onClick={openCreate}
               >
@@ -101,22 +102,22 @@ export function BundleManager() {
           </div>
 
           {/* Info Banner */}
-          <div className="flex items-start gap-3 p-3 bg-blue-500/5 border border-blue-500/20 rounded-2xl">
-            <Gift className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
-            <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold leading-relaxed">
-              {"In POS ProductGrid, you will see a 🎁 Bundles chip under category chips. Click it → click \"Add Bundle\" → all items will be added to the cart with prorated discounts."}
+          <div className="flex items-start gap-2.5 p-3 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md text-[12px] text-neutral-600 dark:text-neutral-400">
+            <Gift className="h-4 w-4 text-neutral-400 dark:text-neutral-500 shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              {"In POS ProductGrid, you will see a Bundles chip under category chips. Click it → click \"Add Bundle\" → all items will be added to the cart with prorated discounts."}
             </p>
           </div>
 
           {/* Bundle List */}
           {bundles.length === 0 ? (
             <EmptyState
-              icon={<Gift className="h-8 w-8 text-primary" />}
+              icon={<Gift className="h-8 w-8 text-neutral-400" />}
               title={"No Bundles & Deals Yet"}
               subtext={"Create your first bundle deal to start selling combos."}
-              className="py-16 bg-white dark:bg-surface rounded-3xl border border-gray-200 dark:border-white/5"
+              className="py-16 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none"
               action={canManage && (
-                <Button size="md" onClick={openCreate} icon={<Plus className="h-3.5 w-3.5" />}>
+                <Button size="sm" variant="primary" onClick={openCreate} icon={<Plus className="h-3.5 w-3.5" />}>
                   {"Create Bundle"}
                 </Button>
               )}

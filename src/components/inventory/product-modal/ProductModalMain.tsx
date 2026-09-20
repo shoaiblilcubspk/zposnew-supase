@@ -74,7 +74,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
       <Modal
         isOpen={isOpen}
         onClose={onClose}
-        title={product ? "edit_product" : "register_new_product"}
+        title={product ? "Edit Product" : "New Product"}
         maxWidth="lg"
         footer={footer}
       >

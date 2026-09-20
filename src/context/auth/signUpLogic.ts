@@ -34,7 +34,9 @@ export async function signUpLogic(
           id: pData.id, username: pData.username, name: pData.name, email: pData.email, role: pData.role as any,
           canEditPrice: can(pData.role, 'edit_price'), canGiveDiscount: can(pData.role, 'give_discount'),
           canDeleteSale: can(pData.role, 'delete_sale'), canViewProfit: can(pData.role, 'view_profit'), canManageStock: can(pData.role, 'manage_stock'),
-          canManagePO: can(pData.role, 'manage_po'), canViewRecords: can(pData.role, 'view_records'), active: pData.active ?? true,
+          canManagePO: can(pData.role, 'manage_po'), canViewRecords: can(pData.role, 'view_records'),
+          canEditProduct: can(pData.role, 'manage_stock'), canEditSale: can(pData.role, 'edit_sale'),
+          active: pData.active ?? true,
           lastLogin: pData.last_login ? new Date(pData.last_login) : undefined, avatar: pData.avatar || undefined,
         });
       }

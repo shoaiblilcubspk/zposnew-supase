@@ -88,7 +88,7 @@ export class PosDB extends Dexie {
   customerLedger!: Table<any>;
 
   constructor() {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+    const supabaseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
     const projectRef = supabaseUrl.split('//')[1]?.split('.')[0] || 'default';
     const dbName = `ZaynahsPosDB_${projectRef}`;
 

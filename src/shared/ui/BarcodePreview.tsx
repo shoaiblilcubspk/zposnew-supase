@@ -61,7 +61,7 @@ export const BarcodePreview = React.memo(
     className,
     inline = false,
     height,
-    _showValue
+    showValue
   }: BarcodePreviewProps) => {
     if (!value) {
       return inline ? (
@@ -72,6 +72,7 @@ export const BarcodePreview = React.memo(
     const barcode = getBarcodeData(value, {
       height: height !== undefined ? height : (inline ? 12 : 28),
       width: inline ? 0.75 : 0.9,
+      displayValue: showValue ?? false,
       ...options
     });
 
@@ -129,8 +130,8 @@ export const BarcodePreview = React.memo(
       <div
         className={
           inline
-            ? `flex flex-col items-center justify-center overflow-hidden h-[44px] bg-white px-2 py-0.5 rounded-lg border border-gray-100 ${className || ''}`
-            : `mt-2 p-3 bg-white rounded-2xl border border-gray-100 flex flex-col items-center justify-center shadow-sm ${className || ''}`
+            ? `flex flex-col items-center justify-center overflow-hidden h-[44px] bg-white px-2 py-0.5 rounded border border-neutral-200 dark:border-white/[0.08] ${className || ''}`
+            : `mt-2 p-3 bg-white rounded-md border border-neutral-200 dark:border-white/[0.08] flex flex-col items-center justify-center shadow-none ${className || ''}`
         }
         style={containerStyle}
       >

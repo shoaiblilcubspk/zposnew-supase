@@ -46,7 +46,7 @@ function RootRedirect() {
   useEffect(() => {
     if (!currentUser) return;
     const savedView = localStorage.getItem('pos_current_view');
-    if (savedView) {
+    if (savedView && savedView !== 'dashboard') {
       navigate('/' + savedView, { replace: true });
     } else {
       navigate('/pos', { replace: true });
@@ -67,12 +67,12 @@ export function AppRoutes() {
       <Route path="/reports" element={<Navigate to="/reports/sales" replace />} />
       <Route path="/reports/:subTab" element={<RequireAccess action="view_reports"><ReportsManager /></RequireAccess>} />
       <Route path="/discounts" element={<RequireAccess action="view_discounts"><DiscountManager /></RequireAccess>} />
-      <Route path="/users" element={<Navigate to="/users/staff" replace />} />
+      <Route path="/users" element={<RequireAccess action="view_users"><UsersPage /></RequireAccess>} />
       <Route path="/users/:subTab" element={<RequireAccess action="view_users"><UsersPage /></RequireAccess>} />
       <Route path="/settings" element={<Navigate to="/settings/general" replace />} />
       <Route path="/settings/:subTab" element={<RequireAccess action="view_settings"><Settings /></RequireAccess>} />
       <Route path="/suppliers" element={<RequireAccess action="view_suppliers"><SupplierManager /></RequireAccess>} />
-      <Route path="/dashboard" element={<RequireAccess action="view_dashboard"><DashboardManager /></RequireAccess>} />
+      <Route path="/dashboard" element={<Navigate to="/pos" replace />} />
       <Route path="/" element={<RootRedirect />} />
       <Route path="*" element={<Navigate to="/pos" replace />} />
     </Routes>

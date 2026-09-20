@@ -10,6 +10,7 @@ interface CartState {
   billDiscountType: 'percentage' | 'fixed';
   notes: string;
   editingSaleId: string | null;
+  salesmanId: string | null;
   setCart: (items: CartItem[]) => void;
   addToCart: (item: CartItem) => void;
   mergeBundleCartItems: (items: CartItem[]) => void;
@@ -20,6 +21,7 @@ interface CartState {
   setBillDiscount: (p: { value: number; type: 'percentage' | 'fixed' }) => void;
   setNotes: (s: string) => void;
   setEditingSaleId: (id: string | null) => void;
+  setSalesmanId: (id: string | null) => void;
   addSalesTab: (tab: SalesTab) => void;
   updateSalesTab: (p: { id: string; updates: Partial<SalesTab> }) => void;
   removeSalesTab: (payload: string | { id: string; nextTabId?: string | null }) => void;
@@ -30,15 +32,24 @@ interface CartState {
 const updateActiveTab = (st: CartState, updater: (tab: SalesTab) => SalesTab) =>
   st.salesTabs.map((t) => (t.id === st.activeSalesTab ? updater(t) : t));
 
+const defaultInitialTab: SalesTab = {
+  id: 'tab_default_1',
+  name: 'Sale 1',
+  cart: [],
+  selectedCustomer: null,
+  createdAt: new Date(),
+};
+
 export const useCartStore = create<CartState>((set) => ({
-  salesTabs: [],
-  activeSalesTab: '',
+  salesTabs: [defaultInitialTab],
+  activeSalesTab: 'tab_default_1',
   cart: [],
   selectedCustomer: null,
   billDiscountValue: 0,
   billDiscountType: 'percentage',
   notes: '',
   editingSaleId: null,
+  salesmanId: null,
 
   setCart: (items) => set((st) => ({ cart: items, salesTabs: updateActiveTab(st, (t) => ({ ...t, cart: items })) })),
 
@@ -85,7 +96,8 @@ export const useCartStore = create<CartState>((set) => ({
     billDiscountType: 'percentage',
     notes: '',
     editingSaleId: null,
-    salesTabs: updateActiveTab(st, (t) => ({ ...t, cart: [], selectedCustomer: null, billDiscountValue: 0, billDiscountType: 'percentage', notes: '', editingSaleId: null })),
+    salesmanId: null,
+    salesTabs: updateActiveTab(st, (t) => ({ ...t, cart: [], selectedCustomer: null, billDiscountValue: 0, billDiscountType: 'percentage', notes: '', editingSaleId: null, salesmanId: null })),
   })),
 
   setSelectedCustomer: (c) => set((st) => ({
@@ -109,6 +121,11 @@ export const useCartStore = create<CartState>((set) => ({
     salesTabs: updateActiveTab(st, (t) => ({ ...t, editingSaleId: id })),
   })),
 
+  setSalesmanId: (id) => set((st) => ({
+    salesmanId: id,
+    salesTabs: updateActiveTab(st, (t) => ({ ...t, salesmanId: id })),
+  })),
+
   addSalesTab: (tab) => set((st) => {
     if (st.salesTabs.length >= 3) return st;
     return {
@@ -120,6 +137,7 @@ export const useCartStore = create<CartState>((set) => ({
       billDiscountType: tab.billDiscountType || 'percentage',
       notes: tab.notes || '',
       editingSaleId: tab.editingSaleId || null,
+      salesmanId: tab.salesmanId || null,
     };
   }),
 
@@ -128,12 +146,13 @@ export const useCartStore = create<CartState>((set) => ({
     if (id === st.activeSalesTab) {
       return {
         salesTabs: updatedTabs,
-        cart: updates.cart ?? st.cart,
+        cart: updates.cart !== undefined ? updates.cart : st.cart,
         selectedCustomer: updates.selectedCustomer !== undefined ? updates.selectedCustomer : st.selectedCustomer,
         billDiscountValue: updates.billDiscountValue !== undefined ? updates.billDiscountValue : st.billDiscountValue,
         billDiscountType: updates.billDiscountType !== undefined ? updates.billDiscountType : st.billDiscountType,
         notes: updates.notes !== undefined ? updates.notes : st.notes,
         editingSaleId: updates.editingSaleId !== undefined ? updates.editingSaleId : st.editingSaleId,
+        salesmanId: updates.salesmanId !== undefined ? updates.salesmanId : st.salesmanId,
       };
     }
     return { salesTabs: updatedTabs };
@@ -155,6 +174,7 @@ export const useCartStore = create<CartState>((set) => ({
         billDiscountType: nextTab?.billDiscountType || 'percentage',
         notes: nextTab?.notes || '',
         editingSaleId: nextTab?.editingSaleId || null,
+        salesmanId: nextTab?.salesmanId || null,
       };
     }
     return { salesTabs: remainingTabs, activeSalesTab: isCurrentActiveRemoved ? targetTabId : st.activeSalesTab };
@@ -170,6 +190,7 @@ export const useCartStore = create<CartState>((set) => ({
       billDiscountType: activeTab?.billDiscountType || 'percentage',
       notes: activeTab?.notes || '',
       editingSaleId: activeTab?.editingSaleId || null,
+      salesmanId: activeTab?.salesmanId || null,
     };
   }),
 

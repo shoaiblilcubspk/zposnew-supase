@@ -2,10 +2,10 @@ import { useSettingsStore, useUsersStore } from '../stores';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/SupabaseAppContext';
 import { useTouchKeyboard } from '../providers/TouchKeyboardProvider';
-import { useState } from 'react';
-import { Suspense } from 'react';
-import { LoginPage } from '../components/auth/LoginPage';
-import { ResetPasswordPage } from '../components/auth/ResetPasswordPage';
+import { useState, useEffect, Suspense } from 'react';
+import { PinLoginPage } from '../components/auth/PinLoginPage';
+import { FirstLaunchSetupModal } from '../components/auth/FirstLaunchSetupModal';
+import { FastLockModal } from '../components/auth/FastLockModal';
 import { Header } from '../components/layout/Header';
 import { SkeletonLoader } from '../shared/ui/SkeletonLoader';
 import { Toaster } from 'sonner';
@@ -15,6 +15,7 @@ import { MobileBottomNav } from '../components/layout/MobileBottomNav';
 import { AppRoutes } from '../appRoutes';
 import { LoadingView } from './LoadingView';
 import { useAppGlobalEffects } from './useAppGlobalEffects';
+import { useMeshBootstrap } from '../lib/mesh/useMeshBootstrap';
 
 export function AppContent() {
   const appSettings = useSettingsStore(s => s.settings);
@@ -22,11 +23,39 @@ export function AppContent() {
   const appSyncProgress = useSettingsStore(s => s.syncProgress);
   const appCurrentUser = useUsersStore(s => s.currentUser);
 
-  const { user, loading, isRecoveringPassword } = useAuth();
+  const { user, loading, isFirstLaunch, onBootstrapComplete } = useAuth();
   useApp();
   useTouchKeyboard();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isTerminalLocked, setIsTerminalLocked] = useState(() => {
+    return localStorage.getItem('pos_terminal_locked') === 'true';
+  });
 
+  const handleLockTerminal = () => {
+    localStorage.setItem('pos_terminal_locked', 'true');
+    setIsTerminalLocked(true);
+  };
+
+  const handleUnlockTerminal = () => {
+    localStorage.removeItem('pos_terminal_locked');
+    setIsTerminalLocked(false);
+  };
+
+  // Global fast-lock shortcut: ⌘L or Ctrl+L
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e?.key && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        handleLockTerminal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const isLoggedIn = Boolean(user && appCurrentUser && appCurrentUser.active);
+  const meshEnabled = !isFirstLaunch && !loading;
+  useMeshBootstrap(meshEnabled);
   useAppGlobalEffects();
 
   return (
@@ -35,64 +64,35 @@ export function AppContent() {
         className="!z-[999999]"
         position="top-center"
         expand={false}
-        visibleToasts={3}
-        richColors
-        closeButton
-        duration={3000}
-        theme={appSettings.theme === 'auto' ? 'system' : appSettings.theme as any}
-        style={{ zIndex: 999999 }}
+        visibleToasts={1}
+        closeButton={false}
+        duration={2500}
+        theme="dark"
         toastOptions={{
-          className: 'touch-none',
-          style: {
-            borderRadius: '1.25rem',
-            padding: '12px 16px',
-            fontSize: '11px',
-            fontWeight: '900',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-          },
-          success: {
-            style: {
-              background: '#10b981',
-              color: '#fff',
-            },
-          },
-          error: {
-            style: {
-              background: '#f43f5e',
-              color: '#fff',
-            },
-          },
-          warning: {
-            style: {
-              background: '#f59e0b',
-              color: '#fff',
-            },
-          },
-          info: {
-            style: {
-              background: '#3b82f6',
-              color: '#fff',
-            },
-          },
+          className: '!rounded-full !px-4 !py-2.5 !bg-neutral-900/95 dark:!bg-[#1a1a1e]/95 !backdrop-blur-xl !border !border-white/10 !text-white !shadow-2xl !text-[13px] !font-medium !tracking-tight flex items-center gap-2.5',
         }}
+        style={{ zIndex: 999999 }}
       />
       
       {loading || (user && !appCurrentUser && appLoading) ? (
         <SkeletonLoader type="list" count={8} />
       ) : (
         <div dir="ltr" className="fixed inset-0 w-full bg-gray-50 dark:bg-app flex flex-col overflow-hidden">
-          {isRecoveringPassword ? (
-        <ResetPasswordPage />
-      ) : !user || !appCurrentUser || !appCurrentUser.active ? (
-        <LoginPage />
-      ) : (
+          {isFirstLaunch ? (
+            <FirstLaunchSetupModal open={isFirstLaunch} onComplete={onBootstrapComplete} />
+          ) : !user || !appCurrentUser || !appCurrentUser.active ? (
+            <PinLoginPage />
+          ) : (
         <>
           <DialogProvider />
-          <Header onShowMobileMenu={() => setIsMobileMenuOpen(true)} isMobileMenuOpen={isMobileMenuOpen} onHideMobileMenu={() => setIsMobileMenuOpen(false)} />
-          <main className="flex-1 min-h-0 relative overflow-y-auto overflow-x-hidden bg-gray-50 dark:bg-app" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+          <FastLockModal isOpen={isTerminalLocked} onUnlock={handleUnlockTerminal} />
+          <Header
+            onShowMobileMenu={() => setIsMobileMenuOpen(true)}
+            isMobileMenuOpen={isMobileMenuOpen}
+            onHideMobileMenu={() => setIsMobileMenuOpen(false)}
+            onLockTerminal={handleLockTerminal}
+          />
+          <main className="flex-1 min-h-0 relative overflow-y-auto overflow-x-hidden bg-gray-50 dark:bg-app pb-[calc(env(safe-area-inset-bottom,0px)+96px)] md:pb-0" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
               <ErrorBoundary>
               <Suspense fallback={<LoadingView />}>
                 <AppRoutes />
@@ -109,17 +109,17 @@ export function AppContent() {
                     </div>
                   </div>
                   {appSyncProgress && (
-                    <div className="bg-white dark:bg-surface px-8 py-6 rounded-[2rem] shadow-2xl border border-gray-200 dark:border-white/5 flex flex-col items-center min-w-[320px] animate-in slide-in-from-bottom-4">
-                      <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">{appSyncProgress.status}</p>
-                      <div className="w-full h-1.5 bg-gray-100 dark:bg-white/5 rounded-full mt-4 overflow-hidden">
+                    <div className="bg-white dark:bg-surface px-6 py-5 rounded-md shadow-lg border border-neutral-200 dark:border-white/[0.08] flex flex-col items-center min-w-[320px]">
+                      <p className="text-[11px] font-medium text-primary uppercase tracking-wider mb-1">{appSyncProgress.status}</p>
+                      <div className="w-full h-1 bg-neutral-100 dark:bg-white/10 rounded-full mt-3 overflow-hidden">
                         <div
-                          className="h-full bg-primary transition-all duration-500 ease-out"
+                          className="h-full bg-primary transition-all duration-300 ease-out"
                           style={{ width: `${(appSyncProgress.current / appSyncProgress.total) * 100}%` }}
                         />
                       </div>
-                      <div className="flex justify-between w-full mt-3">
-                        <span className="text-[9px] font-black text-gray-600">STAGE {appSyncProgress.current}/{appSyncProgress.total}</span>
-                        {appSyncProgress.size && <span className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{appSyncProgress.size} DATA</span>}
+                      <div className="flex justify-between w-full mt-2 text-[11px] font-mono text-neutral-500">
+                        <span>STAGE {appSyncProgress.current}/{appSyncProgress.total}</span>
+                        {appSyncProgress.size && <span>{appSyncProgress.size}</span>}
                       </div>
                     </div>
                   )}

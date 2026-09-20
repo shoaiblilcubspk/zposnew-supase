@@ -36,32 +36,56 @@ export const PurchaseHistorySummary = React.memo(function PurchaseHistorySummary
     : (sortedSuppliers[0]?.[0] || 'Direct Entry');
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-      <div className="stat-card bg-gradient-to-br from-emerald-500 to-teal-600 group">
-        <div className="stat-card-inner">
-          <p className="stat-card-label">{"Total Procurement"}</p>
-          <h3 className="stat-card-value">{formatCurrency(totalPurchaseValue, currency)}</h3>
-          <p className="text-[7px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">{"Active Period"}</p>
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+            {"Total Procurement"}
+          </span>
+          <ShoppingCart className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
         </div>
-        <ShoppingCart className="stat-card-icon" />
+        <div className="mt-1.5 flex items-baseline justify-between">
+          <span className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white font-mono tabular-nums">
+            {formatCurrency(totalPurchaseValue, currency)}
+          </span>
+          <span className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400">
+            {"Active Period"}
+          </span>
+        </div>
       </div>
 
-      <div className="stat-card bg-gradient-to-br from-blue-600 to-indigo-700 group">
-        <div className="stat-card-inner">
-          <p className="stat-card-label">{"Total Stock In"}</p>
-          <h3 className="stat-card-value">{totalItemsCount.toLocaleString()}</h3>
-          <p className="text-[7px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">{filteredRecords.length} {"Entries"}</p>
+      <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+            {"Total Stock In"}
+          </span>
+          <Truck className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
         </div>
-        <Truck className="stat-card-icon" />
+        <div className="mt-1.5 flex items-baseline justify-between">
+          <span className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white font-mono tabular-nums">
+            {totalItemsCount.toLocaleString()}
+          </span>
+          <span className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400">
+            {filteredRecords.length} {"Entries"}
+          </span>
+        </div>
       </div>
 
-      <div className="stat-card bg-gradient-to-br from-orange-500 to-amber-600 group col-span-2 md:col-span-1">
-        <div className="stat-card-inner">
-          <p className="stat-card-label">{"Main Supplier"}</p>
-          <h3 className="stat-card-value">{mainSupplierName}</h3>
-          <p className="text-[7px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">{Object.keys(supplierCounts).length} {"Partners"}</p>
+      <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3.5 shadow-none transition-colors duration-100 col-span-2 md:col-span-1">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+            {"Main Supplier"}
+          </span>
+          <UserIcon className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
         </div>
-        <UserIcon className="stat-card-icon" />
+        <div className="mt-1.5 flex items-baseline justify-between">
+          <span className="text-lg font-semibold text-neutral-900 dark:text-white truncate">
+            {mainSupplierName}
+          </span>
+          <span className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400">
+            {Object.keys(supplierCounts).length} {"Partners"}
+          </span>
+        </div>
       </div>
     </div>
   );

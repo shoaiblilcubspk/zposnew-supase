@@ -58,90 +58,104 @@ export function SupplierLedger({ supplier, onBack, startDate, endDate, dateFilte
   } = useSupplierLedger({ supplier, startDate, endDate, dateFilter });
 
   return (
-    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <Button
-          variant="secondary"
-          onClick={onBack}
-          className="!bg-white dark:!bg-zinc-900 !px-4 !py-2.5 !rounded-xl !shadow-sm !border-gray-200 dark:!border-white/5 !font-black !text-[10px] !text-gray-600 hover:!text-gray-900 dark:hover:!text-white w-full sm:w-auto"
-        >
-          <ChevronLeft className="h-4 w-4" /> {"Back to Suppliers"}
-        </Button>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button variant="danger" onClick={handleRecordBill} className="flex-1 sm:flex-none !px-5 !py-2.5 !rounded-xl !font-black !text-[11px] !bg-rose-500 hover:!bg-rose-600 !shadow-lg !shadow-rose-500/20">
-            <FileText className="h-4 w-4" /> {"Bill"}
+    <div className="space-y-4 animate-in fade-in duration-200">
+      <div className="flex items-center justify-between gap-2 pb-1 border-b border-neutral-200 dark:border-white/[0.08]">
+        <div className="flex items-center gap-2 min-w-0">
+          <Button
+            variant="ghost"
+            onClick={onBack}
+            icon={<ChevronLeft className="h-4 w-4" />}
+            className="h-8 px-2 rounded text-neutral-500 hover:text-neutral-900 dark:hover:text-white border border-transparent hover:border-neutral-200 dark:hover:border-white/[0.08] shrink-0"
+          >
+            <span className="text-[12px] font-medium hidden sm:inline">{"Back to Suppliers"}</span>
+            <span className="text-[12px] font-medium sm:hidden">{"Back"}</span>
           </Button>
-          <Button variant="primary" onClick={handleMakePayment} className="flex-1">
-            <Plus className="h-4 w-4" /> {"Payment"}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleRecordBill}
+            icon={<FileText className="h-3.5 w-3.5" />}
+          >
+            <span className="hidden sm:inline">{"Record Bill"}</span>
+            <span className="sm:hidden">{"Bill"}</span>
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleMakePayment}
+            icon={<Plus className="h-3.5 w-3.5" />}
+          >
+            <span className="hidden sm:inline">{"Record Payment"}</span>
+            <span className="sm:hidden">{"Pay"}</span>
           </Button>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-app rounded-[2rem] p-6 lg:p-8 shadow-2xl border border-gray-200 dark:border-white/5 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none group-hover:bg-primary/15 transition-colors duration-700" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] -ml-20 -mb-20 pointer-events-none" />
-
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b border-gray-200 dark:border-white/10 pb-6 relative z-10">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-primary/10 rounded-2xl">
-                <Wallet className="h-6 w-6 text-primary" />
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">
+      <div className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] p-4 shadow-none">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-3 border-b border-neutral-200 dark:border-white/[0.06]">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08] flex items-center justify-center">
+              <Wallet className="h-4 w-4 text-neutral-500 dark:text-neutral-400" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-neutral-900 dark:text-white tracking-[-0.01em]">
                 {supplier.name}
               </h2>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-2 text-[10px] font-black text-gray-600 uppercase tracking-[0.2em]">
-              <span className="flex items-center gap-1.5"><Phone className="w-3 h-3 text-primary/50" /> {supplier.phone || "No Phone"}</span>
-              <span className="hidden sm:block text-white/10">|</span>
-              <span className="flex items-center gap-1.5"><Clock className="w-3 h-3 text-indigo-500/50" /> {supplier.paymentTerms || "Standard Terms"}</span>
+              <div className="flex items-center gap-3 text-[11px] text-neutral-500 font-mono mt-0.5">
+                <span>{supplier.phone || "No phone"}</span>
+                <span>•</span>
+                <span>{supplier.paymentTerms || "Standard Terms"}</span>
+              </div>
             </div>
           </div>
-          <div className="w-full lg:w-auto text-left lg:text-right bg-black/5 dark:bg-white/5 p-4 lg:p-0 rounded-2xl lg:bg-transparent">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600 mb-1">{"Outstanding Balance"}</p>
-            <p className={`text-4xl sm:text-5xl font-black uppercase tracking-tighter drop-shadow-sm ${balance > 0 ? 'text-rose-500' : 'text-primary'}`}>
+          <div className="text-left sm:text-right">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500 block">Outstanding Balance</span>
+            <span className={`text-2xl font-bold font-mono tabular-nums tracking-tight ${balance > 0 ? 'text-rose-500' : 'text-neutral-900 dark:text-white'}`}>
               {formatCurrency(balance, appSettings.currency)}
-            </p>
-            {balance <= 0 && (
-              <p className="text-[10px] font-black text-primary mt-2 uppercase tracking-[0.2em] flex items-center justify-start lg:justify-end gap-2">
-                <Check className="h-4 w-4 bg-primary/20 p-0.5 rounded-full" /> {"All Settled"}
-              </p>
-            )}
+            </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-6">
-          <div className="stat-card bg-gradient-to-br from-rose-500 to-rose-700 p-4 sm:p-5 rounded-[1.5rem] shadow-lg shadow-rose-500/20 col-span-1">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">{"Total Billed"}</span>
-              <TrendingUp className="h-4 w-4 text-white/40" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+          <div className="bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.06] rounded p-3">
+            <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-neutral-500">
+              <span>Total Billed</span>
+              <TrendingUp className="h-3.5 w-3.5 text-neutral-400" />
             </div>
-            <p className="text-xl sm:text-2xl font-black text-white tracking-tight">{formatCurrency(stats.totalBilled, appSettings.currency)}</p>
+            <div className="text-lg font-bold font-mono tabular-nums text-neutral-900 dark:text-white mt-1">
+              {formatCurrency(stats.totalBilled, appSettings.currency)}
+            </div>
           </div>
 
-          <div className="stat-card bg-gradient-to-br from-emerald-500 to-teal-700 p-4 sm:p-5 rounded-[1.5rem] shadow-lg shadow-emerald-500/20 col-span-1">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">{"Total Paid"}</span>
-              <TrendingDown className="h-4 w-4 text-white/40" />
+          <div className="bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.06] rounded p-3">
+            <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-neutral-500">
+              <span>Total Paid</span>
+              <TrendingDown className="h-3.5 w-3.5 text-neutral-400" />
             </div>
-            <p className="text-xl sm:text-2xl font-black text-white tracking-tight">{formatCurrency(stats.totalPaid, appSettings.currency)}</p>
+            <div className="text-lg font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400 mt-1">
+              {formatCurrency(stats.totalPaid, appSettings.currency)}
+            </div>
           </div>
 
-          <div className="stat-card bg-gradient-to-br from-indigo-500 to-blue-700 p-4 sm:p-5 rounded-[1.5rem] shadow-lg shadow-indigo-500/20 col-span-2 lg:col-span-1">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">{"Remaining Debt"}</span>
-              <Clock className="h-4 w-4 text-white/40" />
+          <div className="bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/[0.06] rounded p-3">
+            <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-neutral-500">
+              <span>Remaining Debt</span>
+              <Clock className="h-3.5 w-3.5 text-neutral-400" />
             </div>
-            <p className="text-xl sm:text-2xl font-black text-white tracking-tight">
+            <div className="text-lg font-bold font-mono tabular-nums text-rose-500 mt-1">
               {formatCurrency(Math.abs(stats?.remaining || 0), appSettings.currency)}
-            </p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden border border-gray-200 dark:border-white/5 shadow-sm">
-        <div className="p-4 border-b border-gray-200 dark:border-white/5 flex items-center justify-between gap-4">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-600">{"Full Ledger (Auto + Manual Bills & Payments)"}</p>
+      <div className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] overflow-hidden shadow-none min-h-[calc(100vh-380px)] flex flex-col justify-between">
+        <div className="px-3.5 py-2.5 border-b border-neutral-200 dark:border-white/[0.06] flex items-center justify-between gap-4">
+          <span className="text-[12px] font-semibold text-neutral-900 dark:text-white uppercase tracking-wider">
+            Ledger History
+          </span>
           <div className="w-full max-w-xs">
             <SharedSearchBar value={searchTerm} onChange={setSearchTerm} placeholder={"Filter transactions..."} />
           </div>

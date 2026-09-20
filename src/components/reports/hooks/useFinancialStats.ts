@@ -25,10 +25,21 @@ export function useFinancialStats(filteredSales: any[], filteredExpenses: any[],
         }
         return a;
       }, 0);
-      const customerPayments = filteredPayments
-        .filter(p => p.direction === 'in' && (method === 'credit' || p.payment_type === method || p.paymentMode === method || p.paymentType === method))
-        .reduce((a, x) => a + Number(x.amount || 0), 0);
-      return { method, sales, expenses, refunds, customerPayments, net: method === 'credit' ? sales - customerPayments : sales + customerPayments - refunds - expenses, retailSales, wholesaleSales };
+
+      // Customer payments received via this payment method (udhar wapas aaya — sale_id IS NULL)
+      // Credit wallet shows nothing here — it shows the pending debt amount from sales above
+      const customerPayments = method === 'credit'
+        ? 0  // Credit wallet = outstanding debt from sales, not cash inflows
+        : filteredPayments
+            .filter(p => p.direction === 'in' && p.customerId &&
+              (p.method === method || p.paymentType === method || p.paymentMode === method))
+            .reduce((a, x) => a + Number(x.amount || 0), 0);
+
+      const net = method === 'credit'
+        ? sales  // Credit wallet expected = total credit given (pending debt)
+        : sales + customerPayments - refunds - expenses;
+
+      return { method, sales, expenses, refunds, customerPayments, net, retailSales, wholesaleSales };
     });
   }, [filteredSales, filteredExpenses, filteredPayments, appSettings]);
 

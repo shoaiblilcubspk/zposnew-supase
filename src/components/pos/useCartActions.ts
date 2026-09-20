@@ -5,6 +5,7 @@ import { salesService } from '../../lib/services';
 import { useAuth } from '../../context/AuthContext';
 import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import { useCartCalculations } from '../../hooks/useCartCalculations';
+import { getExpiryStatus } from '../../utils/expiryUtils';
 
 export function useCartActions() {
   const appCart = useCartStore(s => s.cart);
@@ -79,6 +80,15 @@ export function useCartActions() {
           return;
         }
         sonner.warning(`Stock limit exceeded for ${product.name} — only ${product.stock} in stock`);
+      }
+    }
+
+    if (product.expiryDate && !isReturnMode) {
+      const exp = getExpiryStatus(product.expiryDate, product.expiryAlertDays);
+      if (exp.status === 'expired') {
+        sonner.error(`Expired Item Alert: ${product.name} expired on ${product.expiryDate}!`);
+      } else if (exp.status === 'expiring_soon') {
+        sonner.warning(`Expiring Soon: ${product.name} expires in ${exp.daysRemaining} days (${product.expiryDate}).`);
       }
     }
 

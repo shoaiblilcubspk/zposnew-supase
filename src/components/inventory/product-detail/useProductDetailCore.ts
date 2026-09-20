@@ -13,7 +13,7 @@ export interface ProductDetailHubProps {
   onEdit: () => void;
 }
 
-export function useProductDetail({ product, onBack, onEdit }: ProductDetailHubProps) {
+export function useProductDetail({ product: initialProduct, onBack, onEdit }: ProductDetailHubProps) {
   const appProducts = useProductsStore(s => s.products);
   const appSuppliers = useInventoryStore(s => s.suppliers);
   const appSettings = useSettingsStore(s => s.settings);
@@ -21,6 +21,11 @@ export function useProductDetail({ product, onBack, onEdit }: ProductDetailHubPr
   const appPurchaseRecords = useInventoryStore(s => s.purchaseRecords);
 
   const { profile } = useAuth();
+
+  // Live authoritative product derived from reactive products store
+  const product = useMemo(() => {
+    return (appProducts || []).find(p => p && p.id === initialProduct.id) || initialProduct;
+  }, [appProducts, initialProduct]);
 
   const saleById = useMemo(() => {
     const m = new Map<string, any>();

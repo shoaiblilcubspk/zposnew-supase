@@ -1,244 +1,267 @@
 import React, { useState } from 'react';
-import { User, Lock, Shield, Crown, Loader2, Camera, Save, Tag, CreditCard, Edit, Trash2, Database, ClipboardList, History, Eye, EyeOff } from 'lucide-react';
+import { User, KeyRound, Shield, Camera, Save, Eye, EyeOff, UserCheck, X } from 'lucide-react';
 import { SearchableSelect } from '../../shared/ui/SearchableSelect';
 import { User as UserType } from '../../types';
 import { Modal } from '../../shared/ui/Modal';
-import { cn } from '../../lib/utils';
 import { MediaLibrary } from '../../shared/MediaLibrary';
 import { Button, ToggleSwitch } from '../../shared/ui';
 import { useUserModalData } from './useUserModalData';
+import { UserPermissionsGrid } from './UserPermissionsGrid';
+import { useCapsLock } from '../../hooks/useCapsLock';
+import { CapsLockIndicator } from '../../shared/ui/CapsLockIndicator';
 
 interface UserModalProps {
   isOpen: boolean;
   onClose: () => void;
   user?: UserType | null;
+  currentUser?: UserType | null;
+  onSuccess?: () => void;
+  defaultRole?: 'admin' | 'manager' | 'cashier' | 'salesman';
 }
 
-export function UserModal({ isOpen, onClose, user }: UserModalProps) {
-  const [showPassword, setShowPassword] = useState(false);
+export function UserModal({ isOpen, onClose, user, currentUser: propCurrentUser, onSuccess, defaultRole }: UserModalProps) {
+  const isCapsLock = useCapsLock();
   const {
-    appCurrentUser, loading, formData, setFormData,
-    showMediaLibrary, setShowMediaLibrary, handleSubmit, handleChange,
-    handleRoleChange} = useUserModalData(user, onClose);
+    formData, setFormData,
+    showPin, setShowPin,
+    appCurrentUser,
+    handleSubmit,
+    handleRoleChange,
+    handleChange,
+  } = useUserModalData({ user, currentUser: propCurrentUser, onSuccess, onClose, defaultRole });
+
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
 
   if (!isOpen) return null;
 
   const footer = (
-    <div className="flex items-center justify-end gap-2 sm:gap-3 w-full">
+    <div className="flex items-center justify-end gap-2 w-full">
       <Button
         type="button"
         variant="ghost"
         onClick={onClose}
-        className="!min-h-0 !px-4 sm:!px-6 !py-2.5 sm:!py-3.5 !text-[9px] sm:!text-[10px] !font-black !text-[#ff4b6e] !border !border-rose-200 dark:!border-rose-900/30 hover:!bg-rose-50 dark:hover:!bg-rose-500/10 !shrink-0"
+        className="h-8 px-3 text-[13px]"
       >
-        {'DISCARD'}
+        Cancel
       </Button>
       <Button
         type="button"
         variant="primary"
-        onClick={handleSubmit}
-        disabled={loading}
-        className="!flex-1 sm:!flex-none sm:!min-w-[240px] !py-2.5 sm:!py-3.5 !text-[9px] sm:!text-[11px]"
+        onClick={(e) => handleSubmit(e as any)}
+        className="h-8 px-3 text-[13px]"
+        icon={<Save className="h-3.5 w-3.5" />}
       >
-        {loading ? <Loader2 className="w-4 h-4 sm:h-5 sm:w-5 animate-spin shrink-0" /> : <Save className="w-4 h-4 sm:h-5 sm:w-5 shrink-0" />}
-        <span className="leading-none ml-2">
-          {user ? 'COMMIT CHANGES' : 'REGISTER OPERATOR'}
-        </span>
+        {user ? 'Save Profile' : 'Create User'}
       </Button>
     </div>
   );
+
+  const isOtherAdmin = user?.role === 'admin' && user?.id !== appCurrentUser?.id;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={user ? 'EDIT OPERATOR' : 'REGISTER NEW OPERATOR'}
-      maxWidth="lg"
+      title={user ? 'Edit Staff Member' : 'New Staff Member'}
+      size="lg"
       footer={footer}
     >
-      <div className="space-y-10">
-        {/* Identity & Biometrics */}
-        <div className="space-y-6">
-          <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-            <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
-            {'Identity & Biometrics'}
-          </h3>
-          
-          <div className="flex items-center gap-6">
-            <div className="relative group">
-              <div
-                onClick={() => setShowMediaLibrary(true)}
-                className="h-20 w-20 bg-gray-50 dark:bg-black/75 rounded-2xl flex items-center justify-center overflow-hidden border border-gray-200 dark:border-white/5 shadow-sm transition-all group-hover:border-primary/30 cursor-pointer"
-              >
-                {formData.avatar ? (
-                  <img src={formData.avatar} alt="Avatar" className="h-full w-full object-cover" />
-                ) : (
-                  <User className="h-10 w-10 text-gray-600" />
-                )}
-              </div>
-              <Button
+      <form onSubmit={handleSubmit} autoComplete="off" className="space-y-5">
+        {/* Identity & Basic Info */}
+        <div className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-surface border border-gray-200 dark:border-white/[0.08] rounded-md">
+          <div className="relative shrink-0">
+            <div
+              onClick={() => setShowMediaLibrary(true)}
+              className="h-14 w-14 bg-white dark:bg-black/40 rounded-md flex items-center justify-center overflow-hidden border border-gray-200 dark:border-white/[0.08] cursor-pointer hover:border-primary/50 transition-colors"
+            >
+              {formData.avatar ? (
+                <img src={formData.avatar} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                <User className="h-6 w-6 text-gray-400" />
+              )}
+            </div>
+            {formData.avatar ? (
+              <button
                 type="button"
-                variant="ghost"
-                onClick={() => setShowMediaLibrary(true)}
-                aria-label="Upload avatar"
-                className="!absolute !-bottom-2 !-right-2 !min-h-0 !p-2 !rounded-xl !bg-white dark:!bg-zinc-800 !text-primary !shadow-lg !border !border-gray-200 dark:!border-white/10 hover:!scale-110 active:!scale-90"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFormData(prev => ({ ...prev, avatar: '' }));
+                }}
+                title="Remove photo"
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center transition-colors shadow-sm border border-white/20 bg-neutral-900/80 hover:bg-rose-600 text-white z-10"
               >
-                <Camera className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex-1">
-              <p className="text-[12px] font-black text-gray-900 dark:text-white uppercase tracking-wider">{'System Avatar'}</p>
-              <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{'Authorized Visual Token'}</p>
-            </div>
+                <X className="w-3 h-3 stroke-[2.5]" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowMediaLibrary(true)}
+                aria-label="Upload photo"
+                className="absolute -bottom-1 -right-1 p-1 bg-white dark:bg-zinc-800 rounded border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:text-primary shadow-sm"
+              >
+                <Camera className="h-3 w-3" />
+              </button>
+            )}
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{'Full Legal Name *'}</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
-                placeholder="e.g. Michael Chen"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{'Username *'}</label>
-              <input
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                required
-                disabled={!!user}
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium disabled:opacity-50"
-                placeholder="m.chen"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{'Email Address (Optional)'}</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
-                placeholder="m.chen@local.com"
-              />
-            </div>
-            <div className="space-y-2 md:col-span-3">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-wider">{'Security Key (Password)'}</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required={!user}
-                  className="w-full pl-12 pr-12 bg-[#f8f9fa] dark:bg-black/75 border-none text-gray-900 dark:text-white text-sm rounded-xl py-2.5 focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
-                  placeholder={user ? 'Leave blank to keep current' : 'Min 6 characters'}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-emerald-500 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-medium text-gray-900 dark:text-white truncate">
+              {formData.name || 'New Staff Profile'}
+            </p>
+            <p className="text-[11px] text-gray-500 font-mono tracking-tight">
+              @{formData.username || 'username'} • {formData.role.toUpperCase()}
+            </p>
           </div>
         </div>
 
-        {/* Authority & Privileges */}
-        <div className="space-y-6">
-          <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-            <span className="w-8 h-px bg-gray-200 dark:bg-white/10"></span>
-            {'Operational Authority'}
-          </h3>
-          <SearchableSelect
-            label={'SELECT ROLE'}
-            options={[
-              { id: 'admin', label: 'FULL ADMINISTRATOR' },
-              { id: 'manager', label: 'OPERATIONS MANAGER' },
-              { id: 'cashier', label: 'TERMINAL OPERATOR' }
-            ]}
-            value={formData.role}
-            onChange={(val) => handleRoleChange(val as any)}
-            icon={Shield}
-            disabled={user?.id === appCurrentUser?.id}
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              { key: 'canEditPrice', label: 'PRICE OVERRIDE', icon: Tag },
-              { key: 'canEditProduct', label: 'EDIT & DISABLE ITEMS', icon: Edit, managerOnly: true },
-              { key: 'canGiveDiscount', label: 'ISSUE DISCOUNTS', icon: CreditCard },
-              { key: 'canEditSale', label: 'EDIT SALES', icon: Edit },
-              { key: 'canDeleteSale', label: 'DELETE SALES', icon: Trash2 },
-              { key: 'canManageStock', label: 'INVENTORY HUB', icon: Database },
-              { key: 'canManagePO', label: 'RESTOCK (PO)', icon: ClipboardList },
-              { key: 'canViewRecords', label: 'PURCHASE HISTORY', icon: History },
-              { key: 'canViewProfit', label: 'REVENUE AUDIT', icon: Crown, managerOnly: true },
-            ].map((perm) => (
-              (!perm.managerOnly || formData.role !== 'cashier') && 
-              ((perm.key !== 'canEditSale' && perm.key !== 'canDeleteSale') || formData.role !== 'cashier') && (
-                <div key={perm.key} className={cn(
-                  "flex items-center justify-between p-4 rounded-[20px] border transition-all",
-                  formData.role === 'admin' || (formData as any)[perm.key] 
-                    ? 'bg-emerald-50 dark:bg-primary/5 border-emerald-100 dark:border-primary/20' 
-                    : 'bg-[#f8f9fa] dark:bg-black/20 border-gray-200 dark:border-white/5'
-                )}>
-                  <div className="flex items-center gap-3">
-                    <perm.icon className={cn(
-                      "h-4 w-4",
-                      formData.role === 'admin' || (formData as any)[perm.key] ? 'text-primary' : 'text-gray-600'
-                    )} />
-                    <span className={cn(
-                      "text-[10px] font-black uppercase tracking-widest",
-                      formData.role === 'admin' || (formData as any)[perm.key] ? 'text-primary dark:text-emerald-400' : 'text-gray-600'
-                    )}>{perm.label}</span>
-                  </div>
-                  <ToggleSwitch
-                    checked={formData.role === 'admin' || (formData as any)[perm.key]}
-                    onChange={(checked) => setFormData(prev => ({ ...prev, [perm.key]: checked }))}
-                    disabled={formData.role === 'admin'}
-                    size="sm"
-                    color="bg-primary"
-                  />
-                </div>
-              )
-            ))}
+        {/* Input Fields Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div>
+            <label className="block text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 mb-1">
+              Full Name *
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              className="w-full h-8 px-2.5 text-[13px] bg-white dark:bg-black/30 border border-neutral-300 dark:border-white/[0.12] rounded text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              placeholder="e.g. Michael Chen"
+            />
           </div>
 
+          <div>
+            <label className="block text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 mb-1">
+              Username *
+            </label>
+            <input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              disabled={!!user}
+              className="w-full h-8 px-2.5 text-[13px] bg-white dark:bg-black/30 border border-neutral-300 dark:border-white/[0.12] rounded text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+              placeholder="mchen"
+            />
+          </div>
 
+          <div>
+            <label className="block text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 mb-1">
+              Email (Optional)
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full h-8 px-2.5 text-[13px] bg-white dark:bg-black/30 border border-neutral-300 dark:border-white/[0.12] rounded text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              placeholder="mchen@shop.local"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200 mb-1">
+              Role Authority *
+            </label>
+            <SearchableSelect
+              label="SELECT ROLE"
+              options={[
+                { id: 'admin', label: 'Administrator (Full Access)' },
+                { id: 'manager', label: 'Manager (Operations & Inventory)' },
+                { id: 'cashier', label: 'Cashier (Billing & POS)' },
+                { id: 'salesman', label: 'Salesman (Orders & Catalog)' },
+              ]}
+              value={formData.role}
+              onChange={(val) => handleRoleChange(val as any)}
+              icon={Shield}
+              disabled={user?.id === appCurrentUser?.id}
+            />
+          </div>
         </div>
 
-        {/* Access Protocol */}
-        <div className="p-5 bg-rose-50 dark:bg-rose-500/5 border border-rose-100 dark:border-rose-500/10 rounded-[24px] flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[11px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-tight">{'System Status'}</span>
-            <span className="text-[10px] text-rose-400 font-bold uppercase tracking-widest mt-0.5">{'Authorized / Locked'}</span>
+        {/* Security PIN Section */}
+        <div className="p-3 bg-gray-50 dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded-md space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4 text-primary" />
+              <span className="text-[12.5px] font-semibold text-neutral-900 dark:text-white">
+                {user ? 'Reset Security PIN (Leave blank to keep current)' : 'Security PIN (4–12 Digits) *'}
+              </span>
+              {isCapsLock && <CapsLockIndicator variant="inline" />}
+            </div>
+            {!isOtherAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowPin(!showPin)}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1"
+              >
+                {showPin ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              </button>
+            )}
+          </div>
+
+          {isOtherAdmin ? (
+            <div className="p-2 bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08] rounded text-[12px] text-neutral-500 dark:text-neutral-400">
+              🔒 <strong>Security Protected:</strong> Only this Administrator can modify their own PIN.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <input
+                type={showPin ? 'text' : 'password'}
+                name="pin"
+                autoComplete="new-password"
+                inputMode="numeric"
+                maxLength={12}
+                value={formData.pin}
+                onChange={handleChange}
+                required={!user}
+                className="h-8 px-2.5 text-[13px] font-mono tracking-widest bg-white dark:bg-black/30 border border-neutral-300 dark:border-white/[0.12] rounded text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                placeholder={user ? 'New PIN (optional)' : 'Enter 4-12 digit PIN'}
+              />
+              <input
+                type={showPin ? 'text' : 'password'}
+                name="confirmPin"
+                autoComplete="new-password"
+                inputMode="numeric"
+                maxLength={12}
+                value={formData.confirmPin}
+                onChange={handleChange}
+                required={!user || Boolean(formData.pin)}
+                className="h-8 px-2.5 text-[13px] font-mono tracking-widest bg-white dark:bg-black/30 border border-neutral-300 dark:border-white/[0.12] rounded text-neutral-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                placeholder="Confirm PIN"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Operational Permissions Grid */}
+        <UserPermissionsGrid
+          formData={formData}
+          setFormData={setFormData}
+          isOtherAdmin={isOtherAdmin}
+        />
+
+        {/* Status */}
+        <div className="h-9 px-3 flex items-center justify-between bg-gray-50 dark:bg-surface border border-neutral-300 dark:border-white/[0.12] rounded-md">
+          <div className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4 text-primary" />
+            <span className="text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200">Account Active</span>
           </div>
           <ToggleSwitch
             checked={formData.active}
-            onChange={(checked) => setFormData(prev => ({ ...prev, active: checked }))}
+            onChange={(checked) => setFormData((prev: any) => ({ ...prev, active: checked }))}
             disabled={user?.id === appCurrentUser?.id}
-            size="md"
-            color="bg-rose-500"
-            className="!scale-110"
+            size="sm"
           />
         </div>
-      </div>
+      </form>
+
       {showMediaLibrary && (
         <MediaLibrary
           isOpen={showMediaLibrary}
           onClose={() => setShowMediaLibrary(false)}
-          onSelect={(url) => setFormData(prev => ({ ...prev, avatar: url }))}
+          onSelect={(url) => setFormData((prev: any) => ({ ...prev, avatar: url }))}
         />
       )}
     </Modal>

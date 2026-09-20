@@ -1,7 +1,7 @@
-import { useAppStore, useCustomersStore, useProductsStore, useSalesStore, useSettingsStore } from '../../stores';
+import { useAppStore, useCustomersStore, useProductsStore, useSalesStore, useSettingsStore, useUsersStore } from '../../stores';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Printer, MessageCircle, RotateCcw, Edit, Trash2, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Printer, MessageCircle, RotateCcw, Edit, Trash2, MapPin, UserCheck, Tag } from 'lucide-react';
 import { formatAppDate } from '../../lib/dateUtils';
 import { formatCurrency } from '../../lib/currencies';
 import { Sale } from '../../types';
@@ -16,6 +16,9 @@ import { TransactionSummary } from './TransactionSummary';
 import { useTransactionDetailActions } from './TransactionDetailModal.actions';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/permissions';
+import { getSaleById } from '../../lib/services/sales/salesRepository';
+
+import { TransactionDetailFooter } from './TransactionDetailModal.footer';
 
 interface TransactionDetailModalProps {
   transaction: Sale;
@@ -33,6 +36,7 @@ export function TransactionDetailModal({ transaction, allTransactions, onNavigat
   const appCustomers = useCustomersStore(s => s.customers);
   const appBundles = useAppStore(s => s.bundles);
   const appProducts = useProductsStore(s => s.products);
+  const appUsers = useUsersStore(s => s.users);
   const { profile: userProfile } = useAuth();
   // RBAC matrix: refund = admin|manager|cashier(limited); edit/delete = admin|manager
   const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'manager';
@@ -42,8 +46,21 @@ export function TransactionDetailModal({ transaction, allTransactions, onNavigat
     canDeleteSale: !!userProfile?.canDeleteSale,
   };
 
+  const [currentSale, setCurrentSale] = useState<Sale>(transaction);
+
+  React.useEffect(() => {
+    setCurrentSale(transaction);
+    if (!transaction.items || transaction.items.length === 0) {
+      getSaleById(transaction.id).then(full => {
+        if (full && full.items && full.items.length > 0) {
+          setCurrentSale(full);
+        }
+      });
+    }
+  }, [transaction]);
+
   const showDiscount = appSettings.receiptShowDiscount !== false &&
-    !(transaction.items || []).some((item: any) => item.bundleHideItemPrices === true || item.bundle_hide_item_prices === true);
+    !(currentSale.items || []).some((item: any) => item.bundleHideItemPrices === true || item.bundle_hide_item_prices === true);
 
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
 
@@ -59,7 +76,7 @@ export function TransactionDetailModal({ transaction, allTransactions, onNavigat
     retryWithSupervisor,
     clearSupervisorGate,
   } = useTransactionDetailActions({
-    transaction,
+    transaction: currentSale,
     appCustomers,
     appSales,
     onClose,
@@ -97,6 +114,8 @@ export function TransactionDetailModal({ transaction, allTransactions, onNavigat
   const handlePrev = () => hasPrev && onNavigate(allTransactions[currentIndex - 1]);
   const handleNext = () => hasNext && onNavigate(allTransactions[currentIndex + 1]);
 
+  const invoiceDisplay = (transaction.invoiceNumber || transaction.receiptNumber || 'N/A').replace(/^undefined-/i, 'INV-');
+
   return (
     <>
       <Modal
@@ -106,161 +125,135 @@ export function TransactionDetailModal({ transaction, allTransactions, onNavigat
         showClose={true}
         maxWidth="lg"
         footer={
-          <div>
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <Button variant="secondary" onClick={handlePrev} disabled={!hasPrev} className="flex-1 !gap-1.5 !px-3 !py-2.5 sm:!py-3 !rounded-2xl !text-[9px] sm:!text-[10px] !font-black !text-gray-900 dark:!text-white hover:!bg-gray-200 dark:hover:!bg-white/10 disabled:!opacity-30">
-                <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span>{"Prev"}</span>
-              </Button>
-              <Button variant="secondary" onClick={handleNext} disabled={!hasNext} className="flex-1 !gap-1.5 !px-3 !py-2.5 sm:!py-3 !rounded-2xl !text-[9px] sm:!text-[10px] !font-black !text-gray-900 dark:!text-white hover:!bg-gray-200 dark:hover:!bg-white/10 disabled:!opacity-30">
-                <span>{"Next Sale"}</span> <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full mt-1.5 sm:mt-2">
-              <Button
-                variant="primary"
-                onClick={() => onReprint(transaction)}
-                className="flex-1 min-w-[calc(50%-4px)] sm:min-w-0 sm:flex-1 !gap-1.5 !px-2.5 sm:!px-3 md:!px-5 !py-2.5 sm:!py-3 !rounded-2xl !text-[9px] sm:!text-[10px] !font-black !tracking-wider md:!tracking-widest"
-              >
-                <Printer className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> <span className="truncate">{"Print"}</span>
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={handleWhatsAppShare}
-                className="flex-1 min-w-[calc(50%-4px)] sm:min-w-0 sm:flex-1 !gap-1.5 !px-2.5 sm:!px-3 md:!px-5 !py-2.5 sm:!py-3 !rounded-2xl !text-[9px] sm:!text-[10px] !font-black !tracking-wider md:!tracking-widest !bg-emerald-50 dark:!bg-emerald-900/10 !text-primary !border-transparent"
-              >
-                <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> <span className="truncate">{"WhatsApp"}</span>
-              </Button>
-              {canRefund && (
-              <Button
-                variant="danger"
-                onClick={handleRefundSale}
-                disabled={isProcessingAction || transaction.status === 'refunded'}
-                className="flex-1 min-w-[calc(50%-4px)] sm:min-w-0 sm:flex-1 !gap-1.5 !px-2.5 sm:!px-3 md:!px-5 !py-2.5 sm:!py-3 !rounded-2xl !text-[9px] sm:!text-[10px] !font-black !tracking-wider md:!tracking-widest !bg-rose-50 dark:!bg-rose-900/10 !text-rose-600 !border-transparent disabled:!opacity-50"
-              >
-                <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> <span className="truncate">{"Refund"}</span>
-              </Button>
-              )}
-              {profile.canEditSale && (
-              <Button
-                variant="secondary"
-                onClick={handleEditSale}
-                disabled={isProcessingAction}
-                className="flex-1 min-w-[calc(50%-4px)] sm:min-w-0 sm:flex-1 !gap-1.5 !px-2.5 sm:!px-3 md:!px-5 !py-2.5 sm:!py-3 !rounded-2xl !text-[9px] sm:!text-[10px] !font-black !tracking-wider md:!tracking-widest !bg-amber-50 dark:!bg-amber-900/10 !text-amber-600 !border-transparent disabled:!opacity-50"
-              >
-                <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> <span className="truncate">{"Edit"}</span>
-              </Button>
-              )}
-              {profile.canDeleteSale && (
-              <Button
-                variant="danger"
-                onClick={handleDeleteSale}
-                disabled={isProcessingAction}
-                className="flex-1 min-w-full sm:min-w-0 sm:flex-1 !gap-1.5 !px-2.5 sm:!px-3 md:!px-5 !py-2.5 sm:!py-3 !rounded-2xl !text-[9px] sm:!text-[10px] !font-black !tracking-wider md:!tracking-widest !bg-rose-500 !shadow-lg !shadow-rose-500/20 disabled:!opacity-50"
-              >
-                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> <span className="truncate">{"Delete"}</span>
-              </Button>
-              )}
-            </div>
-          </div>
+          <TransactionDetailFooter
+            hasPrev={hasPrev}
+            hasNext={hasNext}
+            onPrev={handlePrev}
+            onNext={handleNext}
+            profile={profile}
+            canRefund={canRefund}
+            isProcessingAction={isProcessingAction}
+            isRefunded={transaction.status === 'refunded'}
+            onDelete={handleDeleteSale}
+            onEdit={handleEditSale}
+            onRefund={handleRefundSale}
+            onWhatsApp={handleWhatsAppShare}
+            onReprint={() => onReprint(transaction)}
+          />
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-3.5 text-[13px] tracking-[-0.01em]">
           {(onBack || transaction.saleType) && (
             <div className="flex items-center justify-between gap-2 flex-wrap">
               {onBack && (
-                <Button
-                  variant="secondary"
+                <button
+                  type="button"
                   onClick={onBack}
-                  className="!min-h-0 !gap-1.5 !px-3 !py-1.5 !rounded-lg !text-[9px] !font-black !text-gray-700 dark:!text-gray-300 !bg-gray-100 dark:!bg-white/5 hover:!bg-gray-200 dark:hover:!bg-white/10"
+                  className="h-7 px-2.5 rounded border border-neutral-200 dark:border-white/[0.08] bg-neutral-100 dark:bg-white/[0.04] text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-white/[0.08] text-[11px] font-medium flex items-center gap-1 transition-colors"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
                   <span>Back to Customer</span>
-                </Button>
+                </button>
               )}
-              <Badge tone={sourceTag.tone} size="sm" className={`${sourceTag.cls} !text-[8px] !px-2 !py-0.5 ml-auto`}>
+              <Badge tone={sourceTag.tone} size="sm" className="ml-auto font-mono">
                 {sourceTag.label}
               </Badge>
             </div>
           )}
 
           {transaction.status === 'refunded' && (
-            <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 p-3 rounded-2xl text-xs font-black text-center uppercase tracking-widest flex items-center justify-center gap-2">
-              <RotateCcw className="h-4 w-4 shrink-0" />
-              <span>This sale is fully refunded</span>
+            <div className="bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 p-2.5 rounded text-[12px] font-mono text-center flex items-center justify-center gap-2">
+              <RotateCcw className="h-3.5 w-3.5 shrink-0" /> <span>This sale is fully refunded</span>
             </div>
           )}
           {transaction.status === 'partially_refunded' && (
-            <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-400 p-3 rounded-2xl text-xs font-black text-center uppercase tracking-widest flex items-center justify-center gap-2">
-              <RotateCcw className="h-4 w-4 shrink-0" />
-              <span>This sale is partially refunded</span>
+            <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 p-2.5 rounded text-[12px] font-mono text-center flex items-center justify-center gap-2">
+              <RotateCcw className="h-3.5 w-3.5 shrink-0" /> <span>This sale is partially refunded</span>
             </div>
           )}
 
-          {onBack && (
-            <div className="flex items-center justify-center mb-0">
-              <Badge tone="success" size="sm" className="!bg-primary/10 !text-primary dark:!text-emerald-400">
-                {getDealCountBreakdown(transaction.items, appBundles).label}
-              </Badge>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 bg-neutral-50 dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none font-mono">
+            <div>
+              <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Receipt</p>
+              <p className="text-[13px] font-bold text-neutral-900 dark:text-white uppercase truncate mt-0.5">#{invoiceDisplay}</p>
             </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 dark:bg-white/[0.02] rounded-2xl border border-gray-200 dark:border-white/5">
-            <div><p className="text-[8px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Receipt"}</p><p className="text-[11px] font-black text-gray-900 dark:text-white uppercase">#{transaction.invoiceNumber || transaction.receiptNumber}</p></div>
-            <div><p className="text-[8px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Date"}</p><p className="text-[11px] font-black text-gray-900 dark:text-white uppercase">{formatAppDate(transaction.timestamp, appSettings.country)}</p></div>
-            <div><p className="text-[8px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Customer"}</p><p className="text-[11px] font-black text-gray-900 dark:text-white uppercase">{transaction.customerName || "Walk-in"}</p></div>
-            <div><p className="text-[8px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Cashier"}</p><p className="text-[11px] font-black text-gray-900 dark:text-white uppercase">{transaction.cashier || 'System'}</p></div>
-            {transaction.salesmanName && (
-              <div><p className="text-[8px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Salesman"}</p><p className="text-[11px] font-black text-teal-600 uppercase">{transaction.salesmanName}</p></div>
-            )}
-            {transaction.dcNumber && (
-              <div className="col-span-2"><p className="text-[8px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{"DC Number"}</p><p className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-tight tabular-nums">#{transaction.dcNumber}</p></div>
-            )}
-            {transaction.deliveryLocationLat && transaction.deliveryLocationLng && (
-              <div className="col-span-2 mt-1">
-                <a
-                  href={`https://maps.google.com/?q=${transaction.deliveryLocationLat},${transaction.deliveryLocationLng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-2.5 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors border border-emerald-100 dark:border-emerald-900/30"
-                >
-                  <MapPin className="w-3.5 h-3.5 shrink-0" /> {"View Delivery Location"}
-                </a>
+            <div>
+              <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Date & Time</p>
+              <p className="text-[12.5px] font-medium text-neutral-900 dark:text-white uppercase mt-0.5 truncate">{formatAppDate(currentSale.timestamp, appSettings.country)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Customer</p>
+              <p className="text-[13px] font-sans font-semibold text-neutral-900 dark:text-white truncate mt-0.5">{currentSale.customerName || "Walk-in"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Payment Mode</p>
+              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                <Badge tone={currentSale.paymentMethod === 'cash' ? 'emerald' : currentSale.paymentMethod === 'credit' ? 'amber' : 'neutral'} size="sm">
+                  {currentSale.paymentMethod === 'split' ? 'SPLIT' : (currentSale.paymentMethod?.toUpperCase() || 'CASH')}
+                </Badge>
+                {((currentSale.deliveryFee != null && Number(currentSale.deliveryFee) > 0) || (currentSale.extraCharges && currentSale.extraCharges.some((c: any) => Number(c.amount) > 0))) && (
+                  <span className="px-1.5 py-0.5 rounded text-[10.5px] font-mono font-bold uppercase tracking-tight bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40" title="Includes Delivery Charges (DC)">
+                    + DC
+                  </span>
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Cashier</p>
+              <div className="mt-1 inline-flex items-center gap-1 text-[11.5px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.08] font-medium truncate max-w-full">
+                <UserCheck className="w-3 h-3 text-slate-500 shrink-0" />
+                <span className="truncate">{currentSale.cashier || 'System'}</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Salesman</p>
+              {(() => {
+                const smName = currentSale.salesmanName || (currentSale.salesmanId ? appUsers.find(u => u.id === currentSale.salesmanId)?.name : null);
+                return (
+                  <div className="mt-1 inline-flex items-center gap-1 text-[11.5px] font-mono px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40 font-semibold truncate max-w-full">
+                    <Tag className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="truncate">{smName || 'None'}</span>
+                  </div>
+                );
+              })()}
+            </div>
+            {currentSale.dcNumber && (
+              <div className="col-span-full pt-1 border-t border-dashed border-neutral-200 dark:border-white/[0.08]">
+                <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">DC Number: <span className="text-[12.5px] font-bold text-neutral-900 dark:text-white">#{currentSale.dcNumber}</span></p>
               </div>
             )}
           </div>
 
           {editFromInvoice && (
-            <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20">
-              <Edit className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+            <div className="flex items-center gap-2 px-3 py-2 rounded bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08] text-[12px] font-mono">
+              <Edit className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
               {oldSale ? (
-                <button onClick={() => onNavigate(oldSale)} className="text-[10px] font-black text-purple-700 dark:text-purple-300 uppercase tracking-wide hover:underline">
+                <button type="button" onClick={() => onNavigate(oldSale)} className="text-neutral-800 dark:text-neutral-200 hover:underline font-medium">
                   {"Edited from"} #{editFromInvoice}
                 </button>
               ) : (
-                <span className="text-[10px] font-black text-purple-700 dark:text-purple-300 uppercase tracking-wide">
-                  {"Edited from"} #{editFromInvoice}
-                </span>
+                <span className="text-neutral-600 dark:text-neutral-400">{"Edited from"} #{editFromInvoice}</span>
               )}
             </div>
           )}
           {!editFromInvoice && replacedSale && (
-            <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20">
-              <Edit className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-              <button onClick={() => onNavigate(replacedSale)} className="text-[10px] font-black text-purple-700 dark:text-purple-300 uppercase tracking-wide hover:underline">
+            <div className="flex items-center gap-2 px-3 py-2 rounded bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08] text-[12px] font-mono">
+              <Edit className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+              <button type="button" onClick={() => onNavigate(replacedSale)} className="text-neutral-800 dark:text-neutral-200 hover:underline font-medium">
                 {"This bill was edited →"} #{replacedSale.invoiceNumber}
               </button>
             </div>
           )}
 
           <TransactionItemsTable
-            items={transaction.items}
+            items={currentSale.items || []}
             appBundles={appBundles}
             appProducts={appProducts}
             appSettings={appSettings}
             showDiscount={showDiscount}
             isAdmin={isAdmin}
             profile={profile}
-            transactionId={transaction.id}
+            transactionId={currentSale.id}
             onNavigateToProduct={(productId, fromSale) => {
               detailNavigate('/inventory/products', { state: { productId, fromSale } });
               onClose();
@@ -268,7 +261,7 @@ export function TransactionDetailModal({ transaction, allTransactions, onNavigat
           />
 
           <TransactionSummary
-            transaction={transaction}
+            transaction={currentSale}
             appSettings={appSettings}
             showDiscount={showDiscount}
           />

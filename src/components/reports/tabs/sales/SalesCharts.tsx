@@ -11,92 +11,116 @@ interface Props {
   theme: string;
 }
 
-const COLORS = ['#2563EB', '#059669', '#D97706', '#DC2626', '#7C3AED', '#EC4899'];
+const COLORS = ['#10b981', '#6b7280', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
 export function SalesCharts({ salesData, featureAnalytics, categoryData, currency, theme }: Props) {
+  const isDark = theme === 'dark';
   const tooltipStyle = {
-    backgroundColor: theme === 'dark' ? '#171717' : 'white',
-    border: theme === 'dark' ? '1px solid #333' : '1px solid #e5e7eb',
-    borderRadius: '12px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    color: theme === 'dark' ? '#fff' : '#000'
+    backgroundColor: isDark ? '#141414' : '#ffffff',
+    border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #e5e7eb',
+    borderRadius: '6px',
+    boxShadow: 'none',
+    color: isDark ? '#fff' : '#000',
+    fontSize: '12px',
   };
-  const itemStyle = { color: theme === 'dark' ? '#e5e7eb' : '#374151' };
+  const itemStyle = { color: isDark ? '#e5e7eb' : '#374151' };
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-      <div className="card p-6">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-          <TrendingUp className="h-5 w-5 mr-2 text-primary" />{"Sales Trend"}
-        </h3>
-        <ResponsiveContainer width="100%" height={window.innerWidth < 768 ? 240 : 300}>
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+      {/* Sales Trend Line Chart */}
+      <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-4 shadow-none">
+        <div className="flex items-center justify-between pb-3 mb-3 border-b border-neutral-200 dark:border-white/[0.06]">
+          <span className="text-[12px] font-semibold text-neutral-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+            Sales & Volume Trend
+          </span>
+          <span className="text-[11px] text-neutral-500 font-mono">Revenue vs Bills</span>
+        </div>
+        <ResponsiveContainer width="100%" height={240}>
           <LineChart data={salesData}>
-            <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#333' : '#f0f0f0'} />
-            <XAxis dataKey="date" stroke={theme === 'dark' ? '#9ca3af' : '#6b7280'} fontSize={12} />
-            <YAxis stroke={theme === 'dark' ? '#9ca3af' : '#6b7280'} fontSize={12} />
-            <Tooltip formatter={(value: any, name: string) => [name === 'sales' ? formatCurrency(Number(value), currency) : value, name === 'sales' ? "Sales" : "Transactions"]} contentStyle={tooltipStyle} itemStyle={itemStyle} />
-            <Legend />
-            <Line type="monotone" dataKey="sales" stroke="#10b981" strokeWidth={3} name={"Sales"} dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
-            <Line type="monotone" dataKey="transactions" stroke="#059669" strokeWidth={3} name={"Transactions"} dot={{ fill: '#059669', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#262626' : '#f0f0f0'} />
+            <XAxis dataKey="date" stroke={isDark ? '#737373' : '#a3a3a3'} fontSize={11} tickLine={false} />
+            <YAxis stroke={isDark ? '#737373' : '#a3a3a3'} fontSize={11} tickLine={false} />
+            <Tooltip formatter={(value: any, name: string) => [name === 'sales' ? formatCurrency(Number(value), currency) : value, name === 'sales' ? 'Sales' : 'Transactions']} contentStyle={tooltipStyle} itemStyle={itemStyle} />
+            <Legend wrapperStyle={{ fontSize: '11px' }} />
+            <Line type="monotone" dataKey="sales" stroke="#10b981" strokeWidth={2} name="Sales" dot={false} activeDot={{ r: 4 }} />
+            <Line type="monotone" dataKey="transactions" stroke={isDark ? '#a3a3a3' : '#525252'} strokeWidth={1.5} name="Bills" dot={false} activeDot={{ r: 4 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="card p-6 border border-primary/20 shadow-emerald-500/5">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-          <PieIcon className="h-5 w-5 mr-2 text-indigo-500" />{"Revenue By Item Type"}
-        </h3>
+      {/* Revenue By Item Type */}
+      <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-4 shadow-none">
+        <div className="flex items-center justify-between pb-3 mb-3 border-b border-neutral-200 dark:border-white/[0.06]">
+          <span className="text-[12px] font-semibold text-neutral-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <PieIcon className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+            Revenue By Item Type
+          </span>
+          <span className="text-[11px] text-neutral-500 font-mono">Distribution</span>
+        </div>
         <ResponsiveContainer width="100%" height={240}>
           <PieChart>
             <Pie
               data={[
-                { name: "Physical Products", value: featureAnalytics.productRevenue },
-                { name: "Services", value: featureAnalytics.serviceRevenue },
-                { name: "Modifiers & Add-ons", value: featureAnalytics.modifiersRevenue }
+                { name: 'Products', value: featureAnalytics.productRevenue },
+                { name: 'Services', value: featureAnalytics.serviceRevenue },
+                { name: 'Add-ons', value: featureAnalytics.modifiersRevenue }
               ].filter(d => d.value > 0)}
-              cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
+              cx="50%" cy="50%" innerRadius={55} outerRadius={75} paddingAngle={4} dataKey="value"
             >
               {[
-                { name: "Physical Products", value: featureAnalytics.productRevenue },
-                { name: "Services", value: featureAnalytics.serviceRevenue },
-                { name: "Modifiers & Add-ons", value: featureAnalytics.modifiersRevenue }
+                { name: 'Products', value: featureAnalytics.productRevenue },
+                { name: 'Services', value: featureAnalytics.serviceRevenue },
+                { name: 'Add-ons', value: featureAnalytics.modifiersRevenue }
               ].filter(d => d.value > 0).map((_entry, index) => (
-                <Cell key={`cell-${index}`} fill={['#3B82F6', '#8B5CF6', '#EC4899'][index % 3]} />
+                <Cell key={`cell-${index}`} fill={['#10b981', '#3b82f6', '#8b5cf6'][index % 3]} />
               ))}
             </Pie>
             <Tooltip formatter={(value: any) => formatCurrency(Number(value), currency)} contentStyle={tooltipStyle} itemStyle={itemStyle} />
-            <Legend verticalAlign="bottom" height={36} />
+            <Legend verticalAlign="bottom" height={32} wrapperStyle={{ fontSize: '11px' }} />
           </PieChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="card p-6">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-          <BarChart3 className="h-5 w-5 mr-2 text-primary" />{"Sales by Category"}
-        </h3>
-        <ResponsiveContainer width="100%" height={window.innerWidth < 768 ? 240 : 300}>
+      {/* Category Breakdown */}
+      <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-4 shadow-none">
+        <div className="flex items-center justify-between pb-3 mb-3 border-b border-neutral-200 dark:border-white/[0.06]">
+          <span className="text-[12px] font-semibold text-neutral-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+            Sales by Category
+          </span>
+          <span className="text-[11px] text-neutral-500 font-mono">Top Categories</span>
+        </div>
+        <ResponsiveContainer width="100%" height={240}>
           <PieChart>
-            <Pie data={categoryData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#10b981" dataKey="value">
+            <Pie data={categoryData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value">
               {categoryData.map((_, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
             </Pie>
-            <Tooltip formatter={(value: any) => [formatCurrency(Number(value), currency), "Revenue"]} contentStyle={tooltipStyle} itemStyle={itemStyle} />
+            <Tooltip formatter={(value: any) => [formatCurrency(Number(value), currency), 'Revenue']} contentStyle={tooltipStyle} itemStyle={itemStyle} />
+            <Legend verticalAlign="bottom" height={32} wrapperStyle={{ fontSize: '11px' }} />
           </PieChart>
         </ResponsiveContainer>
       </div>
 
+      {/* Top Variants */}
       {featureAnalytics.topVariants.length > 0 && (
-        <div className="card p-6 border border-purple-500/20 shadow-purple-500/5">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-            <ShoppingBag className="h-5 w-5 mr-2 text-purple-500" />{"Top Selling Variants"}
-          </h3>
-          <div className="space-y-4">
+        <div className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-4 shadow-none">
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-neutral-200 dark:border-white/[0.06]">
+            <span className="text-[12px] font-semibold text-neutral-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <ShoppingBag className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+              Top Selling Variants
+            </span>
+            <span className="text-[11px] text-neutral-500 font-mono">Variants</span>
+          </div>
+          <div className="space-y-1.5 max-h-[220px] overflow-y-auto">
             {featureAnalytics.topVariants.map((variant: any, index: number) => (
-              <div key={index} className="flex justify-between items-center p-3 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-colors">
-                <div className="flex flex-col">
-                  <span className="font-medium text-gray-900 dark:text-white text-sm">{variant.name}</span>
-                  <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{variant.quantity} {"sold"}</span>
+              <div key={index} className="flex justify-between items-center px-2.5 py-1.5 bg-neutral-50 dark:bg-white/[0.02] rounded border border-neutral-200 dark:border-white/[0.06]">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-[11px] font-mono text-neutral-400 w-4">{index + 1}.</span>
+                  <span className="text-[13px] font-medium text-neutral-900 dark:text-white truncate">{variant.name}</span>
+                  <span className="text-[10px] font-mono text-neutral-500">({variant.quantity} sold)</span>
                 </div>
-                <span className="font-bold text-primary dark:text-emerald-400 text-sm">
+                <span className="text-[13px] font-mono tabular-nums font-semibold text-neutral-900 dark:text-white ml-2">
                   {formatCurrency(variant.revenue, currency)}
                 </span>
               </div>

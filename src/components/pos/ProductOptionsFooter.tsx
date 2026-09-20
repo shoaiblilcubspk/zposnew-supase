@@ -15,30 +15,31 @@ export function ProductOptionsFooter({ totalPrice, appSettings, isFormValid, isV
   return (
     <div className="flex items-center justify-between w-full">
       <div className="text-left">
-        <p className="text-[9px] sm:text-[10px] font-black text-gray-500 uppercase tracking-widest">{"Total Price"}</p>
-        <p className="text-base sm:text-lg font-black text-primary dark:text-emerald-400 leading-tight">
+        <p className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider">{"Total Price"}</p>
+        <p className="text-base font-mono font-semibold text-primary dark:text-emerald-400 leading-tight tabular-nums">
           {formatCurrency(totalPrice, appSettings.currency)}
         </p>
         {isVariantOutOfStock && (
-          <p className="text-[8px] font-black text-rose-500 uppercase tracking-widest mt-0.5">Out of Stock</p>
+          <p className="text-[11px] text-rose-500 mt-0.5">Out of Stock</p>
         )}
         {matchingVariant?.trackInventory && matchingVariant.stock !== undefined && !isVariantOutOfStock && (
-          <p className="text-[7px] font-black text-gray-500 uppercase tracking-widest mt-0.5">Stock: {matchingVariant.stock}</p>
+          <p className="text-[11px] font-mono text-neutral-400 mt-0.5">Stock: {matchingVariant.stock}</p>
         )}
       </div>
-      <div className="flex items-center justify-end gap-2 sm:gap-3">
+      <div className="flex items-center justify-end gap-2">
         <button
           onClick={onClose}
-          className="px-4 sm:px-6 py-2.5 sm:py-3 border border-rose-200 dark:border-rose-900/30 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all active:scale-95 shrink-0"
+          className="h-8 px-3 rounded-md border border-neutral-200 dark:border-white/[0.08] text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5 text-[13px] font-medium transition-colors shrink-0"
         >
           {"Cancel"}
         </button>
         <button
           onClick={onConfirm}
           disabled={!isFormValid}
-          className="btn btn-md btn-primary !py-2.5 sm:!py-3 !text-[9px] sm:!text-[11px]"
+          className="h-8 px-3.5 rounded-md bg-primary hover:bg-primary-hover text-white text-[13px] font-medium transition-colors flex items-center gap-1.5 disabled:opacity-50"
         >
-          <Check className="w-4 h-4 shrink-0" /> <span className="hidden sm:inline">{"Add to Cart"}</span><span className="sm:hidden">{"Add"}</span>
+          <Check className="w-3.5 h-3.5 shrink-0" />
+          <span>{"Add to Cart"}</span>
         </button>
       </div>
     </div>

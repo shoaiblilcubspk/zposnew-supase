@@ -15,15 +15,15 @@ export function ProductIdentityDetails({ d }: { d: ProductDetailController }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in slide-in-from-bottom-4">
 
-      <div className="lg:col-span-8 bg-white dark:bg-[#1C1C1C] p-6 sm:p-8 rounded-[3rem] border border-gray-200 dark:border-white/5 shadow-2xl">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 bg-violet-500/10 text-violet-500 rounded-[1.5rem]"><BadgeInfo className="w-6 h-6" /></div>
+      <div className="lg:col-span-8 bg-white dark:bg-surface p-4 sm:p-5 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
+        <div className="flex items-center gap-2.5 mb-4">
+          <BadgeInfo className="w-4 h-4 text-neutral-400" />
           <div>
-            <h3 className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">{"Identity Details"}</h3>
-            <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest">{"Global product properties"}</p>
+            <h3 className="text-[13px] font-semibold text-neutral-900 dark:text-white">{"Identity Details"}</h3>
+            <p className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider">{"Global product properties"}</p>
           </div>
         </div>
-        <div className="space-y-6">
+        <div className="space-y-4">
           <SegmentedControl
             options={[
               { value: 'simple', label: 'Simple Product' },
@@ -32,8 +32,8 @@ export function ProductIdentityDetails({ d }: { d: ProductDetailController }) {
             value={formData.productType}
             onChange={(v) => setFormData(prev => ({ ...prev, productType: v }))}
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1">
               <SearchableSelect
                 label={'Category *'.replace(' *', '')}
                 options={categories.map(c => ({ id: c, label: c }))}
@@ -41,7 +41,7 @@ export function ProductIdentityDetails({ d }: { d: ProductDetailController }) {
                 onChange={(val) => setFormData({ ...formData, category: val })}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <SearchableSelect
                 label={"SUPPLIER"}
                 options={[{ id: '', label: 'NONE' }, ...suppliers.map(s => ({ id: s, label: s }))]}
@@ -51,67 +51,67 @@ export function ProductIdentityDetails({ d }: { d: ProductDetailController }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"SKU (Optional)"}</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">{"SKU (Optional)"}</label>
               <div className="relative">
                 <input
                   value={formData.sku}
                   onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
-                  className="w-full bg-gray-50 dark:bg-black/30 border-none pl-5 pr-20 py-4 rounded-[1.5rem] text-sm font-mono outline-none ring-1 ring-gray-100 dark:ring-white/5 focus:ring-emerald-500/50"
+                  className="w-full h-8 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] px-2.5 pr-16 rounded-md text-[13px] font-mono text-neutral-900 dark:text-white outline-none focus:border-neutral-400 transition-colors"
                   placeholder={"ENTER SKU"}
                 />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                   {formData.sku && (
                     <Button
                       variant="ghost"
                       onClick={() => setFormData({ ...formData, sku: '' })}
-                      className="!min-h-0 !p-2 !bg-transparent !text-gray-600 hover:!text-rose-500"
-                      icon={<X className="w-4 h-4" />}
+                      className="h-6 w-6 !p-0 text-neutral-400 hover:text-rose-500"
+                      icon={<X className="w-3.5 h-3.5" />}
                     />
                   )}
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     onClick={generateSku}
-                    className="!min-h-0 !p-2.5 !rounded-2xl !bg-white dark:!bg-[#262626] !text-primary !shadow-sm hover:!scale-110"
+                    className="h-6 w-6 !p-0 rounded"
                     title={"Generate Smart SKU"}
-                    icon={<Wand2 className="w-4 h-4" />}
+                    icon={<Wand2 className="w-3.5 h-3.5" />}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest ml-1">{"Barcode / EAN"}</label>
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">{"Barcode / EAN"}</label>
               <div className="relative">
                 <input
                   value={formData.barcode}
                   onChange={(e) => setFormData({ ...formData, barcode: e.target.value.toUpperCase() })}
-                  className="w-full bg-gray-50 dark:bg-black/30 border-none pl-5 pr-32 py-4 rounded-[1.5rem] text-sm font-mono outline-none ring-1 ring-gray-100 dark:ring-white/5 focus:ring-emerald-500/50"
+                  className="w-full h-8 bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] px-2.5 pr-20 rounded-md text-[13px] font-mono text-neutral-900 dark:text-white outline-none focus:border-neutral-400 transition-colors"
                   placeholder={"SCAN BARCODE"}
                 />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                   {formData.barcode && (
                     <Button
                       variant="ghost"
                       onClick={() => setFormData({ ...formData, barcode: '' })}
-                      className="!min-h-0 !p-2 !bg-transparent !text-gray-600 hover:!text-rose-500"
-                      icon={<X className="w-4 h-4" />}
+                      className="h-6 w-6 !p-0 text-neutral-400 hover:text-rose-500"
+                      icon={<X className="w-3.5 h-3.5" />}
                     />
                   )}
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     onClick={generateBarcode}
-                    className="!min-h-0 !p-2 !rounded-xl !bg-white dark:!bg-[#262626] !text-primary !shadow-sm hover:!scale-110 !border !border-primary/10"
+                    className="h-6 w-6 !p-0 rounded"
                     title={"Generate Barcode"}
-                    icon={<Wand2 className="w-4 h-4" />}
+                    icon={<Wand2 className="w-3.5 h-3.5" />}
                   />
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     onClick={() => { setActiveScannerField('barcode'); setShowScanner(true); }}
-                    className="!min-h-0 !p-2 !rounded-xl !bg-white dark:!bg-[#262626] !text-blue-500 !shadow-sm hover:!scale-110 !border !border-blue-500/10"
+                    className="h-6 w-6 !p-0 rounded text-neutral-600 dark:text-neutral-300"
                     title={"Scan with Camera"}
-                    icon={<Camera className="w-4 h-4" />}
+                    icon={<Camera className="w-3.5 h-3.5" />}
                   />
                 </div>
               </div>

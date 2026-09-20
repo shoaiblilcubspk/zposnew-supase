@@ -33,7 +33,7 @@ const appSelectedCustomer = useCartStore(s => s.selectedCustomer);
   }, []);
 
   const createNewTab = async () => {
-    if (!user) return;
+    const userId = user?.id || 'local_user';
 
     if (appSalesTabs.length >= 3) {
       sonner.warning('Maximum 3 Sale tabs allowed. Please close an existing tab first.');
@@ -69,9 +69,12 @@ const appSelectedCustomer = useCartStore(s => s.selectedCustomer);
         selectedCustomer: null,
       };
 
-      const newTab = await salesTabsService.create(user.id, newTabData);
+      const newTab = await salesTabsService.create(userId, newTabData);
       useCartStore.getState().addSalesTab(newTab);
       useCartStore.getState().setActiveSalesTab(newTab.id);
+      try {
+        localStorage.setItem('pos_active_sales_tab', newTab.id);
+      } catch {}
     } catch (error) {
       console.error('Error creating new tab:', error);
     }
@@ -130,6 +133,9 @@ const appSelectedCustomer = useCartStore(s => s.selectedCustomer);
     }
 
     useCartStore.getState().setActiveSalesTab(tabId);
+    try {
+      localStorage.setItem('pos_active_sales_tab', tabId);
+    } catch {}
   };
 
   const getItemCount = (tab: SalesTab) => {
@@ -160,14 +166,14 @@ const appSelectedCustomer = useCartStore(s => s.selectedCustomer);
             <button
               onClick={() => switchTab(tab.id)}
               style={{ minHeight: 'unset' }}
-              className={`relative flex items-center h-4 min-h-0 px-1.5 lg:h-6 lg:px-3 rounded-md lg:rounded-lg text-[6px] lg:text-[8px] font-black uppercase tracking-[0.05em] transition-all duration-300 ${isActive
-                  ? 'bg-primary text-white shadow-lg shadow-emerald-500/20 scale-105 z-10'
-                  : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+              className={`relative flex items-center h-5 lg:h-6 px-2 lg:px-2.5 rounded text-[11px] font-medium transition-colors ${isActive
+                  ? 'bg-primary text-white'
+                  : 'bg-neutral-100 dark:bg-white/[0.05] text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-white/10'
                 }`}
             >
               <span>Tab {tabNumber}</span>
               {itemCount > 0 && (
-                <span className={`ml-1 px-1 rounded-[3px] text-[5px] lg:text-[7px] ${isActive ? 'bg-white text-primary' : 'bg-primary text-white'}`}>
+                <span className={`ml-1 px-1 rounded text-[10px] font-mono font-medium ${isActive ? 'bg-white text-primary' : 'bg-primary text-white'}`}>
                   {itemCount}
                 </span>
               )}
@@ -176,10 +182,10 @@ const appSelectedCustomer = useCartStore(s => s.selectedCustomer);
               <button
                 onClick={(e) => closeTab(tab.id, e)}
                 style={{ minHeight: 'unset' }}
-                className="ml-0.5 p-0.5 rounded-md min-h-0 text-gray-600 hover:text-rose-500 hover:bg-rose-500/10 transition-all active:scale-90"
+                className="ml-0.5 p-0.5 rounded min-h-0 text-neutral-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
                 title="Close Tab"
               >
-                <X className="h-2 w-2 lg:h-2.5 lg:w-2.5" />
+                <X className="h-2.5 w-2.5" />
               </button>
             )}
           </div>
@@ -187,14 +193,14 @@ const appSelectedCustomer = useCartStore(s => s.selectedCustomer);
       })}
 
       {showAddButton && appSalesTabs.length < 3 && (
-        <div className="sticky right-0 bg-white dark:bg-app z-10 pl-1 py-1 flex items-center shrink-0">
+        <div className="sticky right-0 bg-white dark:bg-app z-10 pl-1 py-0.5 flex items-center shrink-0">
           <button
             onClick={() => window.dispatchEvent(new CustomEvent('create-new-tab'))}
             style={{ minHeight: 'unset' }}
-            className="flex items-center justify-center w-4 h-4 min-h-0 lg:w-6 lg:h-6 rounded-md lg:rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-500 transition-colors"
+            className="flex items-center justify-center w-5 h-5 lg:w-6 lg:h-6 rounded bg-neutral-100 dark:bg-white/[0.05] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-white/[0.08] hover:bg-primary hover:text-white dark:hover:bg-primary transition-colors"
             title="Add New Tab"
           >
-            <Plus className="h-2.5 w-2.5 lg:h-3.5 lg:w-3.5" />
+            <Plus className="h-3 w-3" />
           </button>
         </div>
       )}

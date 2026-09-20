@@ -1,11 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSettingsStore } from '../../stores';
 import { useAuth } from '../../context/AuthContext';
 import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import { sonner } from '../../lib/sonner';
-import { supabase } from '../../lib/supabase';
 import { AppSettings } from '../../types';
 import { buildInitialFormData, syncFormDataFromSettings } from './settingsFormData';
+
+// Fields that save immediately on change (safe live toggles / device-local prefs).
+// These do NOT mark the form dirty — they don't require "Update System" intent.
+const INSTANT_SAVE_FIELDS = [
+  'theme', 'iconStyle', 'interfaceMode', 'posGridColumns', 'touchKeyboardEnabled',
+  'country', 'currency', 'receiptPrinter', 'receiptPaperSize', 'receiptTemplate',
+  'receiptShowLogo', 'receiptShowFooter', 'receiptShowTax', 'receiptShowDiscount',
+  'receiptShowStoreName', 'receiptShowStoreAddress', 'receiptShowStorePhone',
+  'receiptShowStoreEmail', 'receiptShowCustomerName', 'receiptShowCustomerPhone',
+  'receiptShowNotes', 'receiptShowBarcode', 'receiptShowDeliveryAddress', 'receiptShowQrCode',
+  'receiptFontBold', 'receiptFontWeight', 'receiptFontScale',
+];
 
 export function useSettingsForm() {
   const appSettings = useSettingsStore(s => s.settings);
@@ -17,45 +28,57 @@ export function useSettingsForm() {
   const [completedSale, setCompletedSale] = useState<any>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'success'>('idle');
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [formData, setFormDataState] = useState<any>(buildInitialFormData(appSettings));
 
-  const [formData, setFormData] = useState<any>(buildInitialFormData(appSettings));
+  // isDirty = user has unsaved changes. While true, remote P2P sync must NOT overwrite the form.
+  // Resets to false after save (Update System) or discard.
+  const isDirty = useRef(false);
 
   useEffect(() => {
     const on = () => setIsOnline(true);
     const off = () => setIsOnline(false);
     window.addEventListener('online', on);
     window.addEventListener('offline', off);
-    return () => {
-      window.removeEventListener('online', on);
-      window.removeEventListener('offline', off);
-    };
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
 
+  // Sync form from Zustand store — ONLY when form is NOT being edited by the user.
+  // This allows remote device saves to appear automatically on a clean form.
   useEffect(() => {
-    if ((window as any).electronAPI) {
-      (window as any).electronAPI.getConfig().then((config: any) => {
-        if (config.supabaseUrl) {
-          const urlInput = document.getElementById('electron-supabase-url') as HTMLInputElement;
-          if (urlInput) urlInput.value = config.supabaseUrl;
-        }
-        if (config.supabaseAnonKey) {
-          const anonInput = document.getElementById('electron-supabase-anon') as HTMLInputElement;
-          if (anonInput) anonInput.value = config.supabaseAnonKey;
-        }
-        if (config.supabaseServiceRoleKey) {
-          const serviceInput = document.getElementById('electron-supabase-service') as HTMLInputElement;
-          if (serviceInput) serviceInput.value = config.supabaseServiceRoleKey;
-        }
-      });
+    if (!isDirty.current) {
+      setFormDataState(syncFormDataFromSettings(appSettings));
     }
-  }, []);
-
-  useEffect(() => {
-    setFormData(syncFormDataFromSettings(appSettings));
   }, [appSettings]);
+
+  // Listen for P2P-pushed settings events — same dirty guard.
+  // Prevents logo/name/address from being clobbered while user is actively editing.
+  useEffect(() => {
+    const onSettingsUpdated = (e: any) => {
+      if (!isDirty.current && e?.detail) {
+        setFormDataState(syncFormDataFromSettings(e.detail));
+      }
+    };
+    window.addEventListener('settings-updated', onSettingsUpdated as any);
+    return () => window.removeEventListener('settings-updated', onSettingsUpdated as any);
+  }, []);
 
   const canEditSettings = true;
 
+  // Marks form dirty — used for fields that require "Update System" to save + P2P share
+  const setFormData = (updater: any) => {
+    isDirty.current = true;
+    setFormDataState(updater);
+  };
+
+  // Direct form state update WITHOUT marking dirty — for instant-save fields that call
+  // handleInstantUpdate separately (receipt toggles, paper size, template, font scale, etc.)
+  const setFormDataDirect = (updater: any) => {
+    setFormDataState(updater);
+  };
+
+  // Instant-save for live UI preference fields (receipt toggles, theme, etc.)
+  // Safe to save immediately — these are non-destructive and expected to apply live.
+  // Does NOT set isDirty because they don't require "Update System" confirmation.
   const handleInstantUpdate = async (name: string, value: any) => {
     if (!canEditSettings) return;
 
@@ -63,12 +86,12 @@ export function useSettingsForm() {
     if (saleTypeFields.includes(name) && value === false) {
       const otherActive = saleTypeFields.filter(f => f !== name && formData[f as keyof typeof formData]);
       if (otherActive.length === 0) {
-        sonner.warning('At least one sale type must remain active. Re-enable another sale type before disabling this one.');
+        sonner.warning('At least one sale type must remain active.');
         return;
       }
     }
 
-    setFormData((prev: any) => ({ ...prev, [name]: value }));
+    setFormDataState((prev: any) => ({ ...prev, [name]: value }));
     setSyncStatus('saving');
     try {
       const { settingsService } = await import('../../lib/services');
@@ -81,17 +104,13 @@ export function useSettingsForm() {
         receiptFontScale: parseFloat(String(name === 'receiptFontScale' ? value : (formData.receiptFontScale || 1.0))),
         receiptFontWeight: parseInt(String(name === 'receiptFontWeight' ? value : ((formData as any).receiptFontWeight || 600))),
       } as unknown as AppSettings;
-
       await settingsService.update(updatedSettings as any);
       useSettingsStore.getState().setSettings(updatedSettings as any);
       setSyncStatus('success');
-
-      const displayValue = name === 'storeLogo' ? 'Image Uploaded' : value;
-      sonner.toast(`Applied ${name.charAt(0).toUpperCase() + name.slice(1)}: ${displayValue} 🌐`, 'success');
     } catch (error) {
       console.error('Instant update error:', error);
       setSyncStatus('idle');
-      sonner.toast('Failed to apply change instantly', 'error');
+      sonner.toast('Failed to apply change', 'error');
     } finally {
       setTimeout(() => setSyncStatus('idle'), 2000);
     }
@@ -100,52 +119,52 @@ export function useSettingsForm() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     if (!canEditSettings) return;
     const { name, value, type } = e.target;
-    const instantFields = [
-      'country', 'currency', 'receiptPrinter', 'receiptPaperSize', 'receiptTemplate',
-      'interfaceMode', 'theme', 'receiptShowLogo', 'receiptShowFooter', 'receiptShowTax',
-      'receiptShowDiscount', 'receiptShowStoreName', 'receiptShowStoreAddress',
-      'receiptShowStorePhone', 'receiptShowStoreEmail', 'receiptShowCustomerName',
-      'receiptShowCustomerPhone', 'receiptShowNotes', 'receiptShowBarcode', 'receiptShowDeliveryAddress', 'receiptShowQrCode', 'receiptFontBold', 'receiptFontWeight',
-      'receiptFontScale'
-    ];
-    if (instantFields.includes(name)) {
+
+    if (INSTANT_SAVE_FIELDS.includes(name)) {
       const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
       handleInstantUpdate(name, val);
       return;
     }
-    setFormData((prev: any) => ({
+
+    // Non-instant field — mark form dirty. User must click "Update System" to save + P2P share.
+    isDirty.current = true;
+    setFormDataState((prev: any) => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     }));
   };
 
+  // "Update System" button — ONLY place where store identity + all settings save + P2P propagate
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canEditSettings) {
       sonner.error('You do not have permission to change settings.');
       return;
     }
-
     setIsSaving(true);
     setSyncStatus('saving');
-
     try {
-      sonner.loading('Deploying settings changes...');
+      sonner.loading('Saving & sharing to all devices...');
       const { settingsService } = await import('../../lib/services');
-
       const updatedSettings = {
         ...appSettings,
         ...formData,
         taxRate: parseFloat(formData.taxRate),
         invoiceCounter: parseInt(formData.invoiceCounter),
+        invoicePadDigits: parseInt(formData.invoicePadDigits || '4', 10),
         receiptFontScale: parseFloat(formData.receiptFontScale),
         receiptFontWeight: parseInt((formData as any).receiptFontWeight?.toString() || '600'),
       } as unknown as AppSettings;
 
+      // Saves to local SQLite + Dexie + creates P2P outbox event → all devices auto-receive
       await settingsService.update(updatedSettings as any);
       useSettingsStore.getState().setSettings(updatedSettings as any);
+
+      // Form is now in sync with saved state — allow remote P2P events to update it again
+      isDirty.current = false;
+
       setSyncStatus('success');
-      sonner.success('Settings saved to cloud! 🌐');
+      sonner.success('Settings saved & shared to all devices! 🌐');
     } catch (error) {
       console.error('Error saving settings:', error);
       setSyncStatus('idle');
@@ -157,37 +176,35 @@ export function useSettingsForm() {
     }
   };
 
+  // Discard — reset form to last committed settings, clear dirty flag
+  const handleDiscard = () => {
+    isDirty.current = false;
+    setFormDataState(syncFormDataFromSettings(appSettings));
+  };
+
   const handleRepairCounter = async () => {
     if (!canEditSettings) return;
-    if (!navigator.onLine) {
-      sonner.error('You must be online to repair the counter from cloud data.');
-      return;
-    }
-
     try {
-      sonner.loading('Scanning all cloud sales for highest invoice number...');
-      const { data, error } = await supabase.from('sales').select('invoice_number');
-      if (error) throw error;
-      let maxCounterNum = parseInt(formData.invoiceCounter);
-      if (data && data.length > 0) {
-        data.forEach(sale => {
-          const val = sale.invoice_number;
+      sonner.loading('Scanning local sales for highest invoice number...');
+      const { salesService } = await import('../../lib/services');
+      const sales = await salesService.getAll();
+      let maxCounterNum = parseInt(formData.invoiceCounter) || 0;
+      if (sales && sales.length > 0) {
+        sales.forEach(sale => {
+          const val = sale.invoiceNumber;
           if (typeof val === 'string') {
             const matches = val.match(/\d+$/);
             if (matches) {
               const num = parseInt(matches[0]);
-              if (!isNaN(num) && num > maxCounterNum) {
-                maxCounterNum = num;
-              }
+              if (!isNaN(num) && num > maxCounterNum) maxCounterNum = num;
             }
           }
         });
       }
       const nextCounter = maxCounterNum + 1;
-      setFormData((prev: any) => ({ ...prev, invoiceCounter: nextCounter.toString() }));
-      sonner.success(`Counter repaired! Next invoice will be: ${formData.invoicePrefix}-${nextCounter}`);
+      setFormDataState((prev: any) => ({ ...prev, invoiceCounter: nextCounter.toString() }));
+      sonner.success(`Counter repaired! Next invoice: ${formData.invoicePrefix}-${nextCounter}`);
     } catch (err: any) {
-      console.error('Repair failed:', err);
       sonner.error(`Failed to repair counter: ${err.message}`);
     } finally {
       sonner.close();
@@ -195,25 +212,23 @@ export function useSettingsForm() {
   };
 
   const handleResetCalibration = () => {
-    setFormData((prev: any) => ({
+    setFormDataState((prev: any) => ({
       ...prev,
-      receiptPaddingTop: 0,
-      receiptPaddingBottom: 0,
-      receiptPaddingLeft: 0,
-      receiptPaddingRight: 0,
-      receiptOffsetX: 0,
-      receiptHeaderOffsetX: 0,
-      receiptFooterOffsetX: 0
+      receiptPaddingTop: 0, receiptPaddingBottom: 0,
+      receiptPaddingLeft: 0, receiptPaddingRight: 0,
+      receiptOffsetX: 0, receiptHeaderOffsetX: 0, receiptFooterOffsetX: 0,
     }));
-    sonner.toast('Calibration reset! Logo, items, and footer are now centered. 🎯', 'info');
+    sonner.toast('Calibration reset to center. 🎯', 'info');
   };
 
   return {
     formData,
     setFormData,
+    setFormDataDirect,
     handleChange,
     handleInstantUpdate,
     handleSubmit,
+    handleDiscard,
     handleRepairCounter,
     handleResetCalibration,
     appSettings,
@@ -227,5 +242,6 @@ export function useSettingsForm() {
     completedSale,
     setCompletedSale,
     syncStatus,
+    isDirty: isDirty.current,
   };
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Sale } from '../../types';
 import { salesService } from '../../lib/services';
 import { sonner } from '../../lib/sonner';
+import { useSalesStore } from '../../stores';
 import {
   getStartOfDayInTimezone,
   getEndOfDayInTimezone,
@@ -94,6 +95,9 @@ export const useCloudSearch = ({
           salesman: selectedSalesman !== 'all' ? selectedSalesman : undefined,
           saleType: saleTypeFilter !== 'all' ? saleTypeFilter : undefined,
         });
+        if (results && results.length > 0) {
+          useSalesStore.getState().appendSales(results);
+        }
         setCloudResults(results);
       } catch (e) {
         console.error("Cloud search failed", e);

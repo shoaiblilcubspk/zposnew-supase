@@ -1,6 +1,6 @@
 import { useUsersStore } from '../../stores';
 import { useState } from 'react';
-import { Plus, Edit, Trash2, Users, CreditCard } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, ChevronLeft } from 'lucide-react';
 import { Salesman } from '../../types';
 import { SharedSearchBar } from '../../shared/modules/search-and-list';
 import { Badge, Button, EmptyState, Pagination, usePagination } from '../../shared/ui';
@@ -54,145 +54,219 @@ const appCurrentUser = useUsersStore(s => s.currentUser);
   const activeSalesmen = appSalesmen.filter(s => s.active).length;
 
   return (
-    <div className="main-content-scroll p-1 sm:p-4 lg:p-6 bg-gray-50/50 dark:bg-app space-y-3 lg:space-y-6 max-w-[1400px] mx-auto">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 pb-2">
-        <div className="flex flex-col md:flex-row md:items-center gap-4 sm:gap-6 xl:gap-10">
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="h-10 w-10 sm:h-12 sm:w-12 bg-emerald-500/10 rounded-xl flex items-center justify-center shadow-inner border border-emerald-500/10">
-              <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-500" />
-            </div>
-            <div>
-              <h1 className="text-[22px] sm:text-[28px] font-black tracking-tight text-gray-900 dark:text-white leading-none">
-                Salesmen <span className="text-gray-400 font-light">Management</span>
+    <div className="main-content-scroll p-1 sm:p-4 lg:p-6 bg-gray-50/50 dark:bg-app space-y-3 lg:space-y-4 max-w-[1400px] mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2 pb-1 border-b border-neutral-200 dark:border-white/[0.08]">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button
+            variant="ghost"
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'pos' }))}
+            icon={<ChevronLeft className="h-4 w-4" />}
+            className="h-8 px-2.5 rounded text-neutral-500 hover:text-neutral-900 dark:hover:text-white border border-transparent hover:border-neutral-200 dark:hover:border-white/[0.08] shrink-0"
+          >
+            <span className="hidden sm:inline text-[12px] font-medium">POS</span>
+          </Button>
+
+          <div className="h-4 w-px bg-neutral-200 dark:bg-white/[0.08] hidden sm:block shrink-0" />
+
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Users className="h-4 w-4 text-neutral-500 dark:text-neutral-400 shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-base font-semibold text-neutral-900 dark:text-white tracking-[-0.01em] leading-tight truncate">
+                Salesmen Management
               </h1>
-              <div className="flex items-center gap-2 mt-1 sm:mt-2">
-                <Badge tone="success" className="!px-2 !py-0.5 !text-[10px] uppercase font-bold tracking-widest">{"ACTIVE"}: {activeSalesmen}</Badge>
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                  {"TOTAL RECORDS"}: {appSalesmen.length}
-                </span>
-              </div>
+              <p className="text-[11px] text-neutral-500 font-mono tracking-tight truncate">
+                {activeSalesmen} active • {appSalesmen.length} total records
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full lg:w-auto shrink-0">
-          <div className="w-full sm:w-[280px]">
-            <SharedSearchBar
-              placeholder={"Search salesmen..."}
-              value={searchTerm}
-              onChange={setSearchTerm}
-            />
-          </div>
-          {appCurrentUser?.role === 'admin' && (
-            <Button
-              onClick={handleAdd}
-              variant="primary"
-              className="!py-3 !px-5 whitespace-nowrap !h-full"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              <span className="text-[11px] font-black tracking-widest uppercase">{"Add Salesman"}</span>
-            </Button>
-          )}
+        {appCurrentUser?.role === 'admin' && (
+          <Button
+            onClick={handleAdd}
+            variant="primary"
+            size="sm"
+            icon={<Plus className="h-3.5 w-3.5" />}
+            className="shrink-0"
+          >
+            <span>{"Add Salesman"}</span>
+          </Button>
+        )}
+      </div>
+
+      {/* Search Toolbar */}
+      <div className="bg-white dark:bg-surface p-2.5 rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
+        <div className="max-w-md">
+          <SharedSearchBar
+            placeholder={"Search salesmen..."}
+            value={searchTerm}
+            onChange={setSearchTerm}
+          />
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1a1b1e] rounded-2xl sm:rounded-[32px] border border-gray-100 dark:border-white/5 shadow-sm dark:shadow-none overflow-hidden relative">
-        <div className="overflow-x-auto custom-scrollbar">
-          <div className="min-w-[800px] w-full align-middle inline-block">
-            <div className="overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-100 dark:divide-white/5">
-                <thead className="bg-gray-50/50 dark:bg-black/20">
-                  <tr>
-                    <th scope="col" className="px-5 sm:px-8 py-4 sm:py-5 text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest w-[40%]">
-                      {"SALESMAN INFO"}
-                    </th>
-                    <th scope="col" className="px-5 sm:px-8 py-4 sm:py-5 text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                      {"STATUS"}
-                    </th>
-                    <th scope="col" className="px-5 sm:px-8 py-4 sm:py-5 text-right text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest w-[120px]">
-                      {"ACTIONS"}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-white/5 bg-white dark:bg-transparent">
-                  {pageItems.map((salesman) => (
-                    <tr key={salesman.id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors group">
-                      <td className="px-5 sm:px-8 py-4 sm:py-5 whitespace-nowrap">
-                        <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-gray-100 dark:bg-black/50 border border-gray-200 dark:border-white/5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
-                            <Users className="h-5 w-5 text-gray-400" />
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-sm sm:text-[15px] font-bold text-gray-900 dark:text-white truncate">
-                              {salesman.name}
-                            </span>
-                            <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
-                              <span className="text-[11px] sm:text-xs text-gray-500 font-medium font-mono">{salesman.phone || 'N/A'}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 sm:px-8 py-4 sm:py-5 whitespace-nowrap">
-                        <Badge tone={salesman.active ? 'success' : 'neutral'} className="!px-3 !py-1 !text-[10px] uppercase font-bold tracking-widest">
-                          {salesman.active ? "ACTIVE" : "INACTIVE"}
-                        </Badge>
-                      </td>
-                      <td className="px-5 sm:px-8 py-4 sm:py-5 whitespace-nowrap text-right">
-                        {appCurrentUser?.role === 'admin' && (
-                          <div className="flex items-center justify-end gap-1 sm:gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(salesman)}
-                              className="!h-9 !w-9 !p-0 !rounded-xl !bg-[#f8f9fa] dark:!bg-black/40 hover:!bg-blue-50 dark:hover:!bg-blue-500/20 text-gray-400 hover:text-blue-500 transition-colors"
-                              title={"Edit"}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(salesman.id)}
-                              className="!h-9 !w-9 !p-0 !rounded-xl !bg-[#f8f9fa] dark:!bg-black/40 hover:!bg-rose-50 dark:hover:!bg-rose-500/20 text-gray-400 hover:text-rose-500 transition-colors"
-                              title={"Delete"}
-                              disabled={loading}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredSalesmen.length === 0 && (
-                    <tr>
-                      <td colSpan={3} className="px-8 py-16">
-                        <EmptyState
-                          icon={<Users className="w-12 h-12" />}
-                          title={"No Salesmen Found"}
-                          subtext={searchTerm ? "Try adjusting your search terms" : "Add your first salesman to get started"}
-                          action={
-                            !searchTerm && appCurrentUser?.role === 'admin' ? (
-                              <Button variant="primary" onClick={handleAdd}>
-                                <Plus className="h-4 w-4 mr-2" />
-                                {"ADD SALESMAN"}
-                              </Button>
-                            ) : undefined
-                          }
-                        />
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+      <div className="bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] overflow-hidden shadow-none min-h-[calc(100vh-280px)] flex flex-col justify-between">
+        <div className="hidden lg:block overflow-x-auto flex-1">
+          <table className="w-full text-left border-collapse text-[13px]">
+            <thead>
+              <tr className="h-8 bg-neutral-50/50 dark:bg-white/[0.02] border-b border-neutral-200 dark:border-white/[0.08]">
+                <th scope="col" className="px-3.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider w-[45%]">
+                  {"Salesman Info"}
+                </th>
+                <th scope="col" className="px-3.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-center">
+                  {"Status"}
+                </th>
+                <th scope="col" className="px-3.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right w-[120px]">
+                  {"Actions"}
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100 dark:divide-white/[0.04]">
+              {pageItems.map((salesman) => (
+                <tr key={salesman.id} className="h-11 hover:bg-neutral-50/50 dark:hover:bg-white/[0.02] transition-colors group">
+                  <td className="px-3.5 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08] flex items-center justify-center shrink-0">
+                        <Users className="h-4 w-4 text-neutral-500 dark:text-neutral-400" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-medium text-neutral-900 dark:text-white truncate">
+                          {salesman.name}
+                        </span>
+                        <span className="text-[11px] text-neutral-500 font-mono">{salesman.phone || 'No phone'}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-3.5 whitespace-nowrap text-center">
+                    <Badge tone={salesman.active ? 'success' : 'neutral'} size="sm">
+                      {salesman.active ? "Active" : "Inactive"}
+                    </Badge>
+                  </td>
+                  <td className="px-3.5 whitespace-nowrap text-right">
+                    {appCurrentUser?.role === 'admin' && (
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(salesman)}
+                          className="!h-7 !w-7 !p-0 text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                          title={"Edit"}
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(salesman.id)}
+                          className="!h-7 !w-7 !p-0 text-neutral-500 hover:text-rose-600"
+                          title={"Delete"}
+                          disabled={loading}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {filteredSalesmen.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-3.5 py-16 text-center">
+                    <EmptyState
+                      icon={<Users className="w-8 h-8 text-neutral-400 opacity-60" />}
+                      title={"No Salesmen Found"}
+                      subtext={searchTerm ? "Try adjusting your search terms" : "Add your first salesman to get started"}
+                      className="!p-0"
+                      action={
+                        !searchTerm && appCurrentUser?.role === 'admin' ? (
+                          <Button size="sm" variant="primary" onClick={handleAdd}>
+                            <Plus className="h-3.5 w-3.5 mr-1" />
+                            {"Add Salesman"}
+                          </Button>
+                        ) : undefined
+                      }
+                    />
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
-        {totalPages > 1 && (
-          <div className="px-5 sm:px-8 py-4 sm:py-5 border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/20">
+        {/* Mobile Native App Cards */}
+        <div className="lg:hidden p-3 flex-1">
+          {filteredSalesmen.length === 0 ? (
+            <div className="py-12 text-center">
+              <EmptyState
+                icon={<Users className="w-8 h-8 text-neutral-400 opacity-60" />}
+                title={"No Salesmen Found"}
+                subtext={searchTerm ? "Try adjusting your search terms" : "Add your first salesman to get started"}
+                className="!p-0"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {pageItems.map((salesman) => (
+                <div
+                  key={salesman.id}
+                  className="p-3 rounded-md bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] shadow-none flex flex-col justify-between"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-8 w-8 rounded bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08] flex items-center justify-center shrink-0">
+                        <Users className="h-4 w-4 text-neutral-500 dark:text-neutral-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-semibold text-neutral-900 dark:text-white text-[13px] truncate">
+                          {salesman.name}
+                        </h4>
+                        <p className="text-[11px] text-neutral-500 font-mono">{salesman.phone || 'No phone'}</p>
+                      </div>
+                    </div>
+                    <Badge tone={salesman.active ? 'success' : 'neutral'} size="sm">
+                      {salesman.active ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+
+                  {appCurrentUser?.role === 'admin' && (
+                    <div className="pt-2 border-t border-neutral-100 dark:border-white/[0.06] flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(salesman)}
+                        className="!h-7 !w-7 !p-0 text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                        title={"Edit"}
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(salesman.id)}
+                        className="!h-7 !w-7 !p-0 text-neutral-500 hover:text-rose-600"
+                        title={"Delete"}
+                        disabled={loading}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Pinned Pagination Footer */}
+        <div className="px-3.5 py-2.5 bg-neutral-50/50 dark:bg-white/[0.01] border-t border-neutral-200 dark:border-white/[0.08] flex items-center justify-between text-[11px] text-neutral-500 font-mono mt-auto">
+          <span className="hidden sm:inline">
+            Showing {filteredSalesmen.length === 0 ? '0 of 0' : `${((page - 1) * pageSize) + 1}–${Math.min(page * pageSize, filteredSalesmen.length)} of ${filteredSalesmen.length}`}
+          </span>
+          <div className="mx-auto sm:mx-0">
             <Pagination
-              currentPage={page}
+              page={page}
               totalPages={totalPages}
               onPageChange={goToPage}
               pageSize={pageSize}
@@ -200,7 +274,7 @@ const appCurrentUser = useUsersStore(s => s.currentUser);
               totalItems={filteredSalesmen.length}
             />
           </div>
-        )}
+        </div>
       </div>
 
       <SalesmanModal

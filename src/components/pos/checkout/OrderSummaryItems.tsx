@@ -1,5 +1,6 @@
-import { ShoppingBag, Gift } from 'lucide-react';
 import type { CSSProperties } from 'react';
+import { ShoppingBagIcon, GiftIcon } from '../../../shared/icons';
+import { TYPOGRAPHY } from '../../../shared/ui/typography';
 import { CartItem } from '../../../types';
 import { CompactItemRow } from '../CompactItemRow';
 import { formatCurrency } from '../../../lib/currencies';
@@ -71,33 +72,30 @@ export function OrderSummaryItems({ checkoutCartItems, appBundles, showDiscount,
           const hidePrices = isNested && item.bundleHideItemPrices === true;
           return (
             <div key={originalIndex} className={cn(
-              "flex items-start gap-2.5 p-2 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/5",
+              "flex items-start gap-2 p-2 rounded-md bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] shadow-none",
               isNested && "shadow-none border-none bg-transparent dark:bg-transparent p-1"
             )}>
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 text-[10px] font-bold shrink-0 mt-0.5">{isNested ? '-' : (sIdx !== undefined ? sIdx + 1 : originalIndex + 1)}</span>
-              <div className="h-9 w-9 rounded-lg bg-white dark:bg-surface border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 mt-0.5 aspect-square">
+              <span className="flex items-center justify-center w-5 h-5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 text-[10px] font-mono shrink-0 mt-0.5">
+                {isNested ? '-' : (sIdx !== undefined ? sIdx + 1 : originalIndex + 1)}
+              </span>
+              <div className="h-8 w-8 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0 mt-0.5 aspect-square">
                 {item.product.image ? (
                   <img src={item.product.image} className="h-full w-full object-cover" />
                 ) : (
-                  <ShoppingBag className="w-4 h-4 text-gray-600 dark:text-white/20" />
+                  <ShoppingBagIcon size="xs" className="text-neutral-400" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-black uppercase text-gray-900 dark:text-white truncate leading-none">{item.product.name}</p>
+                <p className={cn(TYPOGRAPHY.itemName, "uppercase truncate")}>{item.product.name}</p>
                 {(item.selectedVariant || item.selectedVariantLabel || (item.selectedModifiers && item.selectedModifiers.length > 0)) && (
                   <div className="flex flex-col gap-0.5 my-1">
-                    {item.selectedVariantLabel && (
-                      <span className="text-[8px] font-bold text-gray-600 dark:text-gray-400 leading-tight truncate">
-                        {item.selectedVariantLabel}
-                      </span>
-                    )}
-                    {!item.selectedVariantLabel && item.selectedVariant && (
-                      <span className="text-[8px] font-bold text-gray-600 dark:text-gray-400 leading-tight truncate">
-                        {item.selectedVariant}
+                    {(item.selectedVariantLabel || item.selectedVariant) && (
+                      <span className={cn(TYPOGRAPHY.itemVariant, "truncate")}>
+                        {item.selectedVariantLabel || item.selectedVariant}
                       </span>
                     )}
                     {item.selectedModifiers && item.selectedModifiers.length > 0 && (
-                      <span className="text-[8px] font-bold text-primary dark:text-primary leading-tight truncate">
+                      <span className={cn(TYPOGRAPHY.itemModifier, "truncate")}>
                         + {item.selectedModifiers.map((m: any) => `${Math.abs(item.quantity) > 1 ? Math.abs(item.quantity) + 'x ' : ''}${m.name} (${formatCurrency(m.price * Math.abs(item.quantity), currency)})`).join(', ')}
                       </span>
                     )}
@@ -105,56 +103,56 @@ export function OrderSummaryItems({ checkoutCartItems, appBundles, showDiscount,
                 )}
                 {item.addonItems && item.addonItems.length > 0 && (
                   <div className="my-1">
-                    <span className="text-[7px] font-bold text-violet-500 dark:text-violet-400 leading-tight truncate block">
+                    <span className={cn(TYPOGRAPHY.itemAddon, "truncate block")}>
                       + Add-ons: {item.addonItems.map((a: any) => `${a.addon?.name || a.name} ${a.quantity * Math.abs(item.quantity)}x (${formatCurrency(a.subtotal * Math.abs(item.quantity), currency)})`).join(', ')}
                     </span>
                   </div>
                 )}
                 {item.toppings && item.toppings.length > 0 && (
                   <div className="my-1">
-                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 leading-tight">
+                    <span className={TYPOGRAPHY.itemTopping}>
                       + {item.toppings.map((t: any) => `${Math.abs(item.quantity) > 1 ? Math.abs(item.quantity) + 'x ' : ''}${t.name} (${formatCurrency(t.price * Math.abs(item.quantity), currency)})`).join(', ')}
                     </span>
                   </div>
                 )}
                 {item.displayToppings && item.displayToppings.length > 0 && (
                   <div className="my-1">
-                    <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 leading-tight">
+                    <span className={cn(TYPOGRAPHY.itemTopping, "text-neutral-500 dark:text-neutral-400")}>
                       + {item.displayToppings.map((t: any) => `${Math.abs(item.quantity) > 1 ? Math.abs(item.quantity) + 'x ' : ''}${t.name}`).join(', ')}
                     </span>
                   </div>
                 )}
                 {item.serialNumber && (
                   <div className="my-1">
-                    <span className="text-[8px] font-black text-amber-600 dark:text-amber-500 bg-amber-500/10 px-1 py-[1px] rounded max-w-fit leading-none tracking-widest uppercase">
+                    <span className={TYPOGRAPHY.snBadge}>
                       SN: {item.serialNumber}
                     </span>
                   </div>
                 )}
                 {!hidePrices && (
-                  <div className="flex items-center justify-between mt-0.5">
-                    <p className="text-[8px] text-gray-600 font-bold">
+                  <div className="flex items-center justify-between mt-1">
+                    <p className={cn(TYPOGRAPHY.money, "text-[11.5px] font-medium text-neutral-700 dark:text-neutral-300")}>
                       {Math.abs(item.quantity)} × {formatCurrency(item.product.price, currency)}
                     </p>
                     {isNested && (
-                      <p className="text-[11px] font-black text-gray-900 dark:text-white tabular-nums shrink-0 self-start">
+                      <p className={cn(TYPOGRAPHY.money, "text-[12.5px] shrink-0 self-start")}>
                         {formatCurrency(item.product.price * item.quantity, currency)}
                       </p>
                     )}
                   </div>
                 )}
                 {showDiscount && !isNested && item.discount > 0 && (
-                  <div className="flex items-center justify-between text-[8px] text-rose-500 font-black mt-1.5 uppercase tracking-widest bg-rose-50 dark:bg-rose-500/10 px-1.5 py-0.5 rounded-md border border-rose-100 dark:border-rose-500/20">
+                  <div className="flex items-center justify-between text-[11px] text-rose-600 dark:text-rose-400 font-bold mt-1.5 bg-rose-50 dark:bg-rose-500/10 px-2 py-1 rounded-md border border-rose-200 dark:border-rose-500/20">
                     <span className="flex items-center gap-1">
-                      <Gift className="w-2.5 h-2.5" />
+                      <GiftIcon size="xs" />
                       {"Discount"} {item.discountType === 'percentage' && item.discountValue ? `(${item.discountValue}%)` : ''}
                     </span>
-                    <span className="tabular-nums">-{formatCurrency(item.discount, currency)}</span>
+                    <span className={TYPOGRAPHY.moneyRed}>-{formatCurrency(item.discount, currency)}</span>
                   </div>
                 )}
               </div>
               {!isNested && (
-                <p className="text-[11px] font-black text-gray-900 dark:text-white tabular-nums shrink-0 self-start mt-0.5">
+                <p className={cn(TYPOGRAPHY.money, "text-[12.5px] shrink-0 self-start mt-0.5")}>
                   {formatCurrency(item.product.price * item.quantity, currency)}
                 </p>
               )}
@@ -163,15 +161,15 @@ export function OrderSummaryItems({ checkoutCartItems, appBundles, showDiscount,
         };
 
         const renderedBundlesHeader = bundles.length > 0 ? (
-          <div className="flex items-center gap-1.5 px-1 text-[8px] font-black text-violet-600 dark:text-violet-400 uppercase tracking-widest mb-1">
-            <Gift className="h-3 w-3 text-violet-500 shrink-0" />
+          <div className="flex items-center gap-1.5 px-1 text-[11px] font-bold text-violet-700 dark:text-violet-300 uppercase tracking-wider mb-1">
+            <GiftIcon size="sm" className="text-violet-500 shrink-0" />
             <span>{"Bundle / Deal Items"} ({bundles.length})</span>
           </div>
         ) : null;
 
         const renderedStandalonesHeader = bundles.length > 0 && standaloneItems.length > 0 ? (
-          <div className="flex items-center gap-1.5 px-1 pt-2 text-[8px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest border-t border-gray-100 dark:border-white/5 mt-2 mb-1">
-            <ShoppingBag className="h-3 w-3 text-gray-400 shrink-0" />
+          <div className={cn("flex items-center gap-1.5 px-1 pt-2 border-t border-neutral-200 dark:border-white/10 mt-2 mb-1", TYPOGRAPHY.sectionHeader)}>
+            <ShoppingBagIcon size="sm" className="text-neutral-500 dark:text-neutral-400 shrink-0" />
             <span>{"Other / Standalone Items"} ({standaloneItems.length})</span>
           </div>
         ) : null;
@@ -181,7 +179,7 @@ export function OrderSummaryItems({ checkoutCartItems, appBundles, showDiscount,
         const renderedBundles = bundles.map((b, bIdx) => {
           const discountStr = showDiscount && b.totalDiscount > 0 ? `-${formatCurrency(b.totalDiscount, currency)}` : undefined;
           return (
-            <div key={`checkout-page-bundle-${b.bundleId}`} className="p-3 my-1.5 rounded-xl border border-dashed border-violet-500/30 bg-violet-500/[0.01]">
+            <div key={`checkout-page-bundle-${b.bundleId}`} className="p-2.5 my-1.5 rounded-md border border-neutral-200 dark:border-white/[0.08] bg-neutral-50 dark:bg-surface/50 shadow-none">
               <CompactItemRow
                 image={bundleThumb(b)}
                 name={`${bIdx + 1}. ${b.bundleQty > 1 ? `${b.bundleQty}x ${b.bundleName}` : b.bundleName}`}
@@ -190,29 +188,34 @@ export function OrderSummaryItems({ checkoutCartItems, appBundles, showDiscount,
               />
               {b.items[0]?.item.toppings && b.items[0].item.toppings.length > 0 && (
                 <div className="pl-[3.25rem] pr-3 mt-0.5 mb-1">
-                  <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400 leading-tight">
+                  <span className={TYPOGRAPHY.itemTopping}>
                     + {b.items[0].item.toppings.map((t: any) => `${t.name} (${formatCurrency(t.price, currency)})`).join(', ')}
                   </span>
                 </div>
               )}
               <div className="mt-2 pl-8 border-t border-dashed border-violet-500/10 pt-1.5 space-y-1">
                 {b.items.map(({ item, originalIndex }) => (
-                  <div key={originalIndex} className="flex flex-col text-[9px] text-gray-600 dark:text-gray-400 font-bold uppercase">
+                  <div key={originalIndex} className="flex flex-col text-[11px] text-neutral-800 dark:text-neutral-200 font-semibold">
                     <div className="flex justify-between items-center">
                       <span className="flex items-center gap-1.5 truncate">- {b.bundleQty > 0 ? Math.round(Math.abs(item.quantity) / b.bundleQty) : Math.abs(item.quantity)} × {item.product.name}</span>
                       <div className="flex items-center gap-1 shrink-0 ml-2">
-                        {item.selectedVariantLabel && <span className="text-[8px] text-gray-500">({item.selectedVariantLabel})</span>}
-                        {!item.selectedVariantLabel && item.selectedVariant && <span className="text-[8px] text-gray-500">({item.selectedVariant})</span>}
+                        {(item.selectedVariantLabel || item.selectedVariant) && (
+                          <span className={cn(TYPOGRAPHY.sublabel, "text-[10px]")}>({item.selectedVariantLabel || item.selectedVariant})</span>
+                        )}
                       </div>
                     </div>
                     {item.addonItems && item.addonItems.length > 0 && (
-                      <div className="text-[9px] font-medium text-violet-500 dark:text-violet-400 leading-tight mt-0.5">
-                        + Add-ons: {item.addonItems.map(a => `${a.addon?.name || a.name} ${a.quantity}x (${formatCurrency(a.subtotal, currency)})`).join(', ')}
+                      <div className="mt-0.5">
+                        <span className={TYPOGRAPHY.itemAddon}>
+                          + Add-ons: {item.addonItems.map(a => `${a.addon?.name || a.name} ${a.quantity}x (${formatCurrency(a.subtotal, currency)})`).join(', ')}
+                        </span>
                       </div>
                     )}
                     {item.displayToppings && item.displayToppings.length > 0 && (
-                      <div className="text-[9px] font-medium text-gray-400 dark:text-gray-500 leading-tight mt-0.5">
-                        + {item.displayToppings.map(t => `${Math.abs(item.quantity) > 1 ? Math.abs(item.quantity) + 'x ' : ''}${t.name}`).join(', ')}
+                      <div className="mt-0.5">
+                        <span className={cn(TYPOGRAPHY.itemTopping, "text-neutral-500 dark:text-neutral-400")}>
+                          + {item.displayToppings.map(t => `${Math.abs(item.quantity) > 1 ? Math.abs(item.quantity) + 'x ' : ''}${t.name}`).join(', ')}
+                        </span>
                       </div>
                     )}
                   </div>

@@ -162,7 +162,7 @@ export function LoginPage() {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      className="p-1.5 text-gray-400 hover:text-emerald-600 dark:text-gray-500 dark:hover:text-emerald-400 transition-colors rounded-full"
+                      className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors rounded"
                     >
                       {showPassword ? <Moon className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -231,7 +231,7 @@ export function LoginPage() {
             </form>
           )}
 
-          <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-white/5 dark:to-white/10 rounded-xl border border-gray-200 dark:border-white/5">
+          <div className="mt-6 p-3 bg-neutral-50 dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none">
             <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 text-center uppercase tracking-wider">Need any help?</p>
             <div className="space-y-2">
               <Button

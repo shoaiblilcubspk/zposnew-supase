@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 
 interface UseKeyboardCalculatorArgs {
   onInput: (char: string) => void;
-  play: (sound: string) => void;
+  play: (sound: any) => void;
   setLayout: (layout: 'qwerty' | 'numeric' | 'calculator' | 'symbols') => void;
 }
 

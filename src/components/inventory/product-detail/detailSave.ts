@@ -1,6 +1,5 @@
-import { productsService, generateId, toRemoteStockHistory, productToppingsService, applyVariantStockMovement } from '../../../lib/services';
+import { productsService, generateId, productToppingsService, applyVariantStockMovement } from '../../../lib/services';
 import { localDb } from '../../../lib/localDb';
-import { cloudWrite } from '../../../lib/cloudWrite';
 import { sonner } from '../../../lib/sonner';
 import { useProductsStore } from '../../../stores';
 import { DetailCtx } from './detailContext';
@@ -61,7 +60,6 @@ export async function performSave(ctx: DetailCtx) {
         cashierName: ctx.profile?.email || 'System',
         createdAt: now
       };
-      await cloudWrite('stock_history', 'create', histId, toRemoteStockHistory(histEntry));
       await localDb.stockHistory.add(histEntry);
     } else if (!isInfinity && !wasInfinity) {
       const oldStock = ctx.product.stock || 0;
@@ -80,7 +78,6 @@ export async function performSave(ctx: DetailCtx) {
           cashierName: ctx.profile?.email || 'System',
           createdAt: now
         };
-        await cloudWrite('stock_history', 'create', adjHistId, toRemoteStockHistory(adjHistEntry));
         await localDb.stockHistory.add(adjHistEntry);
       }
 
@@ -106,14 +103,7 @@ export async function performSave(ctx: DetailCtx) {
       }
     }
 
-    // Cloud payload MUST NOT carry stock (or per-variant stock): stock is ledger-driven
-    // via the stock_history inserts above + DB trigger. Writing it directly double-counts.
-    const cloudProduct = { ...updatedProduct };
-    delete (cloudProduct as any).stock;
-    if (Array.isArray((cloudProduct as any).variantData)) {
-      (cloudProduct as any).variantData = (cloudProduct as any).variantData.map((v: any) => { const c = { ...v }; delete c.stock; return c; });
-    }
-    const _saved = await productsService.update(ctx.product.id, cloudProduct);
+    const _saved = await productsService.update(ctx.product.id, updatedProduct);
     await productToppingsService.setByProduct(ctx.product.id, (ctx as any).toppingIds || []);
     useProductsStore.getState().updateProduct(updatedProduct);
     sonner.success('Product updated successfully');

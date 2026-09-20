@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zaynahs POS — Master License Key Generator</title>
+  <style>
+    :root {
+      --bg: #0d0e12;
+      --surface: #17181f;
+      --surface-border: rgba(255, 255, 255, 0.08);
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+    .card {
+      background-color: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 680px;
+      padding: 28px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--surface-border);
+      margin-bottom: 24px;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .form-group {
+      margin-bottom: 18px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .controls-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    select, button, input {
+      font-family: inherit;
+      font-size: 13px;
+    }
+    select {
+      background: #20212b;
+      border: 1px solid var(--surface-border);
+      color: var(--text-main);
+      padding: 8px 12px;
+      border-radius: 8px;
+      outline: none;
+      cursor: pointer;
+    }
+    .btn {
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      border: none;
+      padding: 9px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn-secondary {
+      background: #262734;
+      border: 1px solid var(--surface-border);
+      color: var(--text-main);
+    }
+    .btn-secondary:hover { background: #323344; }
+    .output-box {
+      margin-top: 20px;
+      background: #0f1015;
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .output-header span {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+    textarea {
+      width: 100%;
+      height: 180px;
+      background: transparent;
+      border: none;
+      color: #34d399;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+      resize: vertical;
+      outline: none;
+      white-space: pre;
+    }
+    .verifier-section {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--surface-border);
+    }
+    .verifier-input-row {
+      display: flex;
+      gap: 8px;
+    }
+    .verifier-input {
+      flex: 1;
+      background: #20212b;
+      border: 1px solid var(--surface-border);
+      color: var(--text-main);
+      font-family: var(--mono);
+      padding: 8px 12px;
+      border-radius: 8px;
+      outline: none;
+    }
+    .verifier-input:focus { border-color: var(--primary); }
+    .status-badge {
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      margin-top: 8px;
+      display: none;
+      font-family: var(--mono);
+    }
+    .status-badge.valid {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      display: block;
+    }
+    .status-badge.invalid {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      display: block;
+    }
+    .copy-toast {
+      position: fixed;
+      bottom: 24px;
+      background: #10b981;
+      color: #000;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s ease;
+      pointer-events: none;
+    }
+    .copy-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <div class="badge">Master Tool</div>
+    <div>
+      <h1>Zaynahs POS — License Key Generator</h1>
+      <p class="subtitle">Standalone Offline Retail License Generator & Verification Utility</p>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Generate Keys</label>
+    <div class="controls-row">
+      <select id="keyQuantity">
+        <option value="1">1 Key (Single Store)</option>
+        <option value="5">5 Keys</option>
+        <option value="10" selected>10 Keys</option>
+        <option value="25">25 Keys</option>
+        <option value="50">50 Keys</option>
+        <option value="100">100 Keys (Bulk Pack)</option>
+      </select>
+      <button class="btn" id="generateBtn">
+        ⚡ Generate Keys
+      </button>
+      <button class="btn btn-secondary" id="copyAllBtn">
+        📋 Copy All
+      </button>
+      <button class="btn btn-secondary" id="downloadBtn">
+        💾 Save as TXT
+      </button>
+    </div>
+  </div>
+
+  <div class="output-box">
+    <div class="output-header">
+      <span id="keyCountLabel">0 Keys Generated</span>
+      <span style="color: #6b7280; font-size: 11px;">Format: ZPOS-XXXX-XXXX-YYYY-YYYY</span>
+    </div>
+    <textarea id="keysOutput" readonly placeholder="Click 'Generate Keys' above to generate retail licenses..."></textarea>
+  </div>
+
+  <div class="verifier-section">
+    <label>Instant Key Verifier</label>
+    <div class="verifier-input-row">
+      <input type="text" id="verifyInput" class="verifier-input" placeholder="Paste any ZPOS-XXXX-XXXX-XXXX-XXXX key here to test validity..." />
+      <button class="btn btn-secondary" id="verifyBtn">Verify</button>
+    </div>
+    <div id="statusBadge" class="status-badge"></div>
+  </div>
+</div>
+
+<div class="copy-toast" id="toast">Copied to clipboard!</div>
+
+<script>
+  const MASTER_LICENSE_SALT = 'ZAYNAHS_POS_SECURE_RETAIL_OFFLINE_SALT_V1_2026';
+
+  function computeSignature(payload, salt) {
+    let hash1 = 0x811c9dc5;
+    let hash2 = 0x5bd1e995;
+    const combined = payload + ':' + salt + ':LIC';
+
+    for (let i = 0; i < combined.length; i++) {
+      const code = combined.charCodeAt(i);
+      hash1 = Math.imul(hash1 ^ code, 0x01000193);
+      hash2 = Math.imul(hash2 ^ code, 0x5bd1e995);
+      hash1 ^= hash1 >>> 13;
+      hash2 ^= hash2 >>> 15;
+    }
+
+    const h1 = ((hash1 >>> 0) % 0xffffff).toString(36).toUpperCase().padStart(4, 'X').slice(-4);
+    const h2 = ((hash2 >>> 0) % 0xffffff).toString(36).toUpperCase().padStart(4, 'Z').slice(-4);
+    return h1 + '-' + h2;
+  }
+
+  function generateSingleKey() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let p1 = '';
+    let p2 = '';
+    for (let i = 0; i < 4; i++) p1 += chars.charAt(Math.floor(Math.random() * chars.length));
+    for (let i = 0; i < 4; i++) p2 += chars.charAt(Math.floor(Math.random() * chars.length));
+    const serial = p1 + '-' + p2;
+    const sig = computeSignature(serial, MASTER_LICENSE_SALT);
+    return 'ZPOS-' + serial + '-' + sig;
+  }
+
+  function verifyKey(rawKey) {
+    const cleanKey = (rawKey || '').trim().toUpperCase().replace(/\s+/g, '');
+    const regex = /^ZPOS-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+    if (!regex.test(cleanKey)) return { valid: false, reason: 'Invalid key structure or length.' };
+
+    const parts = cleanKey.split('-');
+    const serialPart = parts[1] + '-' + parts[2];
+    const sigPart = parts[3] + '-' + parts[4];
+    const expectedSig = computeSignature(serialPart, MASTER_LICENSE_SALT);
+
+    if (sigPart !== expectedSig) {
+      return { valid: false, reason: 'Cryptographic signature mismatch (counterfeit key).' };
+    }
+    return { valid: true, serial: serialPart };
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.innerText = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  document.getElementById('generateBtn').addEventListener('click', () => {
+    const count = parseInt(document.getElementById('keyQuantity').value, 10) || 1;
+    const keys = [];
+    for (let i = 0; i < count; i++) {
+      keys.push(generateSingleKey());
+    }
+    const output = keys.join('\n');
+    document.getElementById('keysOutput').value = output;
+    document.getElementById('keyCountLabel').innerText = count + ' ' + (count === 1 ? 'Key' : 'Keys') + ' Generated';
+    showToast(count + ' keys generated successfully!');
+  });
+
+  document.getElementById('copyAllBtn').addEventListener('click', () => {
+    const text = document.getElementById('keysOutput').value;
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    showToast('Copied ' + text.split('\n').filter(Boolean).length + ' keys to clipboard!');
+  });
+
+  document.getElementById('downloadBtn').addEventListener('click', () => {
+    const text = document.getElementById('keysOutput').value;
+    if (!text) return;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ZPOS-Licenses-' + new Date().toISOString().slice(0, 10) + '.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('verifyBtn').addEventListener('click', () => {
+    const input = document.getElementById('verifyInput').value;
+    const badge = document.getElementById('statusBadge');
+    if (!input.trim()) {
+      badge.className = 'status-badge invalid';
+      badge.innerText = 'Please enter a key to verify.';
+      return;
+    }
+    const result = verifyKey(input);
+    if (result.valid) {
+      badge.className = 'status-badge valid';
+      badge.innerText = '✓ VALID GENUINE LICENSE KEY (Serial: ' + result.serial + ')';
+    } else {
+      badge.className = 'status-badge invalid';
+      badge.innerText = '✗ INVALID KEY: ' + result.reason;
+    }
+  });
+
+  // Auto-generate 10 keys on first load
+  document.getElementById('generateBtn').click();
+</script>
+
+</body>
+</html>
