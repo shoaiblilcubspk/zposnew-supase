@@ -34,10 +34,10 @@
     "android:open": "cap open android"
   },
   "dependencies": {
-    "@capacitor-community/sqlite": "^8.1.1",
-    "@capacitor/android": "^8.5.2",
-    "@capacitor/core": "^8.5.2",
-    "@capacitor/ios": "^8.5.2",
+    "@capacitor-community/sqlite": "^7.0.3",
+    "@capacitor/android": "^7.6.9",
+    "@capacitor/core": "^7.6.9",
+    "@capacitor/ios": "^7.6.9",
     "@noble/hashes": "^2.4.0",
     "@supabase/supabase-js": "^2.103.3",
     "@tanstack/react-virtual": "^3.13.24",
@@ -72,7 +72,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.5.2",
+    "@capacitor/cli": "^7.6.9",
     "@eslint/js": "^9.9.1",
     "@tauri-apps/cli": "^2.11.4",
     "@types/jsbarcode": "^3.11.4",

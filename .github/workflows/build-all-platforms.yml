@@ -103,7 +103,7 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - name: Setup Java 21 (required by Capacitor v8)
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -162,23 +162,6 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Patch CapacitorSQLitePlugin for Capacitor 8
-        run: |
-          cat << 'EOF' >> node_modules/@capacitor-community/sqlite/ios/Plugin/CapacitorSQLitePlugin.swift
-
-          extension CAPPluginCall {
-              func getString(_ key: String) -> String? {
-                  return getString(key, defaultValue: nil)
-              }
-              func getInt(_ key: String) -> Int? {
-                  return getInt(key, defaultValue: nil)?.intValue
-              }
-              func getBool(_ key: String) -> Bool? {
-                  return getBool(key, defaultValue: nil)?.boolValue
-              }
-          }
-          EOF
-
       - name: Build web assets
         run: npm run build
 
@@ -188,8 +171,6 @@ jobs:
       - name: Build Xcode App & Archive
         run: |
           cd ios/App
-          xcodebuild -project App.xcodeproj -scheme App -showdestinations || true
-
           # Attempt generic iOS device archive, fallback to generic iOS Simulator
           if ! xcodebuild -project App.xcodeproj \
             -scheme App \
@@ -200,26 +181,31 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             archive; then
-            echo "Falling back to iOS Simulator destination..."
+            echo "Device archive fallback to iOS Simulator build..."
             xcodebuild -project App.xcodeproj \
               -scheme App \
               -configuration Release \
               -destination 'generic/platform=iOS Simulator' \
               -derivedDataPath build \
               CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
               build
           fi
 
       - name: Package into IPA
         run: |
           mkdir -p build/Payload
-          if [ -d "ios/App/build/App.xcarchive/Products/Applications/App.app" ]; then
-            cp -r ios/App/build/App.xcarchive/Products/Applications/App.app build/Payload/
-          elif [ -d "ios/App/build/Build/Products/Release-iphonesimulator/App.app" ]; then
-            cp -r ios/App/build/Build/Products/Release-iphonesimulator/App.app build/Payload/
+          APP_PATH=$(find ios/App/build -name "App.app" -type d | head -n 1)
+          echo "Found App bundle at: $APP_PATH"
+          if [ -n "$APP_PATH" ]; then
+            cp -r "$APP_PATH" build/Payload/
+            cd build
+            zip -r Zaynahs-POS-iOS.ipa Payload
+          else
+            echo "Error: App.app not found in build directory!"
+            exit 1
           fi
-          cd build
-          zip -r Zaynahs-POS-iOS.ipa Payload
 
       - name: Upload iOS IPA Artifact
         uses: actions/upload-artifact@v4
