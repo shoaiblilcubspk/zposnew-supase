@@ -144,27 +144,15 @@ jobs:
 
       - name: Configure Xcode and iOS Platform
         run: |
-          echo "=== Installed Xcode Applications ==="
-          ls -d /Applications/Xcode* || true
-
-          if [ -d "/Applications/Xcode_16.2.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.2.app
-          elif [ -d "/Applications/Xcode_16.0.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.0.app
-          elif [ -d "/Applications/Xcode_16.1.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.1.app
+          if [ -d "/Applications/Xcode_26.2.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.2.app
+          elif [ -d "/Applications/Xcode.app" ]; then
+            sudo xcode-select -s /Applications/Xcode.app
           fi
 
           sudo xcodebuild -runFirstLaunch || true
           xcodebuild -version
-
-          echo "=== Installed Simulators / Platforms ==="
           xcrun simctl list runtimes || true
-
-          if ! xcrun simctl list runtimes | grep -qi "iOS"; then
-            echo "iOS simulator runtime not detected, downloading platform..."
-            xcodebuild -downloadPlatform iOS || true
-          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -184,6 +172,7 @@ jobs:
       - name: Build Xcode App & Archive
         run: |
           cd ios/App
+          xcodebuild -project App.xcodeproj -scheme App -showdestinations || true
           # Attempt generic iOS device archive, fallback to generic iOS Simulator
           xcodebuild -project App.xcodeproj \
             -scheme App \
