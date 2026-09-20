@@ -162,6 +162,23 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Patch CapacitorSQLitePlugin for Capacitor 8
+        run: |
+          cat << 'EOF' >> node_modules/@capacitor-community/sqlite/ios/Plugin/CapacitorSQLitePlugin.swift
+
+          extension CAPPluginCall {
+              func getString(_ key: String) -> String? {
+                  return getString(key, defaultValue: nil)
+              }
+              func getInt(_ key: String) -> Int? {
+                  return getInt(key, defaultValue: nil)?.intValue
+              }
+              func getBool(_ key: String) -> Bool? {
+                  return getBool(key, defaultValue: nil)?.boolValue
+              }
+          }
+          EOF
+
       - name: Build web assets
         run: npm run build
 
