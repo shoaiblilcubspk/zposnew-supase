@@ -1,6 +1,6 @@
 [package]
 name = "zaynahs-pos"
-version = "1.0.0"
+version = "1.0.1"
 description = "Zaynahs POS — Autonomous Local-First Offline-First P2P Replicated POS System"
 authors = ["Zaynahs POS Team"]
 edition = "2021"
