@@ -99,7 +99,8 @@ export async function runMigrations(driver: ISqliteDriver): Promise<number> {
           try {
             await tx.execute(trimmed);
           } catch (err: any) {
-            if (/duplicate column name/i.test(err?.message || '')) {
+            const errMsg = typeof err === 'string' ? err : (err?.message || String(err || ''));
+            if (/duplicate column name|already exists/i.test(errMsg)) {
               continue;
             }
             throw err;

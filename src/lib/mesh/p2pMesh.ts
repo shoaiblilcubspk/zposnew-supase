@@ -103,7 +103,7 @@ export class P2PMeshManager {
   }
 
   broadcastMessage(type: MeshMessageType, payload: any): void {
-    for (const peerId of this.getConnectedPeers()) {
+    for (const peerId of this.getAvailablePeers()) {
       this.sendToPeer(peerId, type, payload);
     }
   }

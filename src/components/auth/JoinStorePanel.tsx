@@ -102,7 +102,9 @@ export function JoinStorePanel({ onSuccess }: JoinStorePanelProps) {
       sonner.success('Successfully paired with primary store mesh!');
       onSuccess();
     } catch (err: any) {
-      sonner.error(err.message || 'Failed joining shop mesh.');
+      const msg = typeof err === 'string' ? err : (err?.message || 'Failed joining shop mesh.');
+      console.error('[JoinStorePanel] Failed joining shop mesh:', err);
+      sonner.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -135,7 +137,9 @@ export function JoinStorePanel({ onSuccess }: JoinStorePanelProps) {
       });
     } catch (err: any) {
       sonner.dismissAll();
-      sonner.error(err.message || 'Failed to connect using PIN.');
+      const msg = typeof err === 'string' ? err : (err?.message || 'Failed to connect using PIN.');
+      console.error('[JoinStorePanel] PIN join error:', err);
+      sonner.error(msg);
       setIsSubmitting(false);
     }
   };

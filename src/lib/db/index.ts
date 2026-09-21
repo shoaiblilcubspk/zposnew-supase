@@ -35,14 +35,19 @@ export async function initDb(dbName = 'zaynahs_pos.sqlite'): Promise<ISqliteDriv
   }
 
   initPromise = (async () => {
-    const driver = getDriver();
-    if (!driver.isOpen) {
-      await driver.open(dbName);
+    try {
+      const driver = getDriver();
+      if (!driver.isOpen) {
+        await driver.open(dbName);
+      }
+      // Execute pending migrations
+      await runMigrations(driver);
+      isInitialized = true;
+      return driver;
+    } catch (err) {
+      initPromise = null;
+      throw err;
     }
-    // Execute pending migrations
-    await runMigrations(driver);
-    isInitialized = true;
-    return driver;
   })();
 
   return initPromise;
