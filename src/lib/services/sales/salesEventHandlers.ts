@@ -285,6 +285,8 @@ export async function handleRemoteSaleEvent(
   } catch {}
 }
 
+registerSalesEventHandlers();
+
 export function registerSalesEventHandlers(): void {
   registerEventHandler('SALE', handleRemoteSaleEvent);
   registerEventHandler('SALE:CREATE', handleRemoteSaleEvent);

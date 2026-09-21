@@ -220,6 +220,8 @@ export async function handleRemoteSaleVoidEvent(
   }
 }
 
+registerReversalEventHandlers();
+
 export function registerReversalEventHandlers(): void {
   registerEventHandler('SALE_REFUNDED', handleRemoteSaleRefundEvent);
   registerEventHandler('SALE_VOIDED', handleRemoteSaleVoidEvent);

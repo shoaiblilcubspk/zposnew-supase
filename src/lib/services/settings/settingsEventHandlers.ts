@@ -77,6 +77,8 @@ export async function handleRemoteSettingsEvent(
   }
 }
 
+registerSettingsEventHandlers();
+
 export function registerSettingsEventHandlers(): void {
   registerEventHandler('SETTINGS', handleRemoteSettingsEvent);
   registerEventHandler('SETTINGS_UPDATED', handleRemoteSettingsEvent);

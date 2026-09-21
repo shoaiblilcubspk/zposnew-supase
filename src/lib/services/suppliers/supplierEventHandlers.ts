@@ -107,6 +107,8 @@ export async function handleRemotePurchaseRecordEvent(
   );
 }
 
+registerSupplierEventHandlers();
+
 export function registerSupplierEventHandlers(): void {
   registerEventHandler('SUPPLIER', handleRemoteSupplierEvent);
   registerEventHandler('PURCHASE_RECORD', handleRemotePurchaseRecordEvent);

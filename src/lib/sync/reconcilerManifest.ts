@@ -26,7 +26,7 @@ export async function buildLocalManifest(deviceId: string): Promise<EntityManife
   const { isDefaultPlaceholderSettings } = await import('../services/settings/settingsHelper');
   const [sales, invTxs, prods, users, discountRows, settingsRow, dexieSettings, customers, expenses, paymentModes] = await Promise.all([
     db.query<any>(`SELECT id, invoice_number, status, total_amount, updated_at FROM ${TABLES.SALES};`).catch(() => []),
-    db.query<any>(`SELECT id FROM ${TABLES.INVENTORY_TRANSACTIONS} WHERE reference_type != 'SALE';`).catch(() => []),
+    db.query<any>(`SELECT id FROM ${TABLES.INVENTORY_TRANSACTIONS}`).catch(() => []),
     db.query<any>(`SELECT id FROM ${TABLES.PRODUCTS} WHERE active = 1;`).catch(() => []),
     db.query<any>(`SELECT id FROM ${TABLES.USERS} WHERE active = 1;`).catch(() => []),
     db.query<any>(`SELECT id FROM ${TABLES.DISCOUNTS} WHERE active = 1;`).catch(() => []),

@@ -1,8 +1,3 @@
-/**
- * Event Synchronization Engine
- * Distributed outbox / inbox replication coordinator over WebRTC P2P DataChannels.
- */
-
 import { getDatabase, TABLES } from '../db';
 import { getP2PMesh, P2PMeshManager } from '../mesh/p2pMesh';
 import { getDeviceProfile, DeviceProfile } from '../mesh/deviceIdentity';
@@ -10,7 +5,6 @@ import { SyncOutboxRecord } from '../events/types';
 import { MeshMessage } from '../mesh/meshProtocol';
 import { getInboxMaxSequence, getUnsyncedOutboxEvents, markEventsSynced } from './vectorClock';
 import { useSyncStatusStore } from './syncStatusStore';
-import { eventDispatcher } from './eventDispatcher';
 import { refreshAllStoresFromLocalDb } from './storeSync';
 import { entityReconciler } from './entityReconciler';
 
@@ -76,14 +70,12 @@ export class SyncEngine {
     try {
       const db = await getDatabase();
       const pRow = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM ${TABLES.PRODUCTS};`);
-      const uRow = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM ${TABLES.USERS};`);
-      if ((pRow?.count ?? 0) === 0 || (uRow?.count ?? 0) === 0) {
-        console.log(`[SyncEngine] Local device has 0 products or users. Requesting SNAPSHOT and RECONCILE from ${peerId}...`);
+      if ((pRow?.count ?? 0) === 0) {
         this.mesh.sendToPeer(peerId, 'SNAPSHOT_REQUEST', {});
         if (this.currentDevice) {
           entityReconciler.reconcileWithPeer(peerId, this.currentDevice.deviceId).catch(() => {});
         }
-        return;
+        // Still attempt incremental sync for other entity types (users, settings, etc.)
       }
     } catch {}
     await this.requestSyncFromPeer(peerId);
@@ -115,6 +107,12 @@ export class SyncEngine {
 
   private async handleSnapshotRequest(senderId: string): Promise<void> {
     try {
+      const db = await getDatabase();
+      const pRow = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM ${TABLES.PRODUCTS};`);
+      if ((pRow?.count ?? 0) === 0) {
+        console.warn('[SyncEngine] Skipping snapshot response: this device has 0 products.');
+        return;
+      }
       const { generateSnapshot } = await import('./snapshotEngine');
       this.mesh.sendToPeer(senderId, 'SNAPSHOT_RESPONSE', await generateSnapshot());
     } catch (err) {
@@ -200,7 +198,7 @@ export class SyncEngine {
    */
   async pushPendingEventsToPeers(): Promise<void> {
     if (!this.currentDevice) return;
-    const peers = this.mesh.getConnectedPeers();
+    const peers = this.mesh.getAvailablePeers();
     if (peers.length === 0) return;
 
     for (const peerId of peers) {
@@ -229,20 +227,15 @@ export class SyncEngine {
   private async periodicSweep(): Promise<void> {
     const store = useSyncStatusStore.getState();
     await store.refreshPendingCount();
-    const peers = this.mesh.getConnectedPeers();
-    store.setConnectedPeersCount(peers.length);
+    const peers = this.mesh.getAvailablePeers();
+    const connectedDc = this.mesh.getConnectedPeers();
+    store.setConnectedPeersCount(Math.max(connectedDc.length, peers.length));
 
     if (peers.length > 0) {
-      // Self-healing: If this node has 0 products AND 0 users, request snapshot from all peers.
-      // CRITICAL: SNAPSHOT_REQUEST is STRICTLY for initial bootstrap only.
-      // DO NOT send SNAPSHOT_REQUEST when this device already has data — doing so causes
-      // placeholder settings from fresh devices to overwrite real store identity on established devices.
-      // Guard: only request snapshot ONCE per session to prevent spam.
       try {
         const db = await getDatabase();
         const pRow = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM products;`);
-        const uRow = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM users;`);
-        if ((pRow?.count ?? 0) === 0 && (uRow?.count ?? 0) === 0 && !this.hasRequestedSnapshot) {
+        if ((pRow?.count ?? 0) === 0 && !this.hasRequestedSnapshot) {
           this.hasRequestedSnapshot = true;
           for (const peerId of peers) {
             this.mesh.sendToPeer(peerId, 'SNAPSHOT_REQUEST', {});
@@ -250,11 +243,10 @@ export class SyncEngine {
               entityReconciler.reconcileWithPeer(peerId, this.currentDevice.deviceId).catch(() => {});
             }
           }
-          return; // Do not run outbox sync on a blank device until snapshot is applied
+          return;
         }
       } catch {}
 
-      // Normal incremental outbox event sync + entity reconcile
       for (const peerId of peers) {
         await this.requestSyncFromPeer(peerId).catch(() => {});
         if (this.currentDevice) {
@@ -268,12 +260,8 @@ export class SyncEngine {
     }
   }
 
-  /**
-   * Immediately trigger full bidirectional mesh synchronization across all connected peers.
-   * Uses incremental event sync + entity reconcile (NOT snapshot — snapshots are for initial bootstrap only).
-   */
   async forceFullMeshReconcile(): Promise<void> {
-    const peers = this.mesh.getConnectedPeers();
+    const peers = this.mesh.getAvailablePeers();
     useSyncStatusStore.getState().setIsSyncing(true);
 
     try {

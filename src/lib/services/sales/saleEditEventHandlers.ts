@@ -198,6 +198,8 @@ export async function handleRemoteSaleEditEvent(
   } catch {}
 }
 
+registerSaleEditEventHandlers();
+
 export function registerSaleEditEventHandlers(): void {
   registerEventHandler('SALE_EDITED', handleRemoteSaleEditEvent);
   registerEventHandler('SALE:UPDATE', handleRemoteSaleEditEvent);

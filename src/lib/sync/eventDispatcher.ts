@@ -47,8 +47,8 @@ class EventDispatcher {
     }
 
     // Default fallback: Log received entity mutation awaiting dedicated domain service
-    console.info(
-      `[EventDispatcher] Unhandled remote event ${event.event_id} for entity ${event.entity_type} (${event.operation})`
+    console.warn(
+      `[EventDispatcher] Unhandled remote event ${event.event_id} for entity ${event.entity_type} (${event.operation}) — handler not registered`
     );
   }
 }

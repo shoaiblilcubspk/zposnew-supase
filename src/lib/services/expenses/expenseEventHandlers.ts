@@ -145,6 +145,8 @@ export async function handleRemoteWalletEvent(
   }
 }
 
+registerExpenseEventHandlers();
+
 export function registerExpenseEventHandlers(): void {
   registerEventHandler('EXPENSE', handleRemoteExpenseEvent);
   registerEventHandler('EXPENSE_CREATED', handleRemoteExpenseEvent);

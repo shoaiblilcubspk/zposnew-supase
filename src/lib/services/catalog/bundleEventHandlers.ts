@@ -105,6 +105,8 @@ export async function handleRemoteBundleEvent(
   } catch {}
 }
 
+registerBundleEventHandlers();
+
 export function registerBundleEventHandlers(): void {
   registerEventHandler('BUNDLE', handleRemoteBundleEvent);
   registerEventHandler('BUNDLE_CREATED', handleRemoteBundleEvent);

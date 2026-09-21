@@ -1,27 +1,8 @@
-/**
- * WebRTC P2P DataChannel Mesh Manager
- * Manages direct peer-to-peer data transport with DTLS encryption.
- * Zero database writes or business logic.
- */
-
 import { getSignalingChannel, SignalingChannel } from './signalingChannel';
 import { getDeviceProfile, DeviceProfile } from './deviceIdentity';
 import { isDeviceAuthorized } from './pairingManager';
-import {
-  PeerSession,
-  PeerConnectionStatus,
-  createPeerSession,
-  drainPendingCandidates,
-  closePeerSession,
-  setupDataChannel,
-} from './peerSession';
-import {
-  MeshMessage,
-  MeshMessageType,
-  WireFrame,
-  serializeMessage,
-  MessageReassembler,
-} from './meshProtocol';
+import { PeerSession, PeerConnectionStatus, createPeerSession, drainPendingCandidates, closePeerSession, setupDataChannel } from './peerSession';
+import { MeshMessage, MeshMessageType, WireFrame, serializeMessage, MessageReassembler } from './meshProtocol';
 import { SignalingEnvelope, PeerPresenceInfo } from './signalingTypes';
 
 export class P2PMeshManager {
@@ -67,18 +48,23 @@ export class P2PMeshManager {
   }
 
   getConnectedPeers(): string[] {
-    // Only return peers with an OPEN WebRTC DataChannel — NOT signaling-only presence.
-    // Signaling presence ≠ data connectivity. Large event batches MUST go through DataChannel.
     return Array.from(this.sessions.entries())
       .filter(([, s]) => s.status === 'connected' && s.dc?.readyState === 'open')
       .map(([id]) => id);
+  }
+
+  getAvailablePeers(): string[] {
+    const dcPeers = this.getConnectedPeers();
+    const sigPeers = this.signaling.peers
+      .map((p) => p.deviceId)
+      .filter((id) => id && id !== this.currentDevice?.deviceId);
+    return Array.from(new Set([...dcPeers, ...sigPeers]));
   }
 
   getConnectionStatus(deviceId: string): PeerConnectionStatus {
     const session = this.sessions.get(deviceId);
     if (session?.status === 'connected' && session.dc?.readyState === 'open') return 'connected';
     if (session?.status === 'connecting') return 'connecting';
-    // Peer is visible in signaling but DataChannel not open yet
     if (this.signaling.peers.some((p) => p.deviceId === deviceId)) return 'connecting';
     return 'disconnected';
   }
@@ -133,11 +119,10 @@ export class P2PMeshManager {
     const authorized = await isDeviceAuthorized(peer.deviceId);
     if (!authorized) return;
 
-    // DO NOT call notifyStatus('connected') here — peer is only in the signaling channel,
-    // not yet connected via WebRTC DataChannel. notifyStatus fires from setupDataChannel 'open'.
     const shouldInitiate = this.currentDevice.deviceId > peer.deviceId;
     const existing = this.sessions.get(peer.deviceId);
-    if (!existing || existing.status === 'disconnected') {
+    const isStale = existing?.status === 'connecting' && Date.now() - existing.lastSeen > 8000;
+    if (!existing || existing.status === 'disconnected' || isStale) {
       if (shouldInitiate) {
         await this.initiateConnection(peer.deviceId);
       }
@@ -279,13 +264,18 @@ export class P2PMeshManager {
   private runHeartbeat(): void {
     const now = Date.now();
     for (const [peerId, session] of this.sessions.entries()) {
-      if (session.status !== 'connected') continue;
-      if (now - session.lastSeen > 15000) {
+      if (session.status === 'connected') {
+        if (now - session.lastSeen > 15000) {
+          closePeerSession(session);
+          this.sessions.delete(peerId);
+          this.notifyStatus(peerId, 'disconnected');
+        } else {
+          this.sendToPeer(peerId, 'PING', null);
+        }
+      } else if (session.status === 'connecting' && now - session.lastSeen > 10000) {
         closePeerSession(session);
         this.sessions.delete(peerId);
         this.notifyStatus(peerId, 'disconnected');
-      } else {
-        this.sendToPeer(peerId, 'PING', null);
       }
     }
   }

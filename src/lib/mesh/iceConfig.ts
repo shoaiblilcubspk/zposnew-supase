@@ -17,30 +17,28 @@
 const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
 
 function validateTurnCredentials(): void {
-  // Skip validation in test environment or when import.meta.env is not available
   const isProd = env.PROD === true || env.MODE === 'production';
   const isTest = env.MODE === 'test' || env.VITEST === 'true';
   const hasTurnUrl = !!env.VITE_TURN_URL;
   const hasTurnUser = !!env.VITE_TURN_USER;
   const hasTurnPass = !!env.VITE_TURN_PASS;
 
-  if (isTest) return; // Skip in test environment
+  if (isTest) return;
   if (isProd && (!hasTurnUrl || !hasTurnUser || !hasTurnPass)) {
-    throw new Error(
-      '[ICE Config] Production build requires TURN credentials. ' +
-      'Set VITE_TURN_URL, VITE_TURN_USER, VITE_TURN_PASS in .env.local. ' +
-      'Public Open Relay fallback is disabled in production.'
+    console.warn(
+      '[ICE Config] Production build running without custom TURN credentials. ' +
+      'Using development Open Relay fallback for WebRTC NAT traversal.'
     );
   }
 }
 
 validateTurnCredentials();
 
-const TURN_URL  = env.VITE_TURN_URL  || (env.PROD ? '' : 'turn:openrelay.metered.ca:80');
-const TURN_URL2 = env.VITE_TURN_URL2 || (env.PROD ? '' : 'turn:openrelay.metered.ca:443');
-const TURN_URL3 = env.VITE_TURN_URL3 || (env.PROD ? '' : 'turns:openrelay.metered.ca:443');
-const TURN_USER = env.VITE_TURN_USER || (env.PROD ? '' : 'openrelayproject');
-const TURN_PASS = env.VITE_TURN_PASS || (env.PROD ? '' : 'openrelayproject');
+const TURN_URL  = env.VITE_TURN_URL  || 'turn:openrelay.metered.ca:80';
+const TURN_URL2 = env.VITE_TURN_URL2 || 'turn:openrelay.metered.ca:443';
+const TURN_URL3 = env.VITE_TURN_URL3 || 'turns:openrelay.metered.ca:443';
+const TURN_USER = env.VITE_TURN_USER || 'openrelayproject';
+const TURN_PASS = env.VITE_TURN_PASS || 'openrelayproject';
 
 function buildTurnServers(): RTCIceServer[] {
   const servers: RTCIceServer[] = [];

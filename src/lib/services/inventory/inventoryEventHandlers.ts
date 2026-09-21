@@ -71,6 +71,8 @@ export async function handleRemoteInventoryEvent(
   } catch {}
 }
 
+registerInventoryEventHandlers();
+
 export function registerInventoryEventHandlers(): void {
   registerEventHandler('INVENTORY', handleRemoteInventoryEvent);
   registerEventHandler('INVENTORY_IN', handleRemoteInventoryEvent);

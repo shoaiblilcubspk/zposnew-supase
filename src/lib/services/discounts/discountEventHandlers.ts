@@ -76,6 +76,8 @@ async function handleRemoteDiscountEvent(
   );
 }
 
+registerDiscountEventHandlers();
+
 export function registerDiscountEventHandlers(): void {
   registerEventHandler('DISCOUNT', handleRemoteDiscountEvent);
   registerEventHandler('DISCOUNT_CREATED', handleRemoteDiscountEvent);

@@ -154,6 +154,8 @@ export async function handleRemoteCustomerLedgerEvent(
   } catch {}
 }
 
+registerCustomerEventHandlers();
+
 export function registerCustomerEventHandlers(): void {
   registerEventHandler('CUSTOMER', handleRemoteCustomerEvent);
   registerEventHandler('CUSTOMER_LEDGER', handleRemoteCustomerLedgerEvent);

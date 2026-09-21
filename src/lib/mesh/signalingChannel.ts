@@ -24,6 +24,7 @@ export class SignalingChannel {
   private listeners: Set<SignalingListeners> = new Set();
   private onlinePeers: Map<string, PeerPresenceInfo> = new Map();
   private processedSignals: Set<string> = new Set();
+  private announceTimer: any = null;
   private _isConnected = false;
 
   get isConnected(): boolean {
@@ -94,9 +95,16 @@ export class SignalingChannel {
         await this.handleIncomingSignal(payload as SignalingEnvelope);
       });
 
+      this.channel.on('broadcast', { event: 'peer_announce' }, ({ payload }) => {
+        if (payload?.deviceId && payload.deviceId !== this.currentDevice?.deviceId) {
+          this.handlePeerJoin(payload as PeerPresenceInfo);
+        }
+      });
+
       this.channel.subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           this._isConnected = true;
+          this.broadcastAnnounce();
           try {
             await this.channel?.track({
               deviceId: this.currentDevice!.deviceId,
@@ -110,6 +118,9 @@ export class SignalingChannel {
           this._isConnected = false;
         }
       });
+
+      if (this.announceTimer) clearInterval(this.announceTimer);
+      this.announceTimer = setInterval(() => this.broadcastAnnounce(), 4000);
     } catch (err) {
       console.warn('[SignalingChannel] Supabase connect offline fallback:', err);
     }
@@ -200,7 +211,7 @@ export class SignalingChannel {
     this.localTransport.sendSignal(envelope);
 
     // 2. Also send via Supabase Realtime if connected
-    if (this.channel && this._isConnected) {
+    if (this.channel && (this._isConnected || (this.channel as any)?.state === 'joined')) {
       try {
         await this.channel.send({
           type: 'broadcast',
@@ -208,6 +219,25 @@ export class SignalingChannel {
           payload: envelope,
         });
       } catch {}
+    }
+  }
+
+  broadcastAnnounce(): void {
+    if (!this.currentDevice) return;
+    const peerInfo: PeerPresenceInfo = {
+      deviceId: this.currentDevice.deviceId,
+      name: this.currentDevice.name,
+      role: this.currentDevice.role,
+      publicKey: this.currentDevice.publicKey,
+      joinedAt: Date.now(),
+    };
+    this.localTransport.broadcastPresence(peerInfo);
+    if (this.channel && (this._isConnected || (this.channel as any)?.state === 'joined')) {
+      this.channel.send({
+        type: 'broadcast',
+        event: 'peer_announce',
+        payload: peerInfo,
+      }).catch(() => {});
     }
   }
 
@@ -223,6 +253,10 @@ export class SignalingChannel {
   }
 
   async disconnect(): Promise<void> {
+    if (this.announceTimer) {
+      clearInterval(this.announceTimer);
+      this.announceTimer = null;
+    }
     this.localTransport.close();
     await this.disconnectSupabase();
     this.onlinePeers.clear();

@@ -36,9 +36,10 @@ export async function handleRemoteProductEvent(
 
   const remoteVersion = p.version || 1;
   const remoteUpdatedAt = p.updatedAt || p.createdAt || now;
+  const remoteTs = new Date(remoteUpdatedAt).getTime();
+  const localTs = existing ? new Date(existing.updated_at).getTime() : 0;
 
-  if (existing && existing.version > remoteVersion) {
-    // Local version is newer, ignore remote update
+  if (existing && localTs > remoteTs) {
     return;
   }
 
@@ -214,6 +215,8 @@ export async function handleRemoteCategoryEvent(
     }
   } catch {}
 }
+
+registerCatalogEventHandlers();
 
 export function registerCatalogEventHandlers(): void {
   registerEventHandler('PRODUCT', handleRemoteProductEvent);
