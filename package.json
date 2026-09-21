@@ -1,7 +1,7 @@
 {
   "name": "zaynahs-pos",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Zaynahs POS — Autonomous Local-First, Offline-First P2P Replicated POS System built with React, TypeScript, SQLite, Tauri, and Capacitor",
   "keywords": [

@@ -16,65 +16,16 @@ import {
 } from './reconcilerQueries';
 import { applyReconciledEntities } from './reconcilePayloadApplier';
 
-export interface EntityManifest {
-  deviceId: string;
-  timestamp: number;
-  sales: Array<{ id: string; invoiceNumber: string; status: string; total: number; updatedAt: number }>;
-  inventoryTxIds: string[];
-  productIds: string[];
-  userIds?: string[];
-  discountIds?: string[];
-  settingsUpdatedAt?: number;
-  hasRealSettings?: boolean;
-}
+import { buildLocalManifest, EntityManifest } from './reconcilerManifest';
+import { processReconcilePayload } from './reconcilerPayloadHandler';
+
+export type { EntityManifest };
 
 export class EntityReconciler {
   private isReconciling = false;
 
   async buildLocalManifest(deviceId: string): Promise<EntityManifest> {
-    const db = await getDatabase();
-    const { localDb, SETTINGS_ID } = await import('../localDb');
-    const { isDefaultPlaceholderSettings } = await import('../services/settings/settingsHelper');
-    const [sales, invTxs, prods, users, discountRows, settingsRow, dexieSettings] = await Promise.all([
-      db.query<any>(`SELECT id, invoice_number, status, total_amount, updated_at FROM ${TABLES.SALES};`).catch(() => []),
-      db.query<any>(`SELECT id FROM ${TABLES.INVENTORY_TRANSACTIONS} WHERE reference_type != 'SALE';`).catch(() => []),
-      db.query<any>(`SELECT id FROM ${TABLES.PRODUCTS} WHERE active = 1;`).catch(() => []),
-      // Only include ACTIVE users — inactive = soft-deleted, must NOT be re-sent to peers
-      db.query<any>(`SELECT id FROM ${TABLES.USERS} WHERE active = 1;`).catch(() => []),
-      db.query<any>(`SELECT id FROM ${TABLES.DISCOUNTS} WHERE active = 1;`).catch(() => []),
-      db.queryOne<{ value: string; updated_at: number }>(`SELECT value, updated_at FROM ${TABLES.SETTINGS} WHERE key = 'app_settings';`).catch(() => null),
-      localDb.appSettings.get(SETTINGS_ID).catch(() => null),
-    ]);
-
-    let effectiveSettings = dexieSettings;
-    if (settingsRow?.value) {
-      try {
-        const parsed = JSON.parse(settingsRow.value);
-        if (!isDefaultPlaceholderSettings(parsed)) {
-          effectiveSettings = parsed;
-        }
-      } catch {}
-    }
-
-    const hasReal = !isDefaultPlaceholderSettings(effectiveSettings);
-    const settingsTime = effectiveSettings?.updatedAt
-      ? new Date(effectiveSettings.updatedAt).getTime()
-      : (settingsRow?.updated_at || 0);
-
-    return {
-      deviceId,
-      timestamp: Date.now(),
-      sales: (sales || []).map((s) => ({
-        id: s.id, invoiceNumber: s.invoice_number, status: s.status || 'completed',
-        total: Number(s.total_amount) || 0, updatedAt: Number(s.updated_at) || 0,
-      })),
-      inventoryTxIds: (invTxs || []).map((t) => t.id),
-      productIds: (prods || []).map((p) => p.id),
-      userIds: (users || []).map((u) => u.id),
-      discountIds: (discountRows || []).map((d: any) => d.id),
-      settingsUpdatedAt: settingsTime,
-      hasRealSettings: hasReal,
-    };
+    return buildLocalManifest(deviceId);
   }
 
   async reconcileWithPeer(peerId: string, localDeviceId: string): Promise<void> {
@@ -143,7 +94,34 @@ export class EntityReconciler {
       ? await db.query<any>(`SELECT * FROM ${TABLES.DISCOUNTS} WHERE id IN (${missingDiscountsRemotely.map(() => '?').join(',')});`, missingDiscountsRemotely).catch(() => [])
       : [];
 
-    // 5. Settings Reconciliation
+    // 6. Customers Reconciliation
+    const localCustomerIds = new Set((await db.query<any>(`SELECT id FROM ${TABLES.CUSTOMERS};`)).map((c) => c.id));
+    const remoteCustomerIds = new Set(remote.customerIds || []);
+    const missingCustomersRemotely = [...localCustomerIds].filter((id) => !remoteCustomerIds.has(id));
+    const missingCustomersLocally = (remote.customerIds || []).filter((id: string) => !localCustomerIds.has(id));
+    const customersToSend = missingCustomersRemotely.length > 0
+      ? await db.query<any>(`SELECT * FROM ${TABLES.CUSTOMERS} WHERE id IN (${missingCustomersRemotely.map(() => '?').join(',')});`, missingCustomersRemotely).catch(() => [])
+      : [];
+
+    // 7. Expenses Reconciliation
+    const localExpenseIds = new Set((await db.query<any>(`SELECT id FROM ${TABLES.EXPENSES};`)).map((e) => e.id));
+    const remoteExpenseIds = new Set(remote.expenseIds || []);
+    const missingExpensesRemotely = [...localExpenseIds].filter((id) => !remoteExpenseIds.has(id));
+    const missingExpensesLocally = (remote.expenseIds || []).filter((id: string) => !localExpenseIds.has(id));
+    const expensesToSend = missingExpensesRemotely.length > 0
+      ? await db.query<any>(`SELECT * FROM ${TABLES.EXPENSES} WHERE id IN (${missingExpensesRemotely.map(() => '?').join(',')});`, missingExpensesRemotely).catch(() => [])
+      : [];
+
+    // 8. Payment Modes Reconciliation
+    const localPaymentModeIds = new Set((await db.query<any>(`SELECT id FROM ${TABLES.PAYMENT_MODES};`)).map((pm) => pm.id));
+    const remotePaymentModeIds = new Set(remote.paymentModeIds || []);
+    const missingPaymentModesRemotely = [...localPaymentModeIds].filter((id) => !remotePaymentModeIds.has(id));
+    const missingPaymentModesLocally = (remote.paymentModeIds || []).filter((id: string) => !localPaymentModeIds.has(id));
+    const paymentModesToSend = missingPaymentModesRemotely.length > 0
+      ? await db.query<any>(`SELECT * FROM ${TABLES.PAYMENT_MODES} WHERE id IN (${missingPaymentModesRemotely.map(() => '?').join(',')});`, missingPaymentModesRemotely).catch(() => [])
+      : [];
+
+    // 9. Settings Reconciliation
     const { localDb, SETTINGS_ID } = await import('../localDb');
     const { isDefaultPlaceholderSettings } = await import('../services/settings/settingsHelper');
     const localSettingsRow = await db.queryOne<{ value: string; updated_at: number }>(
@@ -198,6 +176,12 @@ export class EntityReconciler {
       requestUserIds: missingUsersLocally,
       newDiscounts: discountsToSend,
       requestDiscountIds: missingDiscountsLocally,
+      newCustomers: customersToSend,
+      requestCustomerIds: missingCustomersLocally,
+      newExpenses: expensesToSend,
+      requestExpenseIds: missingExpensesLocally,
+      newPaymentModes: paymentModesToSend,
+      requestPaymentModeIds: missingPaymentModesLocally,
       newSettings: settingsToSend,
       requestSettings,
     });
@@ -208,105 +192,7 @@ export class EntityReconciler {
   }
 
   async handleReconcilePayload(senderId: string, payload: any): Promise<void> {
-    if (!payload) return;
-    const db = await getDatabase();
-    const now = Date.now();
-    const mesh = getP2PMesh();
-
-    await db.transaction(async (tx) => {
-      await applyReconciledEntities(payload, tx, now);
-    });
-
-    if (payload.newSettings) {
-      try {
-        const { localDb, SETTINGS_ID } = await import('../localDb');
-        const { useSettingsStore } = await import('../../stores/settingsStore');
-        const { mergeRemoteSettingsIntoLocal } = await import('../services/settings/settingsHelper');
-        const currentLocal = await localDb.appSettings.get(SETTINGS_ID);
-        const merged = mergeRemoteSettingsIntoLocal(currentLocal, payload.newSettings);
-        merged.id = SETTINGS_ID;
-        merged.updatedAt = new Date(now);
-
-        await localDb.appSettings.put(merged);
-        await db.execute(
-          `INSERT INTO ${TABLES.SETTINGS} (key, value, updated_at) VALUES (?, ?, ?)
-           ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at;`,
-          ['app_settings', JSON.stringify(merged), now]
-        );
-        await db.execute(
-          `UPDATE shop SET
-            name = COALESCE(?, name),
-            currency = COALESCE(?, currency),
-            tax_rate = COALESCE(?, tax_rate),
-            logo_url = CASE WHEN ? IS NOT NULL THEN ? ELSE logo_url END,
-            address = COALESCE(?, address),
-            phone = COALESCE(?, phone),
-            updated_at = ?;`,
-          [
-            merged.storeName || null,
-            merged.currency || null,
-            merged.taxRate !== undefined ? Number(merged.taxRate) : null,
-            merged.storeLogo !== undefined ? (merged.storeLogo || '') : null,
-            merged.storeLogo !== undefined ? (merged.storeLogo || '') : null,
-            merged.storeAddress || null,
-            merged.storePhone || null,
-            now,
-          ]
-        );
-        useSettingsStore.getState().setSettings(merged);
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('settings-updated', { detail: merged }));
-        }
-      } catch (err) {
-        console.warn('[Reconciler] Settings merge warning:', err);
-      }
-    }
-
-    if (payload.requestSettings) {
-      const { localDb, SETTINGS_ID } = await import('../localDb');
-      const { isDefaultPlaceholderSettings } = await import('../services/settings/settingsHelper');
-      let toSend: any = null;
-      const row = await db.queryOne<{ value: string }>(
-        `SELECT value FROM ${TABLES.SETTINGS} WHERE key = 'app_settings';`
-      ).catch(() => null);
-      if (row?.value) { try { toSend = JSON.parse(row.value); } catch {} }
-      if (!toSend || isDefaultPlaceholderSettings(toSend)) {
-        const dex = await localDb.appSettings.get(SETTINGS_ID).catch(() => null);
-        if (dex && !isDefaultPlaceholderSettings(dex)) toSend = dex;
-      }
-      if (toSend && !isDefaultPlaceholderSettings(toSend)) {
-        mesh.sendToPeer(senderId, 'RECONCILE_PAYLOAD', { newSettings: toSend });
-      }
-    }
-    if (payload.requestUserIds?.length > 0) {
-      const users = await getReconcileUsers(payload.requestUserIds);
-      if (users.length > 0) mesh.sendToPeer(senderId, 'RECONCILE_PAYLOAD', { newUsers: users });
-    }
-    if (payload.requestProductIds?.length > 0) {
-      const prods = await getReconcileProducts(payload.requestProductIds);
-      const cats = await db.query(`SELECT * FROM ${TABLES.CATEGORIES};`);
-      const sups = await db.query(`SELECT * FROM ${TABLES.SUPPLIERS};`);
-      if (prods.length > 0) mesh.sendToPeer(senderId, 'RECONCILE_PAYLOAD', { newProducts: prods, newCategories: cats, newSuppliers: sups });
-    }
-    if (payload.requestSaleIds?.length > 0) {
-      const sales = await getReconcileFullSales(payload.requestSaleIds);
-      if (sales.length > 0) mesh.sendToPeer(senderId, 'RECONCILE_PAYLOAD', { newSales: sales });
-    }
-    if (payload.requestDiscountIds?.length > 0) {
-      const discounts = await db.query<any>(
-        `SELECT * FROM ${TABLES.DISCOUNTS} WHERE id IN (${payload.requestDiscountIds.map(() => '?').join(',')});`,
-        payload.requestDiscountIds
-      ).catch(() => []);
-      if (discounts.length > 0) mesh.sendToPeer(senderId, 'RECONCILE_PAYLOAD', { newDiscounts: discounts });
-    }
-    if (payload.requestInvIds?.length > 0) {
-      const txs = await getReconcileInventoryTxs(payload.requestInvIds);
-      if (txs.length > 0) mesh.sendToPeer(senderId, 'RECONCILE_PAYLOAD', { newInvTxs: txs });
-    }
-
-    await recomputeStockFromLedger();
-    await flushDb();
-    await refreshAllStoresFromLocalDb();
+    return processReconcilePayload(senderId, payload);
   }
 }
 

@@ -1,6 +1,8 @@
 /**
  * Local Offline Mesh Signaling Transport
- * Combines BroadcastChannel (same machine) & LAN SSE Relay (/api/mesh/) for 100% offline P2P sync.
+ * Uses BroadcastChannel for same-machine tabs & windows.
+ * LAN/WAN peer discovery & signaling handled by WebRTC Mesh + Supabase Realtime.
+ * No dependency on external HTTP/SSE endpoints — works 100% offline in Tauri.
  */
 
 import { DeviceProfile } from './deviceIdentity';
@@ -8,7 +10,6 @@ import { PeerPresenceInfo, SignalingEnvelope } from './signalingTypes';
 
 export class LocalSignalingTransport {
   private broadcastChannel: BroadcastChannel | null = null;
-  private eventSource: EventSource | null = null;
   private currentDevice: DeviceProfile | null = null;
   private onPresenceCb: ((peer: PeerPresenceInfo) => void) | null = null;
   private onLeaveCb: ((deviceId: string) => void) | null = null;
@@ -26,7 +27,7 @@ export class LocalSignalingTransport {
     this.onLeaveCb = onLeave;
     this.onSignalCb = onSignal;
 
-    // 1. BroadcastChannel for same-machine tabs & windows
+    // BroadcastChannel for same-machine tabs & windows (works in Tauri WebView)
     if (typeof BroadcastChannel !== 'undefined') {
       try {
         this.broadcastChannel = new BroadcastChannel('zpos_mesh_signaling');
@@ -53,49 +54,7 @@ export class LocalSignalingTransport {
       }
     }
 
-    // 2. Local LAN SSE Relay (/api/mesh/events)
-    if (typeof EventSource !== 'undefined') {
-      try {
-        const sseUrl = `/api/mesh/events?deviceId=${encodeURIComponent(currentDevice.deviceId)}`;
-        this.eventSource = new EventSource(sseUrl);
-
-        this.eventSource.addEventListener('presence', (ev: MessageEvent) => {
-          try {
-            const peer = JSON.parse(ev.data) as PeerPresenceInfo;
-            if (peer.deviceId && peer.deviceId !== this.currentDevice?.deviceId) {
-              this.onPresenceCb?.(peer);
-            }
-          } catch {}
-        });
-
-        this.eventSource.addEventListener('peer-leave', (ev: MessageEvent) => {
-          try {
-            const { deviceId } = JSON.parse(ev.data);
-            if (deviceId) this.onLeaveCb?.(deviceId);
-          } catch {}
-        });
-
-        this.eventSource.addEventListener('signal', (ev: MessageEvent) => {
-          try {
-            const envelope = JSON.parse(ev.data) as SignalingEnvelope;
-            if (
-              envelope.targetDeviceId === '*' ||
-              envelope.targetDeviceId === this.currentDevice?.deviceId
-            ) {
-              this.onSignalCb?.(envelope);
-            }
-          } catch {}
-        });
-
-        this.eventSource.onerror = () => {
-          // Expected when running without local node server or offline
-        };
-      } catch (err) {
-        console.warn('[LocalTransport] EventSource init notice:', err);
-      }
-    }
-
-    // Announce local terminal presence continuously
+    // Announce local terminal presence continuously via BroadcastChannel
     const sendPresence = () => {
       this.broadcastPresence({
         deviceId: currentDevice.deviceId,
@@ -120,14 +79,6 @@ export class LocalSignalingTransport {
         });
       } catch {}
     }
-
-    try {
-      fetch('/api/mesh/presence', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(info),
-      }).catch(() => {});
-    } catch {}
   }
 
   sendSignal(envelope: SignalingEnvelope): void {
@@ -140,14 +91,6 @@ export class LocalSignalingTransport {
         });
       } catch {}
     }
-
-    try {
-      fetch('/api/mesh/signal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(envelope),
-      }).catch(() => {});
-    } catch {}
   }
 
   close(): void {
@@ -163,10 +106,6 @@ export class LocalSignalingTransport {
       }
       this.broadcastChannel.close();
       this.broadcastChannel = null;
-    }
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
     }
   }
 }

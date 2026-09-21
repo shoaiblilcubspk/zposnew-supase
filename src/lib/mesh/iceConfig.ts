@@ -9,16 +9,52 @@
  *   - Different LAN / internet: STUN → punchthrough attempt → TURN relay fallback
  *   - TURN ensures 100% connectivity even behind strict corporate/ISP NAT
  *
- * TURN credentials below are from Open Relay Project (free, publicly available).
- * For production: replace with your own Coturn / Twilio / Metered.ca credentials.
- * Env override: VITE_TURN_URL, VITE_TURN_USER, VITE_TURN_PASS in .env.local
+ * TURN credentials MUST be provided via env vars in production:
+ *   VITE_TURN_URL, VITE_TURN_USER, VITE_TURN_PASS (and optionally VITE_TURN_URL2, VITE_TURN_URL3)
+ * Public Open Relay fallback is ONLY for local development — NOT for production use.
  */
 
-const TURN_URL  = import.meta.env.VITE_TURN_URL  || 'turn:openrelay.metered.ca:80';
-const TURN_URL2 = import.meta.env.VITE_TURN_URL2 || 'turn:openrelay.metered.ca:443';
-const TURN_URL3 = import.meta.env.VITE_TURN_URL3 || 'turns:openrelay.metered.ca:443';
-const TURN_USER = import.meta.env.VITE_TURN_USER || 'openrelayproject';
-const TURN_PASS = import.meta.env.VITE_TURN_PASS || 'openrelayproject';
+const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+
+function validateTurnCredentials(): void {
+  // Skip validation in test environment or when import.meta.env is not available
+  const isProd = env.PROD === true || env.MODE === 'production';
+  const isTest = env.MODE === 'test' || env.VITEST === 'true';
+  const hasTurnUrl = !!env.VITE_TURN_URL;
+  const hasTurnUser = !!env.VITE_TURN_USER;
+  const hasTurnPass = !!env.VITE_TURN_PASS;
+
+  if (isTest) return; // Skip in test environment
+  if (isProd && (!hasTurnUrl || !hasTurnUser || !hasTurnPass)) {
+    throw new Error(
+      '[ICE Config] Production build requires TURN credentials. ' +
+      'Set VITE_TURN_URL, VITE_TURN_USER, VITE_TURN_PASS in .env.local. ' +
+      'Public Open Relay fallback is disabled in production.'
+    );
+  }
+}
+
+validateTurnCredentials();
+
+const TURN_URL  = env.VITE_TURN_URL  || (env.PROD ? '' : 'turn:openrelay.metered.ca:80');
+const TURN_URL2 = env.VITE_TURN_URL2 || (env.PROD ? '' : 'turn:openrelay.metered.ca:443');
+const TURN_URL3 = env.VITE_TURN_URL3 || (env.PROD ? '' : 'turns:openrelay.metered.ca:443');
+const TURN_USER = env.VITE_TURN_USER || (env.PROD ? '' : 'openrelayproject');
+const TURN_PASS = env.VITE_TURN_PASS || (env.PROD ? '' : 'openrelayproject');
+
+function buildTurnServers(): RTCIceServer[] {
+  const servers: RTCIceServer[] = [];
+  if (TURN_URL && TURN_USER && TURN_PASS) {
+    servers.push({ urls: TURN_URL, username: TURN_USER, credential: TURN_PASS });
+  }
+  if (TURN_URL2 && TURN_USER && TURN_PASS) {
+    servers.push({ urls: TURN_URL2, username: TURN_USER, credential: TURN_PASS });
+  }
+  if (TURN_URL3 && TURN_USER && TURN_PASS) {
+    servers.push({ urls: TURN_URL3, username: TURN_USER, credential: TURN_PASS });
+  }
+  return servers;
+}
 
 export const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   // ── STUN servers (fast, free, no auth — works for ~80% of connections) ──
@@ -29,22 +65,7 @@ export const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:openrelay.metered.ca:80' },
 
   // ── TURN servers (relay — guarantees connectivity for strict NAT / different LAN) ──
-  // These are the Open Relay Project public TURN servers (free tier)
-  {
-    urls: TURN_URL,
-    username: TURN_USER,
-    credential: TURN_PASS,
-  },
-  {
-    urls: TURN_URL2,
-    username: TURN_USER,
-    credential: TURN_PASS,
-  },
-  {
-    urls: TURN_URL3,
-    username: TURN_USER,
-    credential: TURN_PASS,
-  },
+  ...buildTurnServers(),
 ];
 
 export function getRtcConfiguration(customServers?: RTCIceServer[]): RTCConfiguration {

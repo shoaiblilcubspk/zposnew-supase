@@ -38,14 +38,17 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Build macOS Tauri DMG
-        run: npx tauri build
+      - name: Build macOS Tauri DMG (Universal: Intel x86_64 + Apple Silicon aarch64)
+        run: npx tauri build --target universal-apple-darwin
 
       - name: Prepare macOS DMG with Version
         run: |
           VERSION=$(node -p "require('./package.json').version")
           mkdir -p release-output
-          cp src-tauri/target/release/bundle/dmg/*.dmg release-output/Zaynahs-POS-v${VERSION}.dmg
+          DMG_FILE=$(find src-tauri/target -name "*.dmg" -type f | head -n 1)
+          echo "Found DMG file: $DMG_FILE"
+          cp "$DMG_FILE" "release-output/Zaynahs-POS-v${VERSION}.dmg"
+          ls -lh release-output/
 
       - name: Upload macOS DMG Artifact
         uses: actions/upload-artifact@v4
@@ -89,8 +92,11 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           mkdir -p release-output
-          cp src-tauri/target/release/bundle/nsis/*.exe release-output/Zaynahs-POS-v${VERSION}-Setup.exe || true
-          cp src-tauri/target/release/bundle/msi/*.msi release-output/Zaynahs-POS-v${VERSION}.msi || true
+          EXE_FILE=$(find src-tauri/target -name "*.exe" -type f | grep -i "setup" | head -n 1)
+          MSI_FILE=$(find src-tauri/target -name "*.msi" -type f | head -n 1)
+          if [ -n "$EXE_FILE" ]; then cp "$EXE_FILE" "release-output/Zaynahs-POS-v${VERSION}-Setup.exe"; fi
+          if [ -n "$MSI_FILE" ]; then cp "$MSI_FILE" "release-output/Zaynahs-POS-v${VERSION}.msi"; fi
+          ls -lh release-output/
 
       - name: Upload Windows EXE Artifact
         uses: actions/upload-artifact@v4
@@ -143,7 +149,10 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           mkdir -p release-output
-          cp android/app/build/outputs/apk/debug/*.apk release-output/Zaynahs-POS-v${VERSION}.apk
+          APK_FILE=$(find android/app/build -name "*.apk" -type f | head -n 1)
+          echo "Found APK file: $APK_FILE"
+          cp "$APK_FILE" "release-output/Zaynahs-POS-v${VERSION}.apk"
+          ls -lh release-output/
 
       - name: Upload Android APK Artifact
         uses: actions/upload-artifact@v4
@@ -236,3 +245,40 @@ jobs:
           name: Zaynahs-POS-iOS-IPA
           path: release-output/*.ipa
           retention-days: 30
+
+  # ========================================================
+  # 5. Automated Universal GitHub Release Publishing
+  # ========================================================
+  publish-release:
+    name: Publish GitHub Release
+    needs: [build-macos-dmg, build-windows-exe, build-android-apk, build-ios-ipa]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Consolidate Release Installers
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          mkdir -p release-files
+          find all-artifacts -type f \( -name "*.apk" -o -name "*.ipa" -o -name "*.dmg" -o -name "*.exe" -o -name "*.msi" \) -exec cp {} release-files/ \;
+          ls -lh release-files/
+
+      - name: Publish GitHub Release with Direct Download Links
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          gh release create "v${VERSION}" release-files/* \
+            --title "Zaynahs POS v${VERSION} (Universal All-Platform)" \
+            --notes "Universal Multi-Platform Release v${VERSION} — Compatible with Intel + Apple Silicon macOS, Android phones/tablets, iOS devices, and Windows PCs." \
+            --draft=false \
+            --prerelease=false || \
+          gh release upload "v${VERSION}" release-files/* --clobber

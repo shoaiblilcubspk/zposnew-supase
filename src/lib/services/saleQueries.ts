@@ -7,6 +7,8 @@ import { Sale } from '../../types';
 import { getDatabase } from '../db';
 import { localDb } from '../localDb';
 import { mapSqliteSale, batchHydrateSaleItems } from './sales/salesRepository';
+import { commitLocalTransaction } from '../events';
+import { getDeviceId } from '../mesh/deviceIdentity';
 
 export async function getAllSales(): Promise<Sale[]> {
   const db = await getDatabase();
@@ -73,11 +75,24 @@ export async function updateSale(id: string, updates: Partial<Sale>): Promise<Sa
   const db = await getDatabase();
   const existing = await localDb.sales.get(id);
   const updated = { ...existing, ...updates, updatedAt: new Date() } as Sale;
+  const deviceId = await getDeviceId();
+  const now = Date.now();
 
-  await db.execute(
-    `UPDATE sales SET notes = ?, status = ? WHERE id = ?;`,
-    [updated.notes || null, updated.status || 'completed', id]
-  );
+  await commitLocalTransaction({
+    entityType: 'SALE',
+    entityId: id,
+    operation: 'UPDATE',
+    eventType: 'SALE_UPDATED',
+    deviceId,
+    userId: updated.userId || 'system',
+    payload: { id, ...updates, updatedAt: now },
+    execute: async (tx) => {
+      await tx.execute(
+        `UPDATE sales SET notes = ?, status = ?, updated_at = ? WHERE id = ?;`,
+        [updated.notes || null, updated.status || 'completed', now, id]
+      );
+    },
+  });
 
   try {
     await localDb.sales.put(updated);
@@ -144,21 +159,37 @@ export async function getReportRefunds(startDate: Date, endDate: Date): Promise<
 }
 
 export async function patchLegacySales(): Promise<number> {
-  // Pure local audit
   const db = await getDatabase();
+  const deviceId = await getDeviceId();
+  const now = Date.now();
+
   const itemsWithoutCost = await db.query<any>(
-    `SELECT si.id, p.cost_price
+    `SELECT si.id, p.cost_price, si.sale_id
      FROM sale_items si
      JOIN products p ON si.product_id = p.id
      WHERE si.unit_cost IS NULL OR si.unit_cost = 0;`
   );
 
+  let patched = 0;
   for (const item of itemsWithoutCost) {
-    await db.execute(
-      `UPDATE sale_items SET unit_cost = ? WHERE id = ?;`,
-      [Number(item.cost_price) || 0, item.id]
-    );
+    const cost = Number(item.cost_price) || 0;
+    await commitLocalTransaction({
+      entityType: 'SALE_ITEM',
+      entityId: item.id,
+      operation: 'UPDATE',
+      eventType: 'SALE_ITEM_COST_UPDATED',
+      deviceId,
+      userId: 'system',
+      payload: { id: item.id, saleId: item.sale_id, unitCost: cost, updatedAt: now },
+      execute: async (tx) => {
+        await tx.execute(
+          `UPDATE sale_items SET unit_cost = ?, updated_at = ? WHERE id = ?;`,
+          [cost, now, item.id]
+        );
+      },
+    });
+    patched++;
   }
 
-  return itemsWithoutCost.length;
+  return patched;
 }

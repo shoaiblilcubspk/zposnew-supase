@@ -21,6 +21,7 @@ export class SyncEngine {
   private syncTimer: any = null;
   private unsubscribeMeshMessage: (() => void) | null = null;
   private unsubscribeMeshStatus: (() => void) | null = null;
+  private hasRequestedSnapshot = false;
 
   constructor() {
     this.mesh = getP2PMesh();
@@ -126,6 +127,7 @@ export class SyncEngine {
       if (!payload) return;
       const { applySnapshot } = await import('./snapshotEngine');
       await applySnapshot(payload);
+      this.hasRequestedSnapshot = false; // Reset guard — device now has data
       useSyncStatusStore.getState().setLastSyncTime(Date.now());
       await refreshAllStoresFromLocalDb();
     } catch (err) {
@@ -194,22 +196,25 @@ export class SyncEngine {
 
   /**
    * Push unacknowledged local outbox events to all connected peers immediately.
+   * Uses per-peer cursor (getInboxMaxSequence) to send only events the peer hasn't received.
    */
   async pushPendingEventsToPeers(): Promise<void> {
     if (!this.currentDevice) return;
     const peers = this.mesh.getConnectedPeers();
     if (peers.length === 0) return;
 
-    const db = await getDatabase();
-    const pending = await db.query<SyncOutboxRecord>(
-      `SELECT * FROM sync_outbox WHERE is_synced = 0 ORDER BY sequence ASC LIMIT 50;`
-    );
-    if (pending.length === 0) return;
-
     for (const peerId of peers) {
+      const knownSeq = await getInboxMaxSequence(peerId);
+      const events = await getUnsyncedOutboxEvents(this.currentDevice.deviceId, knownSeq, 50);
+      if (events.length === 0) continue;
+
+      const highestSeq = events[events.length - 1].sequence;
+      const remainingEvents = await getUnsyncedOutboxEvents(this.currentDevice.deviceId, highestSeq, 1);
+      const hasMore = remainingEvents.length > 0;
+
       this.mesh.sendToPeer(peerId, 'EVENT_BATCH', {
-        batch: pending,
-        hasMore: pending.length >= 50,
+        batch: events,
+        hasMore,
       });
     }
   }
@@ -232,11 +237,13 @@ export class SyncEngine {
       // CRITICAL: SNAPSHOT_REQUEST is STRICTLY for initial bootstrap only.
       // DO NOT send SNAPSHOT_REQUEST when this device already has data — doing so causes
       // placeholder settings from fresh devices to overwrite real store identity on established devices.
+      // Guard: only request snapshot ONCE per session to prevent spam.
       try {
         const db = await getDatabase();
         const pRow = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM products;`);
         const uRow = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM users;`);
-        if ((pRow?.count ?? 0) === 0 && (uRow?.count ?? 0) === 0) {
+        if ((pRow?.count ?? 0) === 0 && (uRow?.count ?? 0) === 0 && !this.hasRequestedSnapshot) {
+          this.hasRequestedSnapshot = true;
           for (const peerId of peers) {
             this.mesh.sendToPeer(peerId, 'SNAPSHOT_REQUEST', {});
             if (this.currentDevice) {
@@ -286,10 +293,6 @@ export class SyncEngine {
 }
 
 let syncEngineInstance: SyncEngine | null = null;
-
 export function getSyncEngine(): SyncEngine {
-  if (!syncEngineInstance) {
-    syncEngineInstance = new SyncEngine();
-  }
-  return syncEngineInstance;
+  return (syncEngineInstance ??= new SyncEngine());
 }

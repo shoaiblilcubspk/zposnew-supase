@@ -278,23 +278,16 @@ export async function commitLocalSale(saleInput: Omit<Sale, 'id'>): Promise<Sale
   // Sync Dexie localDb for backward compatibility
   try {
     await localDb.sales.put(sale);
-    for (const item of sale.items || []) {
-      if (!isDraft) {
+    if (!isDraft) {
+      for (const item of sale.items || []) {
         const pid = (item as any).product?.id || (item as any).productId || (item as any).id;
         if (pid) {
           const p = await localDb.products.get(pid);
-          if (p) {
-            await localDb.products.update(p.id, {
-              stock: (p.stock || 0) - (Number(item.quantity) || 1),
-              updatedAt: new Date(now),
-            });
-          }
+          if (p) await localDb.products.update(p.id, { stock: (p.stock || 0) - (Number(item.quantity) || 1), updatedAt: new Date(now) });
         }
       }
     }
-    try {
-      localStorage.setItem('pos_last_sale_event', String(now));
-    } catch {}
+    localStorage.setItem('pos_last_sale_event', String(now));
   } catch {}
 
   return sale;

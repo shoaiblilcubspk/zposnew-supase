@@ -37,9 +37,14 @@ export interface WireFrame {
 }
 
 const CHUNK_SIZE = 16 * 1024; // 16 KB safe chunk size for DataChannels
+const MAX_MESSAGE_SIZE = 50 * 1024 * 1024; // 50 MB max message size
+const MAX_PENDING_MESSAGES = 1000; // Max incomplete messages to buffer
 
 export function serializeMessage(msg: MeshMessage): WireFrame[] {
   const serialized = JSON.stringify(msg.payload ?? null);
+  if (serialized.length > MAX_MESSAGE_SIZE) {
+    throw new Error(`Message size ${serialized.length} exceeds MAX_MESSAGE_SIZE ${MAX_MESSAGE_SIZE}`);
+  }
   const totalChunks = Math.ceil(serialized.length / CHUNK_SIZE) || 1;
   const frames: WireFrame[] = [];
 
@@ -63,6 +68,12 @@ export class MessageReassembler {
   private chunksMap: Map<string, { total: number; chunks: Map<number, string>; receivedAt: number }> = new Map();
 
   addFrame(frame: WireFrame): MeshMessage | null {
+    // Reject oversized frames
+    if (frame.data.length > CHUNK_SIZE * 2) {
+      console.warn('[MeshProtocol] Frame data exceeds expected chunk size, discarding');
+      return null;
+    }
+
     if (frame.total === 1) {
       try {
         const payload = JSON.parse(frame.data);
@@ -79,10 +90,27 @@ export class MessageReassembler {
       }
     }
 
+    // Enforce max pending messages to prevent memory exhaustion
+    if (this.chunksMap.size >= MAX_PENDING_MESSAGES) {
+      this.cleanStale();
+      if (this.chunksMap.size >= MAX_PENDING_MESSAGES) {
+        // Still full after cleanup - drop oldest
+        const oldestKey = this.chunksMap.keys().next().value;
+        if (oldestKey) this.chunksMap.delete(oldestKey);
+      }
+    }
+
     let record = this.chunksMap.get(frame.msgId);
     if (!record) {
       record = { total: frame.total, chunks: new Map(), receivedAt: Date.now() };
       this.chunksMap.set(frame.msgId, record);
+    }
+
+    // Validate total matches expected
+    if (frame.total !== record.total) {
+      console.warn('[MeshProtocol] Frame total mismatch, discarding message');
+      this.chunksMap.delete(frame.msgId);
+      return null;
     }
 
     record.chunks.set(frame.index, frame.data);
@@ -91,10 +119,19 @@ export class MessageReassembler {
       this.chunksMap.delete(frame.msgId);
       const orderedChunks: string[] = [];
       for (let i = 0; i < record.total; i++) {
-        orderedChunks.push(record.chunks.get(i) || '');
+        const chunk = record.chunks.get(i);
+        if (chunk === undefined) {
+          console.warn('[MeshProtocol] Missing chunk in reassembled message');
+          return null;
+        }
+        orderedChunks.push(chunk);
       }
       try {
         const fullStr = orderedChunks.join('');
+        if (fullStr.length > MAX_MESSAGE_SIZE) {
+          console.warn('[MeshProtocol] Reassembled message exceeds max size');
+          return null;
+        }
         const payload = JSON.parse(fullStr);
         return {
           id: frame.msgId,

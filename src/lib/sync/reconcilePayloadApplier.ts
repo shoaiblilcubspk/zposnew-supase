@@ -108,6 +108,23 @@ export async function applyReconciledEntities(
       );
     }
   }
+  for (const cust of payload.newCustomers || []) {
+    if (!cust?.id) continue;
+    await tx.execute(
+      `INSERT INTO ${TABLES.CUSTOMERS} (
+        id, name, phone, email, address, credit_limit, current_balance, active, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name, phone = excluded.phone, email = excluded.email,
+        address = excluded.address, credit_limit = excluded.credit_limit,
+        current_balance = excluded.current_balance, active = excluded.active, updated_at = excluded.updated_at;`,
+      [
+        cust.id, cust.name, cust.phone || null, cust.email || null, cust.address || null,
+        cust.credit_limit || 0, cust.current_balance !== undefined ? cust.current_balance : (cust.balance || 0),
+        cust.active !== undefined ? (cust.active ? 1 : 0) : 1, cust.updated_at || now
+      ]
+    );
+  }
   for (const sale of payload.newSales || []) {
     await insertReconciledSale(sale, tx, now);
   }
@@ -129,6 +146,44 @@ export async function applyReconciledEntities(
         it.quantity, it.balance_after || 0, it.reference_type || 'SYSTEM',
         it.reference_id || it.id, it.device_id || 'remote',
         it.user_id || 'system', it.notes || null, it.created_at || now
+      ]
+    );
+  }
+  for (const exp of payload.newExpenses || []) {
+    if (!exp?.id) continue;
+    await tx.execute(
+      `INSERT INTO ${TABLES.EXPENSES} (
+        id, title, category, amount, payment_mode_id, notes, user_id, date, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        title = excluded.title, category = excluded.category, amount = excluded.amount,
+        payment_mode_id = excluded.payment_mode_id, notes = excluded.notes,
+        user_id = excluded.user_id, date = excluded.date, updated_at = excluded.updated_at;`,
+      [
+        exp.id, exp.title || 'Expense', exp.category || 'General',
+        exp.amount || 0, exp.payment_mode_id || null, exp.notes || null,
+        exp.user_id || 'system', exp.date || now, now
+      ]
+    );
+    // Update payment mode balance
+    if (exp.payment_mode_id) {
+      await tx.execute(
+        `UPDATE ${TABLES.PAYMENT_MODES} SET balance = balance - ?, updated_at = ? WHERE id = ?;`,
+        [exp.amount || 0, now, exp.payment_mode_id]
+      );
+    }
+  }
+  for (const pm of payload.newPaymentModes || []) {
+    if (!pm?.id) continue;
+    await tx.execute(
+      `INSERT INTO ${TABLES.PAYMENT_MODES} (id, name, is_active, is_custom, balance, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         name = excluded.name, is_active = excluded.is_active, is_custom = excluded.is_custom,
+         balance = excluded.balance, updated_at = excluded.updated_at;`,
+      [
+        pm.id, pm.name, pm.is_active ? 1 : 0, pm.is_custom ? 1 : 0,
+        pm.balance || 0, pm.created_at || now
       ]
     );
   }

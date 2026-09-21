@@ -82,6 +82,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         console.error('Local auth initialization error:', err);
+        if (mounted) {
+          setIsFirstLaunch(true);
+        }
       } finally {
         if (mounted) setLoading(false);
       }

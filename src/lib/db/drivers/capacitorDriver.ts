@@ -20,9 +20,7 @@ export class CapacitorSqliteDriver implements ISqliteDriver {
     if (this._isOpen && this.db) return;
 
     try {
-      const pluginName = '@capacitor-community/sqlite';
-      // @ts-ignore - dynamic import in Capacitor runtime
-      const { CapacitorSQLite, SQLiteConnection } = await import(/* @vite-ignore */ pluginName);
+      const { CapacitorSQLite, SQLiteConnection } = await import('@capacitor-community/sqlite');
       this.sqliteConnection = new SQLiteConnection(CapacitorSQLite);
       const cleanDbName = dbName.replace(/\.sqlite$|\.db$/, '');
 

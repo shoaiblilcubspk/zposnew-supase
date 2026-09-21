@@ -1,6 +1,8 @@
-import { queryOne, execute } from '../db';
+import { queryOne, execute, transaction } from '../db';
 import { TABLES } from '../db/schemaConstants';
 import { generateRecoveryCode, hashRecoveryCode, verifyPin } from './pinCrypto';
+import { commitLocalTransaction } from '../events';
+import { getDeviceId } from '../mesh/deviceIdentity';
 
 /**
  * Rotates the 24-character emergency recovery code for the shop in local SQLite.
@@ -29,12 +31,25 @@ export async function rotateRecoveryCode(adminPin: string): Promise<string> {
   // 2. Generate a brand new 24-character recovery code
   const newRecoveryCode = generateRecoveryCode();
   const newRecoveryHash = await hashRecoveryCode(newRecoveryCode);
+  const deviceId = await getDeviceId();
+  const now = Date.now();
 
-  // 3. Atomically commit the new recovery hash to the local SQLite shop record
-  await execute(
-    `UPDATE ${TABLES.SHOP} SET master_recovery_hash = ?, updated_at = ?;`,
-    [newRecoveryHash, Date.now()]
-  );
+  // 3. Atomically commit the new recovery hash to the local SQLite shop record + outbox event
+  await commitLocalTransaction({
+    entityType: 'SHOP',
+    entityId: 'shop',
+    operation: 'UPDATE',
+    eventType: 'RECOVERY_CODE_ROTATED',
+    deviceId,
+    userId: 'admin',
+    payload: { masterRecoveryHash: newRecoveryHash, rotatedAt: now },
+    execute: async (tx) => {
+      await tx.execute(
+        `UPDATE ${TABLES.SHOP} SET master_recovery_hash = ?, updated_at = ?;`,
+        [newRecoveryHash, now]
+      );
+    },
+  });
 
   return newRecoveryCode;
 }
@@ -67,11 +82,24 @@ export async function changeUserPin(
 
   const { hashPin } = await import('./pinCrypto');
   const { fullHash: newPinHash } = await hashPin(newPin);
+  const deviceId = await getDeviceId();
+  const now = Date.now();
 
-  await execute(
-    `UPDATE ${TABLES.USERS} SET pin_hash = ?, updated_at = ? WHERE id = ?;`,
-    [newPinHash, Date.now(), userId]
-  );
+  await commitLocalTransaction({
+    entityType: 'USER',
+    entityId: userId,
+    operation: 'UPDATE',
+    eventType: 'USER_PIN_CHANGED',
+    deviceId,
+    userId,
+    payload: { userId, pinHash: newPinHash, updatedAt: now },
+    execute: async (tx) => {
+      await tx.execute(
+        `UPDATE ${TABLES.USERS} SET pin_hash = ?, updated_at = ? WHERE id = ?;`,
+        [newPinHash, now, userId]
+      );
+    },
+  });
 
   return true;
 }

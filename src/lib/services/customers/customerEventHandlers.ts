@@ -137,11 +137,10 @@ export async function handleRemoteCustomerLedgerEvent(
   if (p.type === 'payment' || !p.type) {
     const { generateId } = await import('../../localDb');
     await tx.execute(
-      `INSERT OR IGNORE INTO payments (id, customer_id, sale_id, mode_id, amount, reference, created_at)
-       VALUES (?, ?, NULL, ?, ?, ?, ?);`,
+      `INSERT OR IGNORE INTO payments (id, sale_id, mode_id, amount, reference, created_at)
+       VALUES (?, NULL, ?, ?, ?, ?);`,
       [
         generateId(),
-        p.customerId,
         p.paymentMode || 'cash',
         paymentAmount,
         p.note || `Customer Payment: ${p.customerId}`,

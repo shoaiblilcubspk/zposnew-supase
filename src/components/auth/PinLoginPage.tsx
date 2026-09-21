@@ -39,19 +39,16 @@ export function PinLoginPage() {
   const handleDigit = (digit: string) => {
     if (lockoutSecs > 0 || isSubmitting || pin.length >= 12) return;
     setPin((prev) => (prev + digit).slice(0, 12));
-    pinInputRef.current?.focus();
   };
 
   const handleClear = () => {
     if (lockoutSecs > 0 || isSubmitting) return;
     setPin('');
-    pinInputRef.current?.focus();
   };
 
   const handleBackspace = () => {
     if (lockoutSecs > 0 || isSubmitting) return;
     setPin((prev) => prev.slice(0, -1));
-    pinInputRef.current?.focus();
   };
 
   const handleLoginSubmit = async (pinToSubmit = pin) => {
@@ -66,7 +63,6 @@ export function PinLoginPage() {
     }
     if (!pinToSubmit || pinToSubmit.length < 4) {
       sonner.warning('PIN must be at least 4 digits (max 12).');
-      pinInputRef.current?.focus();
       return;
     }
 
@@ -80,7 +76,6 @@ export function PinLoginPage() {
     } catch (err: any) {
       sonner.error(err.message || 'Login failed.');
       setPin('');
-      pinInputRef.current?.focus();
     } finally {
       setIsSubmitting(false);
     }
@@ -101,8 +96,8 @@ export function PinLoginPage() {
   }, [pin, identifier, lockoutSecs, isSubmitting, recoveryOpen]);
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-app flex flex-col items-center justify-center p-4 select-none">
-      <div className="w-full max-w-sm bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md shadow-none p-5 sm:p-6 flex flex-col items-center">
+    <div className="fixed inset-0 w-full h-full bg-app flex flex-col items-center justify-center p-4 overflow-y-auto select-none">
+      <div className="w-full max-w-sm bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md shadow-none p-5 sm:p-6 flex flex-col items-center shrink-0 my-auto">
         {/* Header Branding */}
         <div className="flex items-center gap-2.5 mb-4">
           <div className="w-8 h-8 rounded-lg bg-neutral-900 dark:bg-white/10 border border-neutral-200 dark:border-white/[0.08] flex items-center justify-center p-1 overflow-hidden shrink-0 shadow-sm">
@@ -131,8 +126,10 @@ export function PinLoginPage() {
                 </span>
               )}
             </div>
-            <div className="relative">
-              <User className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="relative flex items-center">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center text-neutral-400 dark:text-neutral-500">
+                <User className="w-4 h-4" />
+              </div>
               <input
                 ref={identifierInputRef}
                 type="text"
@@ -150,7 +147,7 @@ export function PinLoginPage() {
                     }
                   }
                 }}
-                placeholder="e.g. shoaib or admin"
+                placeholder="e.g. admin"
                 className="w-full h-10 pl-9 pr-3 text-[13px] bg-white dark:bg-black/30 border border-neutral-300 dark:border-white/[0.12] rounded-md text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
               />
             </div>
@@ -174,8 +171,10 @@ export function PinLoginPage() {
                 </span>
               </div>
             </div>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="relative flex items-center">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center text-neutral-400 dark:text-neutral-500">
+                <Lock className="w-4 h-4" />
+              </div>
               <input
                 ref={pinInputRef}
                 type={showPin ? 'text' : 'password'}
@@ -197,14 +196,14 @@ export function PinLoginPage() {
                   }
                 }}
                 placeholder="Enter 4–12 digit PIN"
-                className={`w-full h-10 pl-9 pr-11 text-[14px] font-mono ${
+                className={`w-full h-10 pl-9 pr-10 text-[14px] font-mono ${
                   showPin ? 'tracking-wider' : 'tracking-[0.25em]'
                 } bg-white dark:bg-black/30 border border-neutral-300 dark:border-white/[0.12] rounded-md text-neutral-900 dark:text-white placeholder:text-neutral-400 placeholder:tracking-normal placeholder:font-sans focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all`}
               />
               <button
                 type="button"
                 onClick={() => setShowPin(!showPin)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer rounded transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer rounded transition-colors"
                 tabIndex={-1}
                 title={showPin ? 'Hide PIN' : 'Show PIN'}
               >

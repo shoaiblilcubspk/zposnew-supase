@@ -64,3 +64,7 @@ export function getDriver(): ISqliteDriver {
 export function resetDriverForTesting(mockDriver?: ISqliteDriver): void {
   driverInstance = mockDriver || null;
 }
+
+export function resetDbForTesting(): void {
+  driverInstance = null;
+}

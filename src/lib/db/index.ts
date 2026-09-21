@@ -3,14 +3,20 @@
  * Authoritative single entry point for all database queries and transactions across platforms.
  */
 
-import { getDriver } from './driverFactory';
+import { getDriver, resetDriverForTesting as resetDriverInstance } from './driverFactory';
 import { ISqliteDriver, ISqliteTransaction, QueryResult, SqliteParams } from './types';
 import { runMigrations } from './migrationRunner';
 
 export * from './types';
 export * from './schemaConstants';
-export { detectPlatform } from './driverFactory';
+export { detectPlatform, resetDriverForTesting } from './driverFactory';
 export { runMigrations, getCurrentSchemaVersion } from './migrationRunner';
+
+export function resetDbForTesting(): void {
+  isInitialized = false;
+  initPromise = null;
+  resetDriverInstance();
+}
 
 let isInitialized = false;
 let initPromise: Promise<ISqliteDriver> | null = null;
