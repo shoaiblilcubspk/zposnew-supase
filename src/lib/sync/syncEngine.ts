@@ -201,18 +201,16 @@ export class SyncEngine {
     const peers = this.mesh.getAvailablePeers();
     if (peers.length === 0) return;
 
+    const db = await getDatabase();
+    const events = await db.query<SyncOutboxRecord>(
+      `SELECT * FROM sync_outbox WHERE is_synced = 0 ORDER BY sequence ASC LIMIT 50;`
+    );
+    if (events.length === 0) return;
+
     for (const peerId of peers) {
-      const knownSeq = await getInboxMaxSequence(peerId);
-      const events = await getUnsyncedOutboxEvents(this.currentDevice.deviceId, knownSeq, 50);
-      if (events.length === 0) continue;
-
-      const highestSeq = events[events.length - 1].sequence;
-      const remainingEvents = await getUnsyncedOutboxEvents(this.currentDevice.deviceId, highestSeq, 1);
-      const hasMore = remainingEvents.length > 0;
-
       this.mesh.sendToPeer(peerId, 'EVENT_BATCH', {
         batch: events,
-        hasMore,
+        hasMore: events.length >= 50,
       });
     }
   }
@@ -235,15 +233,13 @@ export class SyncEngine {
       try {
         const db = await getDatabase();
         const pRow = await db.queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM products;`);
-        if ((pRow?.count ?? 0) === 0 && !this.hasRequestedSnapshot) {
-          this.hasRequestedSnapshot = true;
+        if ((pRow?.count ?? 0) === 0) {
           for (const peerId of peers) {
             this.mesh.sendToPeer(peerId, 'SNAPSHOT_REQUEST', {});
             if (this.currentDevice) {
               entityReconciler.reconcileWithPeer(peerId, this.currentDevice.deviceId).catch(() => {});
             }
           }
-          return;
         }
       } catch {}
 
@@ -254,9 +250,7 @@ export class SyncEngine {
         }
       }
 
-      if (store.pendingOutboxCount > 0) {
-        await this.pushPendingEventsToPeers().catch(() => {});
-      }
+      await this.pushPendingEventsToPeers().catch(() => {});
     }
   }
 
