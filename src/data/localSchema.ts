@@ -336,6 +336,19 @@ export const LOCAL_SCHEMA_STATEMENTS: string[] = [
     ('11111111-1111-4111-8111-000000000004','11111111-1111-4111-8111-a00000000004','udhar','Udhar / Credit',1,'1970-01-01T00:00:00.000Z','1970-01-01T00:00:00.000Z');`,
 ];
 
+/**
+ * Idempotent ADD COLUMN migrations for EXISTING local databases. `CREATE TABLE IF NOT EXISTS`
+ * never alters an already-created table, so any column added after a device first synced must
+ * be applied here. Each statement is run with its error swallowed (a duplicate-column error on
+ * an already-migrated device is expected and harmless). Append new ALTERs here whenever a
+ * synced column is added — this keeps existing installs in lockstep with fresh clones.
+ */
+export const LOCAL_SCHEMA_MIGRATIONS: string[] = [
+  `ALTER TABLE expenses ADD COLUMN deleted_at TEXT`,
+  `ALTER TABLE purchase_records ADD COLUMN deleted_at TEXT`,
+  `ALTER TABLE bundle_items ADD COLUMN deleted_at TEXT`,
+];
+
 /** All synced table names (used by the pull side of the sync engine). */
 export const SYNCED_TABLES = [
   'store_settings', 'receipt_settings', 'categories', 'suppliers', 'products',

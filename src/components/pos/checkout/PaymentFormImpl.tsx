@@ -3,6 +3,7 @@ import { formatCurrency } from '../../../lib/currencies';
 import { SearchableSelect, RealIcon, CapsLockIndicator } from '../../../shared/ui';
 import { cn } from '../../../lib/utils';
 import { useCartStore, useSettingsStore } from '../../../stores';
+import { SplitPaymentSection } from './SplitPaymentSection';
 
 type AppSettings = ReturnType<typeof useSettingsStore.getState>['settings'];
 

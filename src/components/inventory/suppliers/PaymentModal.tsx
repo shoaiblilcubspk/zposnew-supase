@@ -101,9 +101,9 @@ export function PaymentModal({
             <div className="flex-1">
               <div className="flex items-center gap-1.5">
                 <p className="text-[11px] font-mono text-neutral-700 dark:text-neutral-300 uppercase">{'Manual Override'}</p>
-                <HelpTooltip content="Forces the system to accept irregular amounts (e.g., paying more than the outstanding debt). Logs this action as an admin correction." />
+                <HelpTooltip content="Turn on for custom payments or manual adjustments (e.g., advance payment or fixing old ledger). This will be recorded as an Admin correction in history." />
               </div>
-              <p className="text-[10px] text-neutral-500 font-mono mt-0.5">{'Admin amount correction — logged'}</p>
+              <p className="text-[10px] text-neutral-500 font-mono mt-0.5">{'Mark as Admin balance correction'}</p>
             </div>
             <ToggleSwitch checked={isPaymentManualOverride} onChange={setIsPaymentManualOverride} color="bg-primary" />
           </div>

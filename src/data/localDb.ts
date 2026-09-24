@@ -7,7 +7,7 @@
 
 import { createDriver } from '../lib/db/driverFactory';
 import type { ISqliteDriver, ISqliteTransaction, QueryResult, SqliteParams } from '../lib/db/types';
-import { LOCAL_SCHEMA_STATEMENTS } from './localSchema';
+import { LOCAL_SCHEMA_STATEMENTS, LOCAL_SCHEMA_MIGRATIONS } from './localSchema';
 
 const DB_NAME = 'zaynahs_cloud.sqlite';
 
@@ -28,6 +28,11 @@ export async function initLocalDb(): Promise<ISqliteDriver> {
     // Idempotent schema apply (CREATE TABLE IF NOT EXISTS ...).
     for (const stmt of LOCAL_SCHEMA_STATEMENTS) {
       await d.execute(stmt);
+    }
+    // Additive column migrations for existing DBs (CREATE TABLE IF NOT EXISTS won't alter an
+    // existing table). Duplicate-column errors on already-migrated devices are expected/ignored.
+    for (const stmt of LOCAL_SCHEMA_MIGRATIONS) {
+      try { await d.execute(stmt); } catch { /* column already exists — safe to ignore */ }
     }
     driver = d;
     return d;
