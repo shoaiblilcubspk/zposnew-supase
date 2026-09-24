@@ -4,10 +4,25 @@
  */
 
 import { getDatabase } from '../db';
-import { generateId } from '../localDb';
+import { generateId } from '../ids';
 
 // In-memory / browser blob cache
 const memoryImageCache = new Map<string, { data: Uint8Array; mimeType: string; url?: string }>();
+
+// Subscribers notified whenever a new image blob becomes locally available.
+// Lets UI (useProductImage) reactively re-resolve once an image download or save completes.
+const imageSavedListeners = new Set<(hash: string) => void>();
+
+export function onImageSaved(cb: (hash: string) => void): () => void {
+  imageSavedListeners.add(cb);
+  return () => imageSavedListeners.delete(cb);
+}
+
+function notifyImageSaved(hash: string): void {
+  imageSavedListeners.forEach((cb) => {
+    try { cb(hash); } catch {}
+  });
+}
 
 const IMAGE_IDB_NAME = 'zpos_image_blobs';
 const IMAGE_STORE_NAME = 'blobs';
@@ -107,6 +122,15 @@ export async function getImageUrl(hash: string): Promise<string | null> {
       memoryImageCache.set(hash, stored);
     }
   }
+  // Not local yet — pull from the Supabase Storage bucket (cloud-direct image sync).
+  if (!cached) {
+    const fetched = await downloadImageFromBucket(hash);
+    if (fetched) {
+      cached = fetched;
+      memoryImageCache.set(hash, fetched);
+      putStoredBlob(hash, fetched.data, fetched.mimeType).catch(() => {});
+    }
+  }
   if (cached) {
     if (!cached.url && typeof URL !== 'undefined' && typeof Blob !== 'undefined') {
       const blob = new Blob([cached.data as any], { type: cached.mimeType });
@@ -115,6 +139,40 @@ export async function getImageUrl(hash: string): Promise<string | null> {
     return cached.url || null;
   }
   return null;
+}
+
+const BUCKET = 'product-images';
+
+/** Upload a content-addressed image blob to Supabase Storage (best-effort, idempotent). */
+async function uploadImageToBucket(hash: string, data: Uint8Array, mimeType: string): Promise<void> {
+  try {
+    if (typeof Blob === 'undefined') return;
+    const { getSupabase } = await import('../../data');
+    const supabase = getSupabase();
+    await supabase.storage
+      .from(BUCKET)
+      .upload(`${hash}.webp`, new Blob([data as any], { type: mimeType }), {
+        upsert: true,
+        contentType: mimeType,
+        cacheControl: '31536000',
+      });
+  } catch {
+    /* offline / transient — the blob is safe locally and can re-upload later */
+  }
+}
+
+/** Download a content-addressed image blob from Supabase Storage. */
+async function downloadImageFromBucket(hash: string): Promise<{ data: Uint8Array; mimeType: string } | null> {
+  try {
+    const { getSupabase } = await import('../../data');
+    const supabase = getSupabase();
+    const { data: blob, error } = await supabase.storage.from(BUCKET).download(`${hash}.webp`);
+    if (error || !blob) return null;
+    const buf = new Uint8Array(await blob.arrayBuffer());
+    return { data: buf, mimeType: (blob as any).type || 'image/webp' };
+  } catch {
+    return null;
+  }
 }
 
 export async function saveImage(
@@ -135,6 +193,10 @@ export async function saveImage(
 
   memoryImageCache.set(hash, { data, mimeType, url });
   await putStoredBlob(hash, data, mimeType);
+  notifyImageSaved(hash);
+
+  // Upload to the Supabase Storage bucket so other devices can fetch it (cloud-direct sync).
+  uploadImageToBucket(hash, data, mimeType).catch(() => {});
 
   // If productId provided and exists in products table, register in product_images
   if (productId) {
@@ -166,6 +228,102 @@ export async function deleteImage(hash: string): Promise<void> {
     const db = await getDatabase();
     await db.execute(`DELETE FROM product_images WHERE image_hash = ?;`, [hash]);
   } catch {}
+}
+
+/**
+ * Orphan cleanup for a bundle that FAILED to save (§1.5.5). The image was uploaded first;
+ * if the product write rolled back, remove the now-orphaned blob (local + IndexedDB + bucket)
+ * and any product_images link — but ONLY if no active product still references the hash
+ * (content-addressed images can be shared, so a referenced hash is never deleted).
+ */
+export async function deleteOrphanImage(hash: string): Promise<void> {
+  if (!hash || !isImageHash(hash)) return;
+  try {
+    const { localQueryOne } = await import('../../data');
+    const ref = await localQueryOne<{ one: number }>(
+      `SELECT 1 AS one FROM products WHERE image_hash = ? AND active = 1 LIMIT 1;`,
+      [hash]
+    );
+    if (ref) return; // still referenced — not an orphan, keep it.
+  } catch {
+    return; // if we cannot verify, be conservative and do NOT delete.
+  }
+
+  const cached = memoryImageCache.get(hash);
+  if (cached?.url && typeof URL !== 'undefined' && URL.revokeObjectURL) URL.revokeObjectURL(cached.url);
+  memoryImageCache.delete(hash);
+  try {
+    const db = await openImageIdb();
+    const tx = db.transaction(IMAGE_STORE_NAME, 'readwrite');
+    tx.objectStore(IMAGE_STORE_NAME).delete(hash);
+  } catch {}
+  try {
+    const db = await getDatabase();
+    await db.execute(`DELETE FROM product_images WHERE image_hash = ?;`, [hash]);
+  } catch {}
+  try {
+    const { getSupabase } = await import('../../data');
+    await getSupabase().storage.from(BUCKET).remove([`${hash}.webp`]);
+  } catch {}
+}
+
+/**
+ * Decode a base64 data URI into raw bytes + mime type.
+ * Returns null if the string is not a data URI.
+ */
+function decodeDataUri(value: string): { bytes: Uint8Array; mimeType: string } | null {
+  const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(value);
+  if (!match) return null;
+  const mimeType = match[1] || 'image/webp';
+  const isBase64 = Boolean(match[2]);
+  const payload = match[3] || '';
+  try {
+    if (isBase64) {
+      if (typeof Buffer !== 'undefined') {
+        return { bytes: new Uint8Array(Buffer.from(payload, 'base64')), mimeType };
+      }
+      const binary = atob(payload);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return { bytes, mimeType };
+    }
+    // URL-encoded (non-base64) data URI
+    const decoded = decodeURIComponent(payload);
+    const bytes = new Uint8Array(decoded.length);
+    for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+    return { bytes, mimeType };
+  } catch {
+    return null;
+  }
+}
+
+/** True if the value is a 64-char lowercase hex SHA-256 hash. */
+export function isImageHash(value: string): boolean {
+  return /^[0-9a-f]{64}$/.test(value);
+}
+
+/**
+ * Normalize any product image value into a content-addressed hash.
+ * - undefined/empty  -> undefined
+ * - existing hash    -> returned unchanged
+ * - base64 data URI  -> decoded, stored via saveImage(), returns SHA-256 hash
+ * - other (http/etc) -> returned unchanged (backward-compat)
+ */
+export async function resolveImageToHash(
+  value: string | undefined | null,
+  productId?: string
+): Promise<string | undefined> {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (isImageHash(trimmed)) return trimmed;
+  if (trimmed.startsWith('data:')) {
+    const decoded = decodeDataUri(trimmed);
+    if (!decoded) return trimmed;
+    const { hash } = await saveImage(decoded.bytes, decoded.mimeType, productId);
+    return hash;
+  }
+  return trimmed;
 }
 
 export async function listMissingImages(): Promise<string[]> {

@@ -10,6 +10,16 @@ const IDB_NAME = 'zaynahs_pos_sqlite_store';
 const IDB_STORE = 'sqlite_blobs';
 const IDB_KEY = 'active_database';
 
+/**
+ * Persistence key per database file. The legacy DB keeps the original 'active_database'
+ * key (so existing data is untouched); any other db name (e.g. the Supabase-mirror
+ * 'zaynahs_cloud.sqlite') gets its own key so multiple driver instances can coexist
+ * without clobbering each other during the incremental migration.
+ */
+function idbKeyFor(dbName: string): string {
+  return dbName === 'zaynahs_pos.sqlite' ? IDB_KEY : `db_${dbName}`;
+}
+
 async function initSqlJsEngine(): Promise<SqlJsStatic> {
   const isNode = typeof window === 'undefined';
   let wasmBinary: ArrayBuffer | undefined;
@@ -42,13 +52,16 @@ export class WasmSqliteDriver implements ISqliteDriver {
   private sqlJs: SqlJsStatic | null = null;
   private _isOpen = false;
   private saveDebounceTimer: any = null;
+  private storageKey: string = IDB_KEY;
 
   get isOpen(): boolean {
     return this._isOpen && this.db !== null;
   }
 
-  async open(_dbName = 'zaynahs_pos.sqlite'): Promise<void> {
+  async open(dbName = 'zaynahs_pos.sqlite'): Promise<void> {
     if (this._isOpen && this.db) return;
+
+    this.storageKey = idbKeyFor(dbName);
 
     if (!this.sqlJs) {
       this.sqlJs = await initSqlJsEngine();
@@ -215,7 +228,7 @@ export class WasmSqliteDriver implements ISqliteDriver {
         try {
           const tx = db.transaction(IDB_STORE, 'readonly');
           const store = tx.objectStore(IDB_STORE);
-          const getReq = store.get(IDB_KEY);
+          const getReq = store.get(this.storageKey);
           getReq.onsuccess = () => {
             const res = getReq.result || null;
             db.close();
@@ -247,7 +260,7 @@ export class WasmSqliteDriver implements ISqliteDriver {
         try {
           const tx = db.transaction(IDB_STORE, 'readwrite');
           const store = tx.objectStore(IDB_STORE);
-          store.put(binary, IDB_KEY);
+          store.put(binary, this.storageKey);
           tx.oncomplete = () => {
             db.close();
             resolve();

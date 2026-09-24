@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { useUsersStore, useProductsStore, useSettingsStore } from '../stores';
-import { localDb } from '../lib/localDb';
 import { seedPaymentModes, seedMissingBarcodes } from '../lib/services';
 import { useAppLoadData } from './useAppLoadData';
 // Realtime disabled — single-tenant POS, saves bandwidth. Data loads on page load / manual refresh.
@@ -72,9 +71,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       seedMissingBarcodes()
         .then((res) => {
           if (res && res.updated.length > 0) {
-            localDb.products.toArray()
-              .then((all) => useProductsStore.getState().setProducts(all as any))
-              .catch(() => {});
+            import('../lib/services').then(({ productsService }) =>
+              productsService.getAll()
+                .then((all) => useProductsStore.getState().setProducts(all as any))
+                .catch(() => {})
+            );
           }
         })
         .catch(() => {});

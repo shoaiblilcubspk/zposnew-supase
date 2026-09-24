@@ -1,6 +1,5 @@
 import { PurchaseRecord } from '../../../types';
 import { purchaseRecordsService, productsService, generateId } from '../../../lib/services';
-import { localDb } from '../../../lib/localDb';
 import { sonner } from '../../../lib/sonner';
 import { useProductsStore, useInventoryStore } from '../../../stores';
 import { DetailCtx } from './detailContext';

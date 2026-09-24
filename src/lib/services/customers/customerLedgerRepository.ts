@@ -1,13 +1,12 @@
 /**
- * Customer Ledger Repository
- * Authoritative append-only customer debit & credit ledger in local SQLite.
+ * Customer Ledger Repository — Supabase-only cloud-direct (Phase 3: Atomic Action Bundle).
+ * A customer payment/refund is ONE atomic bundle (AGENTS.md §1.5): customers.current_balance
+ * (non-additive) + append-only customer_ledger entry + append-only payments row. A failure
+ * saves nothing — the balance can never drift from the ledger. No P2P, no Dexie.
  */
 
-import { getDatabase } from '../../db';
+import { localQuery, localQueryOne, atomicWrite, newOperationId, type AtomicOp } from '../../../data';
 import { CustomerLedger } from '../../../types';
-import { commitLocalTransaction } from '../../events';
-import { getDeviceId } from '../../mesh/deviceIdentity';
-import { localDb, generateId } from '../../localDb';
 
 export interface CustomerPaymentInput {
   customerId: string;
@@ -16,98 +15,60 @@ export interface CustomerPaymentInput {
   reference?: string;
   note?: string;
   createdBy?: string;
+  operationId?: string;
+}
+
+async function getCustomerBalance(customerId: string): Promise<number> {
+  const row = await localQueryOne<{ current_balance: number }>(
+    `SELECT current_balance FROM customers WHERE id = ?;`,
+    [customerId]
+  );
+  return row ? Number(row.current_balance) || 0 : 0;
 }
 
 export async function receiveCustomerPayment(
   params: CustomerPaymentInput
 ): Promise<{ balanceBefore: number; balanceAfter: number; ledgerId: string }> {
-  const deviceId = await getDeviceId();
-  const now = Date.now();
-  const ledgerId = generateId();
   const paymentAmount = Number(params.amount) || 0;
+  const paymentMode = params.paymentMode || 'cash';
 
-  let balanceBefore = 0;
-  let balanceAfter = 0;
+  const balanceBefore = await getCustomerBalance(params.customerId);
+  const balanceAfter = balanceBefore - paymentAmount;
 
-  await commitLocalTransaction({
-    entityType: 'CUSTOMER_LEDGER',
-    entityId: ledgerId,
-    operation: 'CREATE',
-    eventType: 'CUSTOMER_PAYMENT',
-    deviceId,
-    userId: params.createdBy || 'cashier',
-    payload: {
-      id: ledgerId,
-      customerId: params.customerId,
-      type: 'payment',
-      amount: paymentAmount,
-      paymentMode: params.paymentMode || 'cash',
-      reference: params.reference || null,
-      note: params.note || null,
-      timestamp: now,
+  const ops: AtomicOp[] = [
+    // 1. Update the customer's running balance (non-additive field).
+    { table: 'customers', op: 'update', id: params.customerId, patch: { current_balance: balanceAfter } },
+    // 2. Append the credit entry to the immutable ledger.
+    {
+      table: 'customer_ledger', op: 'insert',
+      row: {
+        customer_id: params.customerId,
+        type: 'payment',
+        amount: paymentAmount,
+        sale_id: null,
+        payment_mode: paymentMode,
+        notes: params.note || params.reference || 'Payment Received',
+        user_id: params.createdBy || 'cashier',
+      },
     },
-    execute: async (tx) => {
-      // 1. Fetch current customer balance
-      const custRow = await tx.queryOne<{ current_balance: number }>(
-        `SELECT current_balance FROM customers WHERE id = ?;`,
-        [params.customerId]
-      );
-      balanceBefore = custRow ? Number(custRow.current_balance) : 0;
-      balanceAfter = balanceBefore - paymentAmount;
-
-      // 2. Update customer balance in SQLite
-      await tx.execute(
-        `UPDATE customers SET current_balance = ?, updated_at = ? WHERE id = ?;`,
-        [balanceAfter, now, params.customerId]
-      );
-
-      // 3. Insert customer_ledger credit row
-      await tx.execute(
-        `INSERT INTO customer_ledger (
-          id, customer_id, type, amount, balance_after, sale_id, payment_mode, notes, created_at
-        ) VALUES (?, ?, 'payment', ?, ?, NULL, ?, ?, ?);`,
-        [
-          ledgerId,
-          params.customerId,
-          paymentAmount,
-          balanceAfter,
-          params.paymentMode || 'cash',
-          params.note || params.reference || 'Payment Received',
-          now,
-        ]
-      );
-
-      // 4. Insert into payments table (cash inflow to drawer/wallet)
-      await tx.execute(
-        `INSERT INTO payments (id, sale_id, mode_id, amount, reference, created_at)
-         VALUES (?, NULL, ?, ?, ?, ?);`,
-        [
-          generateId(),
-          params.paymentMode || 'cash',
-          paymentAmount,
-          `Customer Payment: ${params.customerId}`,
-          now,
-        ]
-      );
+    // 3. Record the cash inflow in the payments ledger (append-only).
+    {
+      table: 'payments', op: 'insert',
+      row: {
+        sale_id: null,
+        mode_code: paymentMode,
+        amount: paymentAmount,
+        reference: `Customer Payment: ${params.customerId}`,
+        user_id: params.createdBy || 'cashier',
+      },
     },
+  ];
+
+  const result = await atomicWrite(ops, {
+    operation_id: params.operationId ?? newOperationId(),
+    action: 'add_payment',
   });
-
-  // Keep localDb in sync
-  try {
-    await localDb.customers.update(params.customerId, { balance: balanceAfter });
-    await localDb.customerLedger.add({
-      id: ledgerId,
-      customerId: params.customerId,
-      type: 'payment_received',
-      debit: 0,
-      credit: paymentAmount,
-      balanceAfter,
-      reference: params.reference,
-      note: params.note,
-      createdBy: params.createdBy,
-      createdAt: new Date(now),
-    });
-  } catch {}
+  const ledgerId = String(result.rows[1].payload.id);
 
   return { balanceBefore, balanceAfter, ledgerId };
 }
@@ -120,109 +81,76 @@ export async function refundCustomerPayment(params: {
   reference?: string;
   note?: string;
   createdBy?: string;
+  operationId?: string;
 }): Promise<{ balanceBefore: number; balanceAfter: number; ledgerId: string }> {
-  const deviceId = await getDeviceId();
-  const now = Date.now();
-  const ledgerId = generateId();
   const refundAmount = Number(params.amount) || 0;
+  const paymentMode = params.paymentMode || 'cash';
 
-  let balanceBefore = 0;
-  let balanceAfter = 0;
+  const balanceBefore = await getCustomerBalance(params.customerId);
+  const balanceAfter = balanceBefore + refundAmount;
 
-  await commitLocalTransaction({
-    entityType: 'CUSTOMER_LEDGER',
-    entityId: ledgerId,
-    operation: 'CREATE',
-    eventType: 'CUSTOMER_PAYMENT',
-    deviceId,
-    userId: params.createdBy || 'cashier',
-    payload: {
-      id: ledgerId,
-      customerId: params.customerId,
-      type: 'refund',
-      amount: refundAmount,
-      paymentMode: params.paymentMode || 'cash',
-      reference: params.reference || null,
-      note: params.note || null,
-      timestamp: now,
+  const ops: AtomicOp[] = [
+    // 1. Update the customer's running balance (non-additive field).
+    { table: 'customers', op: 'update', id: params.customerId, patch: { current_balance: balanceAfter } },
+    // 2. Append the refund entry to the immutable ledger.
+    {
+      table: 'customer_ledger', op: 'insert',
+      row: {
+        customer_id: params.customerId,
+        type: 'refund',
+        amount: refundAmount,
+        sale_id: null,
+        payment_mode: paymentMode,
+        notes: params.note || params.reference || 'Customer Refund',
+        user_id: params.createdBy || 'cashier',
+      },
     },
-    execute: async (tx) => {
-      const custRow = await tx.queryOne<{ current_balance: number }>(
-        `SELECT current_balance FROM customers WHERE id = ?;`,
-        [params.customerId]
-      );
-      balanceBefore = custRow ? Number(custRow.current_balance) : 0;
-      balanceAfter = balanceBefore + refundAmount;
-
-      await tx.execute(
-        `UPDATE customers SET current_balance = ?, updated_at = ? WHERE id = ?;`,
-        [balanceAfter, now, params.customerId]
-      );
-
-      await tx.execute(
-        `INSERT INTO customer_ledger (
-          id, customer_id, type, amount, balance_after, sale_id, payment_mode, notes, created_at
-        ) VALUES (?, ?, 'refund', ?, ?, NULL, ?, ?, ?);`,
-        [
-          ledgerId,
-          params.customerId,
-          refundAmount,
-          balanceAfter,
-          params.paymentMode || 'cash',
-          params.note || params.reference || 'Customer Refund',
-          now,
-        ]
-      );
-
-      await tx.execute(
-        `INSERT INTO payments (id, sale_id, mode_id, amount, reference, created_at)
-         VALUES (?, NULL, ?, ?, ?, ?);`,
-        [
-          generateId(),
-          params.paymentMode || 'cash',
-          -refundAmount,
-          `Customer Refund: ${params.customerId}`,
-          now,
-        ]
-      );
+    // 3. Record the cash outflow in the payments ledger (append-only).
+    {
+      table: 'payments', op: 'insert',
+      row: {
+        sale_id: null,
+        mode_code: paymentMode,
+        amount: -refundAmount,
+        reference: `Customer Refund: ${params.customerId}`,
+        user_id: params.createdBy || 'cashier',
+      },
     },
+  ];
+
+  const result = await atomicWrite(ops, {
+    operation_id: params.operationId ?? newOperationId(),
+    action: 'customer_refund',
   });
-
-  try {
-    await localDb.customers.update(params.customerId, { balance: balanceAfter });
-    await localDb.customerLedger.add({
-      id: ledgerId,
-      customerId: params.customerId,
-      type: 'refund',
-      debit: refundAmount,
-      credit: 0,
-      balanceAfter,
-      reference: params.reference,
-      note: params.note,
-      createdBy: params.createdBy,
-      createdAt: new Date(now),
-    });
-  } catch {}
+  const ledgerId = String(result.rows[1].payload.id);
 
   return { balanceBefore, balanceAfter, ledgerId };
 }
 
 export async function getCustomerLedgerHistory(customerId: string): Promise<CustomerLedger[]> {
-  const db = await getDatabase();
-  const rows = await db.query(
+  const rows = await localQuery<any>(
     `SELECT * FROM customer_ledger WHERE customer_id = ? ORDER BY created_at ASC;`,
     [customerId]
   );
-  return rows.map((r: any) => ({
-    id: r.id,
-    customerId: r.customer_id,
-    saleId: r.sale_id || undefined,
-    type: r.type,
-    debit: r.type === 'sale' ? Number(r.amount) : 0,
-    credit: r.type === 'payment' || r.type === 'refund' ? Number(r.amount) : 0,
-    balanceAfter: Number(r.balance_after),
-    reference: r.payment_mode || undefined,
-    note: r.notes || undefined,
-    createdAt: new Date(Number(r.created_at)),
-  }));
+
+  // balance_after is not stored on the immutable ledger; compute the running balance.
+  let running = 0;
+  return rows.map((r: any) => {
+    const amount = Number(r.amount) || 0;
+    const debit = r.type === 'sale' ? amount : 0;
+    const credit = r.type === 'payment' || r.type === 'refund' ? amount : 0;
+    running += debit - credit;
+    return {
+      id: r.id,
+      customerId: r.customer_id,
+      saleId: r.sale_id || undefined,
+      type: r.type,
+      debit,
+      credit,
+      balanceAfter: running,
+      reference: r.payment_mode || undefined,
+      note: r.notes || undefined,
+      createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+    };
+  });
 }

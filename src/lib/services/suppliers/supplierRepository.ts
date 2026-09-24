@@ -1,13 +1,11 @@
 /**
- * Local SQLite Supplier Repository
- * Authoritative supplier directory query and mutation engine with outbox replication.
+ * Supplier repository — Supabase-only cloud-direct (Phase 10d).
+ * Reads from the local mirror, writes through the sync queue. No P2P, no Dexie.
+ * Rows are snake_case (Rule 3); mapped to the camelCase `Supplier` domain type here.
  */
 
-import { getDatabase } from '../../db';
+import { localQuery, localQueryOne, insertRow, updateRow, softDeleteRow } from '../../../data';
 import { Supplier } from '../../../types';
-import { commitLocalTransaction } from '../../events';
-import { getDeviceId } from '../../mesh/deviceIdentity';
-import { localDb, generateId } from '../../localDb';
 
 export function mapSqliteSupplier(row: any): Supplier {
   return {
@@ -17,178 +15,73 @@ export function mapSqliteSupplier(row: any): Supplier {
     phone: row.phone || '',
     address: row.address || '',
     openingBalance: Number(row.balance) || 0,
-    createdAt: new Date(Number(row.updated_at) || Date.now()),
-    updatedAt: new Date(Number(row.updated_at) || Date.now()),
+    createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+    updatedAt: row.updated_at ? new Date(row.updated_at) : undefined,
   };
 }
 
 export async function getAllSuppliers(): Promise<Supplier[]> {
-  const db = await getDatabase();
-  const rows = await db.query(
-    `SELECT * FROM suppliers WHERE active = 1 ORDER BY name ASC;`
-  );
+  const rows = await localQuery<any>(`SELECT * FROM suppliers WHERE active = 1 ORDER BY name ASC;`);
   return rows.map(mapSqliteSupplier);
 }
 
 export async function getSupplierById(id: string): Promise<Supplier | null> {
-  const db = await getDatabase();
-  const row = await db.queryOne(`SELECT * FROM suppliers WHERE id = ?;`, [id]);
+  const row = await localQueryOne<any>(`SELECT * FROM suppliers WHERE id = ?;`, [id]);
   return row ? mapSqliteSupplier(row) : null;
 }
 
 export async function createSupplier(
   supplier: Omit<Supplier, 'id' | 'createdAt'>,
-  userId = 'system'
+  _userId = 'system'
 ): Promise<Supplier> {
-  const deviceId = await getDeviceId();
-  const db = await getDatabase();
-  const now = Date.now();
   const balance = Number(supplier.openingBalance) || 0;
 
-  // ─── Phone-based deduplication ─────────────────────────────────────────────
+  // Phone-based dedup, then name-based dedup (suppliers without phone).
   if (supplier.phone && supplier.phone.trim()) {
-    const existing = await db.queryOne<any>(
+    const existing = await localQueryOne<any>(
       `SELECT * FROM suppliers WHERE phone = ? AND active = 1 LIMIT 1;`,
       [supplier.phone.trim()]
     );
     if (existing) return mapSqliteSupplier(existing);
   }
-  // ─── Name-based deduplication (for suppliers without phone) ────────────────
   if (supplier.name && supplier.name.trim()) {
-    const existing = await db.queryOne<any>(
+    const existing = await localQueryOne<any>(
       `SELECT * FROM suppliers WHERE LOWER(name) = LOWER(?) AND active = 1 LIMIT 1;`,
       [supplier.name.trim()]
     );
     if (existing) return mapSqliteSupplier(existing);
   }
 
-  const id = generateId();
-
-  const newSupplier: Supplier = {
-    ...supplier,
-    id,
-    createdAt: new Date(now),
-    updatedAt: new Date(now),
-  };
-
-  await commitLocalTransaction({
-    entityType: 'SUPPLIER',
-    entityId: id,
-    operation: 'CREATE',
-    eventType: 'SUPPLIER_CREATED',
-    deviceId,
-    userId,
-    payload: {
-      id,
-      name: newSupplier.name,
-      phone: newSupplier.phone || null,
-      email: newSupplier.email || null,
-      address: newSupplier.address || null,
-      balance,
-      active: 1,
-      updatedAt: now,
-    },
-    execute: async (tx) => {
-      await tx.execute(
-        `INSERT INTO suppliers (id, name, phone, email, address, balance, active, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, 1, ?);`,
-        [
-          id,
-          newSupplier.name,
-          newSupplier.phone || null,
-          newSupplier.email || null,
-          newSupplier.address || null,
-          balance,
-          now,
-        ]
-      );
-    },
+  const row = await insertRow('suppliers', {
+    name: supplier.name,
+    phone: supplier.phone || null,
+    email: supplier.email || null,
+    address: supplier.address || null,
+    balance,
+    active: 1,
   });
-
-  try {
-    await localDb.suppliers.put(newSupplier);
-  } catch {}
-
-  return newSupplier;
+  return mapSqliteSupplier(row);
 }
 
 export async function updateSupplier(
   id: string,
   updates: Partial<Supplier>,
-  userId = 'system'
+  _userId = 'system'
 ): Promise<Supplier> {
-  const deviceId = await getDeviceId();
   const existing = await getSupplierById(id);
   if (!existing) throw new Error(`Supplier ${id} not found.`);
 
-  const now = Date.now();
-  const updated: Supplier = {
-    ...existing,
-    ...updates,
-    id,
-    updatedAt: new Date(now),
-  };
+  const patch: Record<string, any> = {};
+  if (updates.name !== undefined) patch.name = updates.name;
+  if (updates.phone !== undefined) patch.phone = updates.phone || null;
+  if (updates.email !== undefined) patch.email = updates.email || null;
+  if (updates.address !== undefined) patch.address = updates.address || null;
+  if (updates.openingBalance !== undefined) patch.balance = Number(updates.openingBalance) || 0;
+  if (Object.keys(patch).length > 0) await updateRow('suppliers', id, patch);
 
-  await commitLocalTransaction({
-    entityType: 'SUPPLIER',
-    entityId: id,
-    operation: 'UPDATE',
-    eventType: 'SUPPLIER_UPDATED',
-    deviceId,
-    userId,
-    payload: {
-      id,
-      name: updated.name,
-      phone: updated.phone || null,
-      email: updated.email || null,
-      address: updated.address || null,
-      updatedAt: now,
-    },
-    execute: async (tx) => {
-      await tx.execute(
-        `UPDATE suppliers SET name = ?, phone = ?, email = ?, address = ?, updated_at = ? WHERE id = ?;`,
-        [
-          updated.name,
-          updated.phone || null,
-          updated.email || null,
-          updated.address || null,
-          now,
-          id,
-        ]
-      );
-    },
-  });
-
-  try {
-    await localDb.suppliers.put(updated);
-  } catch {}
-
-  return updated;
+  return { ...existing, ...updates, id, updatedAt: new Date() };
 }
 
-export async function deleteSupplier(id: string, userId = 'system'): Promise<void> {
-  const deviceId = await getDeviceId();
-  const now = Date.now();
-
-  await commitLocalTransaction({
-    entityType: 'SUPPLIER',
-    entityId: id,
-    operation: 'DELETE',
-    eventType: 'SUPPLIER_DELETED',
-    deviceId,
-    userId,
-    payload: { id, deletedAt: now },
-    execute: async (tx) => {
-      await tx.execute(`UPDATE suppliers SET active = 0, updated_at = ? WHERE id = ?;`, [now, id]);
-      await tx.execute(
-        `INSERT OR REPLACE INTO tombstones (entity_type, entity_id, deleted_at, deleted_by)
-         VALUES ('SUPPLIER', ?, ?, ?);`,
-        [id, now, userId]
-      );
-    },
-  });
-
-  try {
-    await localDb.suppliers.delete(id);
-  } catch {}
+export async function deleteSupplier(id: string, _userId = 'system'): Promise<void> {
+  await softDeleteRow('suppliers', id, 'active');
 }

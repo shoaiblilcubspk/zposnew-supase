@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
 // ZERO-CACHE MANDATE: Wipe all service workers & CacheStorage.
-// Local SQLite & Native P2P are the sole authoritative local sources of truth.
+// Local SQLite mirror and Supabase cloud are the authoritative sources of truth.
 if (typeof window !== 'undefined') {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then((registrations) => {

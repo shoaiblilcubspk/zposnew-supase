@@ -1,5 +1,7 @@
+import { useRef } from 'react';
 import { sonner } from '../../../lib/sonner';
-import { useProductsStore, useInventoryStore } from '../../../stores';
+import { useProductsStore } from '../../../stores';
+import { newOperationId } from '../../../data';
 import { Product } from '../../../types';
 import type { ProductFormData } from './useProductForm';
 
@@ -17,6 +19,7 @@ interface UseProductSubmitArgs {
   setVariants: React.Dispatch<React.SetStateAction<any[]>>;
   setVariantData: React.Dispatch<React.SetStateAction<any[]>>;
   setModifiers: React.Dispatch<React.SetStateAction<any[]>>;
+  setProductAddons: React.Dispatch<React.SetStateAction<any[]>>;
   onClose: () => void;
 }
 
@@ -33,8 +36,13 @@ export function useProductSubmit({
   setVariants,
   setVariantData,
   setModifiers,
+  setProductAddons,
   onClose,
 }: UseProductSubmitArgs) {
+  // One operation_id per user action (§1.5.2): generated once at submit start, REUSED on every
+  // retry, and only reset after a successful save or discard. Guarantees an idempotent replay.
+  const operationIdRef = useRef<string | null>(null);
+
   const handleSubmit = async () => {
     const role = appCurrentUser?.role;
     if (role === 'cashier') {
@@ -109,29 +117,21 @@ export function useProductSubmit({
     try {
       const { productsService } = await import('../../../lib/services');
 
+      // Stable operation_id for this submit; kept across retries until success/discard.
+      if (!operationIdRef.current) operationIdRef.current = newOperationId();
+      const operation_id = operationIdRef.current;
+
       if (product) {
-        const updated = await productsService.update(productData.id, productData);
+        const updated = await productsService.update(productData.id, productData, appCurrentUser?.name, operation_id);
         useProductsStore.getState().updateProduct({ ...productData, ...updated });
       } else {
-        if (formData.supplier.trim()) {
-          const { suppliersService } = await import('../../../lib/services');
-          const existingSupplier = appSuppliers.find(
-            s => s.name.toLowerCase() === formData.supplier.trim().toLowerCase()
-          );
-
-          if (!existingSupplier) {
-            const newSupp = await suppliersService.create({
-              name: formData.supplier.trim(),
-              email: '', phone: '', address: '', businessType: 'General',
-              paymentTerms: '', openingBalance: 0, rating: 0
-            });
-            useInventoryStore.getState().setSuppliers([...appSuppliers, newSupp]);
-          }
-        }
-
-        const newProduct = await productsService.create(productData);
+        // Supplier is resolved-or-created INSIDE the create_product bundle (no separate write).
+        const newProduct = await productsService.create(productData, appCurrentUser?.name, operation_id);
         useProductsStore.getState().addProduct({ ...newProduct, variantData: productData.variantData });
       }
+
+      // Success -> release the operation_id so the next action gets a fresh one.
+      operationIdRef.current = null;
 
       sonner.success(product ? 'Product updated successfully' : 'Product added successfully');
 

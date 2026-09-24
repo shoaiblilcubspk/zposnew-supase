@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { ArrowUpRight, ArrowDownLeft, Ban } from 'lucide-react';
-import { localDb } from '../../../lib/localDb';
 import { getSaleById } from '../../../lib/services/sales/salesRepository';
 import { sonner } from '../../../lib/sonner';
 
@@ -130,7 +129,7 @@ export function useProductDetailHistory({
     const isRetailTransaction = h.label?.includes('Sale') || h.label?.includes('Return');
 
     if (isRetailTransaction && h.fullReference) {
-      const sale = (await getSaleById(h.fullReference)) || (await localDb.sales.get(h.fullReference));
+      const sale = await getSaleById(h.fullReference);
       if (!sale) {
         sonner.error("This invoice has been deleted.");
         return;

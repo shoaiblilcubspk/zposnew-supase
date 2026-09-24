@@ -1,9 +1,8 @@
-import { getDatabase, TABLES } from '../db';
-import { commitLocalTransaction } from '../events';
-import { generateId } from '../localDb';
+import { atomicWrite, newOperationId, type AtomicOp } from '../../data';
+import { safeRandomUUID } from '../crypto/uuid';
 import { Bundle } from '../../types';
 
-/** Create a new bundle with its items in SQLite + P2P outbox */
+/** Create a new bundle + its items as ONE atomic bundle (§1.5). */
 export async function createBundle(data: {
   name: string;
   description?: string;
@@ -14,65 +13,38 @@ export async function createBundle(data: {
   overridePrice?: number;
   image?: string | null;
 }): Promise<Bundle> {
-  const id = generateId();
-  const now = Date.now();
+  const id = safeRandomUUID();
+  const now = new Date();
 
-  const itemRows = (data.items || []).map(item => ({
-    id: generateId(),
+  const itemRows = (data.items || []).map((item) => ({
+    id: safeRandomUUID(),
     bundleId: id,
     productId: item.productId,
     quantity: item.quantity,
   }));
 
-  const db = await getDatabase();
-
-  await db.transaction(async tx => {
-    await tx.execute(
-      `INSERT INTO ${TABLES.BUNDLES} (
-        id, name, description, discount_value, discount_type,
-        override_price, hide_item_prices, active, image, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?);`,
-      [
+  const ops: AtomicOp[] = [
+    {
+      table: 'bundles', op: 'insert',
+      row: {
         id,
-        data.name.trim(),
-        data.description || '',
-        data.discountValue,
-        data.discountType,
-        data.overridePrice ?? null,
-        data.hideItemPrices ? 1 : 0,
-        data.image || null,
-        now,
-        now,
-      ]
-    );
-
-    for (const item of itemRows) {
-      await tx.execute(
-        `INSERT INTO ${TABLES.BUNDLE_ITEMS} (id, bundle_id, product_id, quantity) VALUES (?, ?, ?, ?);`,
-        [item.id, id, item.productId, item.quantity]
-      );
-    }
-  });
-
-  await commitLocalTransaction({
-    entityType: 'BUNDLE',
-    entityId: id,
-    eventType: 'BUNDLE_CREATED',
-    payload: {
-      id,
-      name: data.name.trim(),
-      description: data.description || '',
-      discountValue: data.discountValue,
-      discountType: data.discountType,
-      overridePrice: data.overridePrice ?? null,
-      hideItemPrices: data.hideItemPrices || false,
-      active: true,
-      image: data.image || null,
-      items: itemRows,
-      createdAt: now,
-      updatedAt: now,
+        name: data.name.trim(),
+        description: data.description || '',
+        discount_value: data.discountValue,
+        discount_type: data.discountType,
+        override_price: data.overridePrice ?? null,
+        hide_item_prices: data.hideItemPrices ? 1 : 0,
+        active: 1,
+        image: data.image || null,
+      },
     },
-  });
+    ...itemRows.map((item): AtomicOp => ({
+      table: 'bundle_items', op: 'insert',
+      row: { id: item.id, bundle_id: id, product_id: item.productId, quantity: item.quantity },
+    })),
+  ];
+
+  await atomicWrite(ops, { operation_id: newOperationId(), action: 'create_bundle_deal' });
 
   return {
     id,
@@ -84,8 +56,8 @@ export async function createBundle(data: {
     hideItemPrices: data.hideItemPrices || false,
     active: true,
     image: data.image || undefined,
-    items: itemRows.map(r => ({ id: r.id, bundleId: id, productId: r.productId, quantity: r.quantity })),
-    createdAt: new Date(now),
-    updatedAt: new Date(now),
+    items: itemRows.map((r) => ({ id: r.id, bundleId: id, productId: r.productId, quantity: r.quantity })),
+    createdAt: now,
+    updatedAt: now,
   };
 }

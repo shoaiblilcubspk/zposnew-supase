@@ -6,7 +6,7 @@
 
 import { supabase } from '../supabase';
 import { createEncryptedBackup } from './backupEngine';
-import { getDeviceProfile } from '../mesh/deviceIdentity';
+import { getDeviceProfile } from '../deviceIdentity';
 import JSZip from 'jszip';
 import { getDatabase } from '../db';
 import { getImageData } from '../media/localImageStore';
@@ -106,7 +106,7 @@ export async function uploadDatabaseToCloud(password?: string): Promise<{
 
     if (error) {
       const errMsg = error.message.includes('Bucket not found')
-        ? `Supabase bucket "${BUCKET_NAME}" not found. Please create it in Supabase dashboard (see docs/SUPABASE_SETUP.md).`
+        ? `Supabase bucket "${BUCKET_NAME}" not found. Please verify it in Supabase (see supabase/README.md).`
         : error.message;
       saveCloudBackupConfig({
         lastBackupStatus: 'failed',

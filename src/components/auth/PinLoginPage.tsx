@@ -37,8 +37,8 @@ export function PinLoginPage() {
   }, []);
 
   const handleDigit = (digit: string) => {
-    if (lockoutSecs > 0 || isSubmitting || pin.length >= 12) return;
-    setPin((prev) => (prev + digit).slice(0, 12));
+    if (lockoutSecs > 0 || isSubmitting || pin.length >= 64) return;
+    setPin((prev) => (prev + digit).slice(0, 64));
   };
 
   const handleClear = () => {
@@ -62,7 +62,7 @@ export function PinLoginPage() {
       return;
     }
     if (!pinToSubmit || pinToSubmit.length < 4) {
-      sonner.warning('PIN must be at least 4 digits (max 12).');
+      sonner.warning('Password must be at least 4 characters.');
       return;
     }
 
@@ -157,7 +157,7 @@ export function PinLoginPage() {
           <div className="w-full mb-3">
             <div className="flex items-center justify-between mb-1.5 px-0.5">
               <label className="text-[11px] uppercase tracking-wider text-neutral-600 dark:text-neutral-400 font-semibold whitespace-nowrap">
-                Security PIN
+                Password
               </label>
               <div className="flex items-center gap-2 whitespace-nowrap">
                 {isCapsLock && (
@@ -166,9 +166,6 @@ export function PinLoginPage() {
                     Caps Lock ON
                   </span>
                 )}
-                <span className="text-[11px] font-mono text-neutral-400 dark:text-neutral-500">
-                  {pin.length}/12 digits
-                </span>
               </div>
             </div>
             <div className="relative flex items-center">
@@ -178,12 +175,11 @@ export function PinLoginPage() {
               <input
                 ref={pinInputRef}
                 type={showPin ? 'text' : 'password'}
-                inputMode="numeric"
-                maxLength={12}
+                autoComplete="current-password"
+                maxLength={64}
                 value={pin}
                 onChange={(e) => {
-                  const clean = e.target.value.replace(/\D/g, '').slice(0, 12);
-                  setPin(clean);
+                  setPin(e.target.value.slice(0, 64));
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -195,10 +191,10 @@ export function PinLoginPage() {
                     }
                   }
                 }}
-                placeholder="Enter 4–12 digit PIN"
-                className={`w-full h-10 pl-9 pr-10 text-[14px] font-mono ${
-                  showPin ? 'tracking-wider' : 'tracking-[0.25em]'
-                } bg-white dark:bg-black/30 border border-neutral-300 dark:border-white/[0.12] rounded-md text-neutral-900 dark:text-white placeholder:text-neutral-400 placeholder:tracking-normal placeholder:font-sans focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all`}
+                placeholder="Enter your password"
+                className={`w-full h-10 pl-9 pr-10 text-[14px] ${
+                  showPin ? 'tracking-wider' : 'tracking-[0.2em]'
+                } bg-white dark:bg-black/30 border border-neutral-300 dark:border-white/[0.12] rounded-md text-neutral-900 dark:text-white placeholder:text-neutral-400 placeholder:tracking-normal focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all`}
               />
               <button
                 type="button"

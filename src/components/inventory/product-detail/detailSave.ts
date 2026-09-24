@@ -1,5 +1,5 @@
 import { productsService, generateId, productToppingsService, applyVariantStockMovement } from '../../../lib/services';
-import { localDb } from '../../../lib/localDb';
+import { stockHistoryService } from '../../../lib/services/stockHistoryService';
 import { sonner } from '../../../lib/sonner';
 import { useProductsStore } from '../../../stores';
 import { DetailCtx } from './detailContext';
@@ -60,7 +60,7 @@ export async function performSave(ctx: DetailCtx) {
         cashierName: ctx.profile?.email || 'System',
         createdAt: now
       };
-      await localDb.stockHistory.add(histEntry);
+      await stockHistoryService.create(histEntry as any);
     } else if (!isInfinity && !wasInfinity) {
       const oldStock = ctx.product.stock || 0;
       const newStockVal = updatedProduct.stock || 0;
@@ -78,7 +78,7 @@ export async function performSave(ctx: DetailCtx) {
           cashierName: ctx.profile?.email || 'System',
           createdAt: now
         };
-        await localDb.stockHistory.add(adjHistEntry);
+        await stockHistoryService.create(adjHistEntry as any);
       }
 
       const savedVariantData = ctx.variantData || [];

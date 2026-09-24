@@ -1,18 +1,19 @@
 /**
- * Local Authentication Service
- * Manages PIN authentication, first-launch admin setup, and emergency recovery in local SQLite.
+ * Local Authentication Service — Supabase-only cloud-direct (Phase 10b).
+ * Username/password staff accounts backed by `staff_users` in the local mirror (synced from
+ * Supabase). Login hash-compare happens on-device (offline-accurate). No PIN `users` table,
+ * no P2P, no Dexie. Default admin (admin/admin) is seeded server-side (migration 0007).
  */
 
-import { query, queryOne, execute, transaction } from '../db';
-import { TABLES } from '../db/schemaConstants';
+import { localQuery, localQueryOne, insertRow } from '../../data';
 import { User } from '../../types';
 import { hashPin, verifyPin, generateRecoveryCode, hashRecoveryCode, verifyRecoveryCode } from './pinCrypto';
-import { getOrCreateDeviceKeypair } from '../crypto/deviceKeypair';
-import { safeRandomUUID } from '../crypto/uuid';
-import { mapRowToUser as mapDbRowToUser } from '../services/users/userRepository';
+import { mapRowToUser as mapDbRowToUser, createUser } from '../services/users/userRepository';
 
 let failedAttempts = 0;
 let lockoutUntil = 0;
+
+const RECOVERY_KEY = 'pos_master_recovery_hash';
 
 export interface SetupConfig {
   shopName: string;
@@ -35,12 +36,8 @@ export interface AuthUserInfo {
 
 export async function isFirstLaunch(): Promise<boolean> {
   try {
-    const shopRow = await queryOne<{ count: number }>(`SELECT COUNT(*) AS count FROM ${TABLES.SHOP};`);
-    const userRow = await queryOne<{ count: number }>(`SELECT COUNT(*) AS count FROM ${TABLES.USERS};`);
-    if ((shopRow?.count ?? 0) === 0 || (userRow?.count ?? 0) === 0) {
-      return true;
-    }
-    return false;
+    const row = await localQueryOne<{ count: number }>(`SELECT COUNT(*) AS count FROM staff_users WHERE is_active = 1;`);
+    return (row?.count ?? 0) === 0;
   } catch {
     return true;
   }
@@ -48,12 +45,14 @@ export async function isFirstLaunch(): Promise<boolean> {
 
 export async function getActiveStaffUsers(): Promise<AuthUserInfo[]> {
   try {
-    return await query<AuthUserInfo>(
-      `SELECT id, name, username, role, avatar, email, active 
-       FROM ${TABLES.USERS} 
-       WHERE active = 1 
-       ORDER BY role = 'admin' DESC, name ASC;`
+    const rows = await localQuery<any>(
+      `SELECT id, full_name, username, role, avatar, email, is_active
+       FROM staff_users WHERE is_active = 1 ORDER BY role = 'admin' DESC, full_name ASC;`
     );
+    return rows.map((r) => ({
+      id: r.id, name: r.full_name || r.username, username: r.username, role: r.role,
+      avatar: r.avatar || undefined, email: r.email || undefined, active: Boolean(r.is_active),
+    }));
   } catch {
     return [];
   }
@@ -61,17 +60,12 @@ export async function getActiveStaffUsers(): Promise<AuthUserInfo[]> {
 
 export function getLockoutRemainingSeconds(): number {
   const now = Date.now();
-  if (lockoutUntil > now) {
-    return Math.ceil((lockoutUntil - now) / 1000);
-  }
-  return 0;
+  return lockoutUntil > now ? Math.ceil((lockoutUntil - now) / 1000) : 0;
 }
 
 export function recordFailedAttempt(): number {
   failedAttempts++;
-  if (failedAttempts >= 5) {
-    lockoutUntil = Date.now() + 30_000; // 30 second lockout
-  }
+  if (failedAttempts >= 5) lockoutUntil = Date.now() + 30_000;
   return failedAttempts;
 }
 
@@ -80,198 +74,92 @@ export function resetFailedAttempts(): void {
   lockoutUntil = 0;
 }
 
+/** Login by username (or name/email) + password. Offline-accurate local hash compare. */
 export async function loginWithPin(pin: string, identifierOrUserId?: string): Promise<User> {
   const remainingLockout = getLockoutRemainingSeconds();
-  if (remainingLockout > 0) {
-    throw new Error(`Terminal locked due to too many attempts. Please wait ${remainingLockout}s.`);
-  }
+  if (remainingLockout > 0) throw new Error(`Terminal locked due to too many attempts. Please wait ${remainingLockout}s.`);
 
-  // 1. Fetch user record
   let userRow: any;
   if (identifierOrUserId && identifierOrUserId.trim()) {
     const clean = identifierOrUserId.trim().toLowerCase();
-    userRow = await queryOne(
-      `SELECT * FROM ${TABLES.USERS} 
-       WHERE (id = ? OR LOWER(TRIM(username)) = ? OR LOWER(TRIM(name)) = ? OR LOWER(TRIM(email)) = ?) AND active = 1;`,
+    userRow = await localQueryOne<any>(
+      `SELECT * FROM staff_users
+       WHERE (id = ? OR LOWER(TRIM(username)) = ? OR LOWER(TRIM(full_name)) = ? OR LOWER(TRIM(email)) = ?) AND is_active = 1;`,
       [identifierOrUserId.trim(), clean, clean, clean]
     );
   } else {
-    // If no identifier provided, check if PIN matches any active user
-    const allUsers = await query(`SELECT * FROM ${TABLES.USERS} WHERE active = 1;`);
-    for (const u of allUsers) {
-      const isMatch = await verifyPin(pin, u.pin_hash);
-      if (isMatch) {
-        userRow = u;
-        break;
-      }
+    const all = await localQuery<any>(`SELECT * FROM staff_users WHERE is_active = 1;`);
+    for (const u of all) {
+      if (await verifyPin(pin, u.password_hash)) { userRow = u; break; }
     }
   }
 
-  if (!userRow) {
-    recordFailedAttempt();
-    throw new Error('Invalid credentials. Please check your username/email and PIN.');
-  }
+  if (!userRow) { recordFailedAttempt(); throw new Error('Invalid credentials. Please check your username and password.'); }
 
-  // 2. Verify PIN
-  const isValid = await verifyPin(pin, userRow.pin_hash);
-  if (!isValid) {
-    recordFailedAttempt();
-    throw new Error('Invalid credentials. Please check your username/email and PIN.');
-  }
+  const isValid = await verifyPin(pin, userRow.password_hash);
+  if (!isValid) { recordFailedAttempt(); throw new Error('Invalid credentials. Please check your username and password.'); }
 
   resetFailedAttempts();
-
-  // 3. Map to domain User model
   return mapDbRowToUser(userRow);
 }
 
-/**
- * Verify whether a given PIN is correct for a specific user ID.
- * Used for checkout authorization and sensitive operations.
- */
+/** Verify a password for a specific staff id (checkout authorization / sensitive ops). */
 export async function verifyUserPin(userId: string, pin: string): Promise<boolean> {
   if (!userId || !pin) return false;
   try {
-    const userRow = await queryOne<{ pin_hash: string }>(
-      `SELECT pin_hash FROM ${TABLES.USERS} WHERE id = ? AND active = 1;`,
-      [userId]
+    const row = await localQueryOne<{ password_hash: string }>(
+      `SELECT password_hash FROM staff_users WHERE id = ? AND is_active = 1;`, [userId]
     );
-    if (!userRow || !userRow.pin_hash) return false;
-    return await verifyPin(pin, userRow.pin_hash);
+    if (!row?.password_hash) return false;
+    return verifyPin(pin, row.password_hash);
   } catch {
     return false;
   }
 }
 
+/** First-run onboarding: create the store settings row + the first admin account. */
 export async function bootstrapAdmin(config: SetupConfig): Promise<{ user: User; recoveryCode: string }> {
-  const shopId = `SHOP-${safeRandomUUID().substring(0, 8).toUpperCase()}`;
-  const deviceId = 'PC-MAIN';
-  const adminId = safeRandomUUID();
   const recoveryCode = generateRecoveryCode();
-  const now = Date.now();
-
-  const { publicKeyHex } = await getOrCreateDeviceKeypair();
-  const { fullHash: pinHash } = await hashPin(config.adminPin);
   const recoveryHash = await hashRecoveryCode(recoveryCode);
+  try { if (typeof localStorage !== 'undefined') localStorage.setItem(RECOVERY_KEY, recoveryHash); } catch {}
 
-  await transaction(async (tx) => {
-    // 1. Create Shop Profile
-    await tx.execute(
-      `INSERT INTO ${TABLES.SHOP} (
-        id, name, currency, master_recovery_hash, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?);`,
-      [shopId, config.shopName, config.currency || 'PKR', recoveryHash, now, now]
-    );
-
-    // 2. Register Root / Primary Device
-    await tx.execute(
-      `INSERT INTO ${TABLES.DEVICES} (
-        device_id, name, role, public_key, paired_at
-      ) VALUES (?, ?, ?, ?, ?);`,
-      [deviceId, 'PC-MAIN (Root Device)', 'primary', publicKeyHex, now]
-    );
-
-    // 3. Create First Admin User
-    await tx.execute(
-      `INSERT INTO ${TABLES.USERS} (
-        id, name, username, pin_hash, role, active, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
-      [adminId, config.adminName, config.adminUsername.toLowerCase(), pinHash, 'admin', 1, now, now]
-    );
-
-    // 4. Save Default Settings
-    await tx.execute(
-      `INSERT INTO ${TABLES.SETTINGS} (key, value, updated_at) VALUES 
-       ('shop_id', ?, ?),
-       ('shop_name', ?, ?),
-       ('currency', ?, ?),
-       ('device_id', ?, ?);`,
-      [shopId, now, config.shopName, now, config.currency || 'PKR', now, deviceId, now]
-    );
-
-    // 5. Append Genesis Events to sync_outbox
-    try {
-      const { createOutboxEvent } = await import('../events/eventFactory');
-      const shopEvt = await createOutboxEvent({
-        entityType: 'SHOP',
-        entityId: shopId,
-        operation: 'CREATE',
-        eventType: 'SHOP_CREATED',
-        deviceId,
-        userId: adminId,
-        payload: { id: shopId, name: config.shopName, currency: config.currency || 'PKR', createdAt: now },
-      }, tx);
-      await tx.execute(
-        `INSERT INTO sync_outbox (event_id, device_id, sequence, entity_type, entity_id, operation, payload, created_at, is_synced)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0);`,
-        [shopEvt.event_id, shopEvt.device_id, shopEvt.sequence, shopEvt.entity_type, shopEvt.entity_id, shopEvt.operation, shopEvt.payload, shopEvt.created_at]
-      );
-
-      const devEvt = await createOutboxEvent({
-        entityType: 'DEVICE',
-        entityId: deviceId,
-        operation: 'CREATE',
-        eventType: 'DEVICE_REGISTERED',
-        deviceId,
-        userId: adminId,
-        payload: { deviceId, name: 'PC-MAIN (Root Device)', role: 'primary', publicKeyHex, pairedAt: now },
-      }, tx);
-      await tx.execute(
-        `INSERT INTO sync_outbox (event_id, device_id, sequence, entity_type, entity_id, operation, payload, created_at, is_synced)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0);`,
-        [devEvt.event_id, devEvt.device_id, devEvt.sequence, devEvt.entity_type, devEvt.entity_id, devEvt.operation, devEvt.payload, devEvt.created_at]
-      );
-
-      const usrEvt = await createOutboxEvent({
-        entityType: 'USER',
-        entityId: adminId,
-        operation: 'CREATE',
-        eventType: 'USER_CREATED',
-        deviceId,
-        userId: adminId,
-        payload: { id: adminId, name: config.adminName, username: config.adminUsername.toLowerCase(), role: 'admin', pin_hash: pinHash, pinHash, active: 1, createdAt: now },
-      }, tx);
-      await tx.execute(
-        `INSERT INTO sync_outbox (event_id, device_id, sequence, entity_type, entity_id, operation, payload, created_at, is_synced)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0);`,
-        [usrEvt.event_id, usrEvt.device_id, usrEvt.sequence, usrEvt.entity_type, usrEvt.entity_id, usrEvt.operation, usrEvt.payload, usrEvt.created_at]
-      );
-    } catch (e) {
-      console.warn('Genesis outbox event write skipped:', e);
+  // Store identity + currency via store_settings (single row).
+  try {
+    const existing = await localQueryOne<{ id: string }>(`SELECT id FROM store_settings LIMIT 1;`);
+    if (!existing) {
+      await insertRow('store_settings', {
+        id: '00000000-0000-4000-8000-000000000001',
+        store_name: config.shopName,
+        currency: config.currency || 'PKR',
+        store_logo: config.logoUrl || null,
+      });
     }
+  } catch (e) {
+    console.warn('[bootstrapAdmin] store_settings init skipped:', (e as Error).message);
+  }
+
+  const user = await createUser({
+    name: config.adminName,
+    username: config.adminUsername.toLowerCase(),
+    pin: config.adminPin,
+    role: 'admin',
   });
 
-  // Refresh sync status store pending count
-  try {
-    const { useSyncStatusStore } = await import('../sync/syncStatusStore');
-    useSyncStatusStore.getState().refreshPendingCount().catch(() => {});
-  } catch {}
-
-  const adminRow = await queryOne(`SELECT * FROM ${TABLES.USERS} WHERE id = ?;`, [adminId]);
-  const user = mapDbRowToUser(adminRow);
   return { user, recoveryCode };
 }
 
 export async function resetAdminPinWithRecoveryCode(recoveryCode: string, newPin: string): Promise<boolean> {
-  const shop = await queryOne<{ master_recovery_hash: string }>(
-    `SELECT master_recovery_hash FROM ${TABLES.SHOP} LIMIT 1;`
-  );
+  let recoveryHash: string | null = null;
+  try { if (typeof localStorage !== 'undefined') recoveryHash = localStorage.getItem(RECOVERY_KEY); } catch {}
+  if (!recoveryHash) throw new Error('Recovery code is not available on this device.');
 
-  if (!shop || !shop.master_recovery_hash) {
-    throw new Error('Shop master profile not found.');
-  }
+  const ok = await verifyRecoveryCode(recoveryCode, recoveryHash);
+  if (!ok) throw new Error('Invalid emergency recovery code.');
 
-  const isCodeValid = await verifyRecoveryCode(recoveryCode, shop.master_recovery_hash);
-  if (!isCodeValid) {
-    throw new Error('Invalid emergency recovery code.');
-  }
-
-  const { fullHash: newPinHash } = await hashPin(newPin);
-  await execute(
-    `UPDATE ${TABLES.USERS} SET pin_hash = ?, updated_at = ? WHERE role = 'admin';`,
-    [newPinHash, Date.now()]
-  );
-
+  const { fullHash: newHash } = await hashPin(newPin);
+  const admins = await localQuery<{ id: string }>(`SELECT id FROM staff_users WHERE role = 'admin';`);
+  const { updateRow } = await import('../../data');
+  for (const a of admins) await updateRow('staff_users', a.id, { password_hash: newHash });
   return true;
 }
 

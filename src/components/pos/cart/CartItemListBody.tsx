@@ -3,6 +3,7 @@ import { sonner } from '../../../lib/sonner';
 import { CartItem, Bundle } from '../../../types';
 import { formatCurrency } from '../../../lib/currencies';
 import { CartItemCard } from './CartItemCard';
+import { ProductThumb } from '../../../shared/ui/ProductThumb';
 
 interface CartItemListBodyProps {
   cartItems: CartItem[];
@@ -142,7 +143,7 @@ export function CartItemListBody({
               {/* Thumbnail */}
               <div className="w-9 h-9 rounded overflow-hidden bg-neutral-100 dark:bg-neutral-900 shrink-0 flex items-center justify-center aspect-square border border-neutral-200 dark:border-white/[0.08]">
                 {bundleImage(b) ? (
-                  <img src={bundleImage(b)!} alt={b.bundleName} className="w-full h-full object-cover" />
+                  <ProductThumb image={bundleImage(b)} alt={b.bundleName} imgClassName="w-full h-full object-cover" fallback={<Package className="h-4 w-4 text-neutral-400" />} />
                 ) : (
                   <Package className="h-4 w-4 text-neutral-400" />
                 )}

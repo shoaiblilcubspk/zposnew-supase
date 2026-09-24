@@ -3,7 +3,7 @@
  * Clean facade delegating to authoritative SQLite wallet repository.
  */
 
-import { generateId } from '../localDb';
+import { generateId } from '../ids';
 import { normalizePaymentMethod } from './utils';
 import { saleTxnType, walletDelta, resolveReversal } from './ledgerResolver';
 import {
@@ -203,24 +203,22 @@ export const paymentModesService = {
  * Needed by usePaymentsStore so Reports → Financial shows customer payments received.
  */
 export async function getAllStandalonePayments(): Promise<any[]> {
-  const { getDatabase } = await import('../db');
-  const db = await getDatabase();
-  const rows = await db.query<any>(
-    `SELECT id, customer_id, supplier_id, mode_id, amount, reference, created_at,
-            'in' AS direction, mode_id AS payment_type
+  const { localQuery } = await import('../../data');
+  const rows = await localQuery<any>(
+    `SELECT id, sale_id, mode_code, amount, reference, created_at
      FROM payments
      WHERE sale_id IS NULL
      ORDER BY created_at DESC;`
-  ).catch(() => []);
+  ).catch(() => [] as any[]);
   return rows.map((r: any) => ({
     id: r.id,
-    customerId: r.customer_id,
-    supplierId: r.supplier_id,
+    customerId: undefined,
+    supplierId: undefined,
     amount: Number(r.amount) || 0,
-    method: r.mode_id || r.payment_type || 'cash',
-    paymentType: r.mode_id || r.payment_type || 'cash',
-    direction: r.customer_id ? 'in' : 'out',
+    method: r.mode_code || 'cash',
+    paymentType: r.mode_code || 'cash',
+    direction: 'in',
     note: r.reference,
-    createdAt: r.created_at ? new Date(Number(r.created_at)) : new Date(),
+    createdAt: r.created_at ? new Date(r.created_at) : new Date(),
   }));
 }

@@ -56,7 +56,7 @@ Import: `import { SharedSearchBar, SharedProductList, useDragDropList } from '..
 
 | `src/lib/services/` | Local SQLite domain services (`products`, `sales`, `inventory`, `customers`, `expenses`, `users`, `settings`) | Every data mutation and read — strictly local SQLite in <10ms |
 | `src/lib/db/` | Local SQLite storage engine adapter (`TauriSqliteDriver` on desktop, `WasmSqliteDriver` in browser) | Single authoritative local database persistence |
-| `src/lib/sync/syncEngine.ts` | Incremental WebRTC P2P event sync (`sync_outbox` / `sync_inbox`) with vector clocks | Background delta replication between paired terminals |
+| `src/data/syncWorker.ts` | Cloud sync worker and write-through queue (device ↔ Supabase) | Idempotent cloud replication and pull synchronization |
 | `stockInCommit.ts` | `commitStockInToInventory()` — THE single stock-in commit path (PO bulk + Quick Restock) | ANY stock-in operation |
 | `sonner.ts` | `sonner.toast / confirm / loading / success / error` | ALL toasts + confirmations |
 | `currencies.ts` | `formatCurrency`, `getCurrencySymbol`, `formatNumberWithPrecision` | ALL money formatting |

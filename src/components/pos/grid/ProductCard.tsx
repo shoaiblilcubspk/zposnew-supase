@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Package, Plus, Minus, Infinity as InfinityIcon } from 'lucide-react';
 import { Product } from '../../../types';
+import { useProductImage } from '../../../hooks/useProductImage';
 
 interface ProductCardProps {
   product: Product;
@@ -18,6 +19,7 @@ export const ProductCard = memo(function ProductCard({ product, onAddToCart, onU
   const isNoStock = shouldTrackInventory && product.stock === 0;
   const isLowStock = shouldTrackInventory && product.stock > 0 && product.stock <= (product.minStock || 5);
   const isInfinite = !shouldTrackInventory || product.stock >= 990000;
+  const imageUrl = useProductImage(product.image);
 
   return (
     <div
@@ -36,9 +38,9 @@ export const ProductCard = memo(function ProductCard({ product, onAddToCart, onU
       }}
     >
       <div className={`relative overflow-hidden bg-neutral-100 dark:bg-neutral-900 ${isTouchMode ? 'aspect-square' : 'aspect-[4/3]'}`}>
-        {product.image ? (
+        {imageUrl ? (
           <img
-            src={product.image}
+            src={imageUrl}
             alt={product.name}
             className="w-full h-full object-cover"
             loading="lazy"

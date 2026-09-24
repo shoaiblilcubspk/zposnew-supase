@@ -1,4 +1,9 @@
-import { localDb, generateId } from '../localDb';
+/**
+ * Price History Service — Supabase-only cloud-direct (Phase 10m).
+ * Append-only price/cost change audit in the mirror `price_history`. No Dexie.
+ */
+
+import { localQuery, insertRow, type AtomicInsert } from '../../data';
 import { getActor } from '../actionToken';
 
 export interface PriceChangeInput {
@@ -10,27 +15,42 @@ export interface PriceChangeInput {
   note?: string;
 }
 
-/** PHASE 11/12: record an attributable price/cost change. Always kept locally;
- *  flushed to the cloud price_history table when online (audit log, non-financial,
- *  so a direct insert is safe and offline-first enough). */
-export async function logPriceChange(input: PriceChangeInput): Promise<void> {
+/** Build the append-only price_history row (no write). */
+function buildPriceHistoryRow(input: PriceChangeInput): Record<string, any> {
   const actor = getActor();
-  const now = new Date();
-  const id = generateId();
-  const row = {
-    id,
-    productId: input.productId,
-    oldPrice: input.oldPrice ?? null,
-    newPrice: input.newPrice ?? null,
-    oldCost: input.oldCost ?? null,
-    newCost: input.newCost ?? null,
-    changedBy: actor?.id ?? null,
+  return {
+    product_id: input.productId,
+    old_price: input.oldPrice ?? null,
+    new_price: input.newPrice ?? null,
+    old_cost: input.oldCost ?? null,
+    new_cost: input.newCost ?? null,
+    changed_by: actor?.id ?? null,
     note: input.note ?? null,
-    createdAt: now,
   };
-  await localDb.priceHistory.add(row as any).catch(() => {});
+}
+
+/** Build an atomicWrite insert op for a price_history row (for use inside a bundle). */
+export function buildPriceHistoryOp(input: PriceChangeInput): AtomicInsert {
+  return { table: 'price_history', op: 'insert', row: buildPriceHistoryRow(input) };
+}
+
+export async function logPriceChange(input: PriceChangeInput): Promise<void> {
+  await insertRow('price_history', buildPriceHistoryRow(input)).catch(() => {});
 }
 
 export async function getPriceHistory(productId: string): Promise<any[]> {
-  return await localDb.priceHistory.where('productId').equals(productId).reverse().sortBy('createdAt').catch(() => []);
+  const rows = await localQuery<any>(
+    `SELECT * FROM price_history WHERE product_id = ? ORDER BY created_at DESC;`, [productId]
+  ).catch(() => [] as any[]);
+  return rows.map((r) => ({
+    id: r.id,
+    productId: r.product_id,
+    oldPrice: r.old_price,
+    newPrice: r.new_price,
+    oldCost: r.old_cost,
+    newCost: r.new_cost,
+    changedBy: r.changed_by,
+    note: r.note,
+    createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+  }));
 }

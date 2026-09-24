@@ -5,6 +5,7 @@ import { CartItem } from '../../../types';
 import { CompactItemRow } from '../CompactItemRow';
 import { formatCurrency } from '../../../lib/currencies';
 import { cn } from '../../../lib/utils';
+import { ProductThumb } from '../../../shared/ui/ProductThumb';
 
 interface OrderSummaryItemsProps {
   checkoutCartItems: CartItem[];
@@ -79,11 +80,11 @@ export function OrderSummaryItems({ checkoutCartItems, appBundles, showDiscount,
                 {isNested ? '-' : (sIdx !== undefined ? sIdx + 1 : originalIndex + 1)}
               </span>
               <div className="h-8 w-8 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0 mt-0.5 aspect-square">
-                {item.product.image ? (
-                  <img src={item.product.image} className="h-full w-full object-cover" />
-                ) : (
-                  <ShoppingBagIcon size="xs" className="text-neutral-400" />
-                )}
+                <ProductThumb
+                  image={item.product.image}
+                  imgClassName="h-full w-full object-cover"
+                  fallback={<ShoppingBagIcon size="xs" className="text-neutral-400" />}
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <p className={cn(TYPOGRAPHY.itemName, "uppercase truncate")}>{item.product.name}</p>

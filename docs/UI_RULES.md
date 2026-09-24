@@ -209,30 +209,29 @@ The sales terminal is the mission-critical interface of the entire store:
 - **Cryptographic PIN Security:** 4-to-6 digit numeric PIN hashed with PBKDF2/SHA-256 (100,000 iterations). Plaintext PINs are NEVER stored or synced.
 - **Progressive Lockout:** 3 failed attempts = warning, 5 failed attempts = 30s delay, 10 failed attempts = account locked.
 - **Soft Delete Only:** Deactivating a user sets `active = 0` (`status = 'disabled'`). Historical sales and audit logs remain intact.
-- **Detailed Specification:** See `docs/USER & ROLE SETUP — FIRST INSTALL TO DAILY SALES.md` and `docs/USERS_AND_ROLES.md`.
+- **Detailed Specification:** See `docs/RBAC_RULES.md`.
 
 ---
 
-## 15. DEVICES & P2P MESH MANAGEMENT
-- **Device Management Matrix:** Device Name, Device ID, User/Owner, Authorization Status (`trusted` vs `revoked`), Last Seen, Sync State.
-- **Device Pairing Flow:**
-  - Root terminal generates short-lived ephemeral QR token (5 min expiry).
-  - New device scans QR and sends join request.
-  - Admin approves device on root terminal; ECDSA keypair exchanged.
-  - Initial snapshot bootstrap and outbox replication commence over WebRTC DataChannels.
-- **Device Revocation:** Admin can revoke any device instantly; peer terminals reject revoked device events.
+## 15. DEVICES & CLOUD SYNC MANAGEMENT
+- **Device Management:** Device Name, Device ID, Active Staff User, Last Seen, Cloud Sync State.
+- **Terminal Setup:**
+  - Devices sign in with staff credentials (username + password).
+  - Devices are assigned a local `device_id` on first launch for audit log attribution.
+  - Zero P2P device pairing or QR token exchange required.
+- **Staff Access Control:** Admin can manage staff roles and deactivate accounts from Settings.
 
 ---
 
-## 16. SYNC ENGINE & MESH STATUS UI
+## 16. CLOUD SYNC STATUS UI
 Keep the UI simple and non-intrusive for counter staff:
 - **Global Header Widget:**
-  - `🟢 Synced` (All outbox events replicated).
-  - `🔄 Syncing` (Replicating pending events).
+  - `🟢 Synced` (All local mutations committed to Supabase).
+  - `🔄 Syncing` (Pushing queued bundles or pulling cloud updates).
   - `🟡 Offline` (Terminal operating 100% autonomously offline).
-  - `🔴 Error` (Signaling or network connection error).
-- **Popover Details:** Connected peer terminals count, pending outbox events queue, last successful sync timestamp.
-- **Zero Technical Jargon:** Never expose WebRTC SDP/ICE candidates, signaling channel sockets, or cryptographic raw hashes to cashiers.
+  - `🔴 Error` (Cloud connection or sync queue error).
+- **Popover Details:** Pending sync queue count, last successful sync timestamp, network status.
+- **Zero Technical Jargon:** Never expose raw SQL errors, JWT tokens, or internal RPC payloads to cashiers.
 
 ---
 
@@ -393,11 +392,11 @@ Every screen and component must eliminate the common AI template tells:
          ↓
   Domain Service (`src/lib/services/`)
          ↓
-  Local Authoritative SQLite DB (`src/lib/db/`)
+  Local Authoritative SQLite DB (`src/data/localDb.ts`)
          ↓
-  Append-Only Event (`sync_outbox`)
+  Atomic Write Bundle (`sync_queue`)
          ↓
-  P2P Sync Engine (`WebRTC DataChannels`)
+  Cloud Sync Worker (`Supabase RPCs`)
   ```
 - Reports and charts query local SQLite aggregations directly.
 
@@ -480,7 +479,7 @@ To prevent visual regressions and ensure 100% uniformity across all screens:
   ```
 
 ### 31.5 Category & Supplier Data Integrity
-- Categories and suppliers are durable entities stored in local SQLite (`categories` and `suppliers` tables) and synchronized via P2P outbox.
+- Categories and suppliers are durable entities stored in local SQLite (`categories` and `suppliers` tables) and synchronized via cloud sync queue.
 - **NEVER** derive categories or suppliers purely from `products.map(p => p.category)`. Deleting a product must NEVER delete or hide its category or supplier from the system.
 
 ---
@@ -519,7 +518,7 @@ Sub-tab segmented controls in major modules (Inventory, Reports, Settings) apply
   - Suppliers: `text-rose-500`
 - **Settings Sub-tabs:**
   - General Settings: `text-emerald-500`
-  - Device Mesh (P2P): `text-cyan-500`
+  - Cloud Sync: `text-cyan-500`
   - Receipt Design: `text-blue-500`
   - Security & Account: `text-amber-500`
   - Backup & Restore: `text-purple-500`
@@ -637,9 +636,9 @@ To guarantee a true native mobile app feel across all smartphone and tablet scre
 
 5. **Apple Dynamic Island Sonner Toast Architecture (Universal Centered Capsule):**
    - **Zero 1-Side Cutoff Guarantee:** Toaster container (`[data-sonner-toaster]`) must span `left: 0 !important; right: 0 !important; width: 100vw !important;` with `display: flex; flex-direction: column; align-items: center;`. This guarantees horizontal symmetry on both mobile and desktop.
-   - **Pill Element Centering:** The toast element (`[data-sonner-toast]`) must be `position: relative !important; margin: 0 auto !important; width: max-content !important; min-width: 0 !important; max-width: min(calc(100vw - 28px), 440px) !important;` so it hugs content and never overflows or shifts to one side.
-   - **Apple Island Aesthetics:** Pure capsule (`border-radius: 9999px`), `background: rgba(10, 10, 12, 0.94)`, `backdrop-filter: blur(28px) saturate(200%)`, 1px border at `rgba(255, 255, 255, 0.16)`, subtle double inset shadow, and emerald/rose/amber glowing status icons.
-   - **Typography & Truncation:** Title text is `text-[13px] font-semibold tracking-[-0.015em] text-[#f8fafc]` with `overflow: hidden; text-overflow: ellipsis; white-space: nowrap;` for safe truncation on small mobile screens.
+   - **Full Text Visibility & Centering:** The toast element (`[data-sonner-toast]`) is `position: relative !important; margin: 0 auto !important; width: fit-content !important; min-width: 0 !important; max-width: min(calc(100vw - 28px), 760px) !important; justify-content: flex-start !important;` so text starts naturally from the left without flex-center overflow clipping on either side.
+   - **Apple Island Aesthetics:** Dynamic capsule (`border-radius: 20px`), `background: rgba(10, 10, 12, 0.95)`, `backdrop-filter: blur(28px) saturate(200%)`, 1px border at `rgba(255, 255, 255, 0.16)`, subtle double inset shadow, and emerald/rose/amber glowing status icons.
+   - **Typography & Wrapping (Zero Truncation):** Title & description text is `text-[13px] font-semibold tracking-[-0.015em] text-[#f8fafc]` with `white-space: normal !important; word-break: break-word !important; overflow: visible !important;`. The entire notification text is always 100% visible and never half-hidden or cut off with ellipses.
    - **Mobile Top Clearance:** Anchored at `top: max(env(safe-area-inset-top, 14px), 14px)` floating gracefully as a true native Dynamic Island.
 
 6. **Payment Tender Cards Tactile Float & Zero-Touch Alignment:**

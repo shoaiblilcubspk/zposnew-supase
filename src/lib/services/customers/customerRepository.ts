@@ -1,15 +1,14 @@
 /**
- * Local SQLite Customer Repository
- * Authoritative customer directory query and mutation engine with outbox replication.
+ * Customer repository — Supabase-only cloud-direct.
+ * Reads from the local mirror (`src/data`), writes through the sync queue. No P2P, no Dexie.
+ * Rows are snake_case (Rule 3); mapped to the camelCase `Customer` domain type at this boundary.
  */
 
-import { getDatabase } from '../../db';
+import { localQuery, localQueryOne, insertRow, updateRow, softDeleteRow } from '../../../data';
 import { Customer } from '../../../types';
-import { commitLocalTransaction } from '../../events';
-import { getDeviceId } from '../../mesh/deviceIdentity';
-import { localDb, generateId } from '../../localDb';
 
 export function mapSqliteCustomer(row: any): Customer {
+  const balance = Number(row.current_balance) || 0;
   return {
     id: row.id,
     name: row.name,
@@ -18,36 +17,31 @@ export function mapSqliteCustomer(row: any): Customer {
     address: row.address || '',
     priceTier: 'retail',
     totalPurchases: 0,
-    balance: Number(row.current_balance) || 0,
+    balance,
     creditLimit: Number(row.credit_limit) || 0,
-    creditUsed: Number(row.current_balance) || 0,
-    // credit_limit = 0 means unlimited (not disabled). allowCredit is always true per customer.
-    // Credit is controlled globally via appSettings.enableCreditSales, not per-customer limit.
-    allowCredit: row.allow_credit !== undefined ? Boolean(row.allow_credit) : true,
-    createdAt: new Date(Number(row.updated_at) || Date.now()),
-    updatedAt: new Date(Number(row.updated_at) || Date.now()),
+    creditUsed: balance,
+    // credit_limit = 0 means unlimited (not disabled). Credit is controlled globally
+    // via appSettings.enableCreditSales, not per-customer, so allowCredit is always true.
+    allowCredit: true,
+    createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+    updatedAt: row.updated_at ? new Date(row.updated_at) : undefined,
   };
 }
 
 export async function getAllCustomers(): Promise<Customer[]> {
-  const db = await getDatabase();
-  const rows = await db.query(
-    `SELECT * FROM customers WHERE active = 1 ORDER BY name ASC;`
-  );
+  const rows = await localQuery<any>(`SELECT * FROM customers WHERE active = 1 ORDER BY name ASC;`);
   return rows.map(mapSqliteCustomer);
 }
 
 export async function getCustomerById(id: string): Promise<Customer | null> {
-  const db = await getDatabase();
-  const row = await db.queryOne(`SELECT * FROM customers WHERE id = ?;`, [id]);
+  const row = await localQueryOne<any>(`SELECT * FROM customers WHERE id = ?;`, [id]);
   return row ? mapSqliteCustomer(row) : null;
 }
 
 export async function searchCustomers(queryStr: string): Promise<Customer[]> {
-  const db = await getDatabase();
   const term = `%${queryStr.trim().toLowerCase()}%`;
-  const rows = await db.query(
-    `SELECT * FROM customers 
+  const rows = await localQuery<any>(
+    `SELECT * FROM customers
      WHERE active = 1 AND (LOWER(name) LIKE ? OR LOWER(phone) LIKE ?)
      ORDER BY name ASC LIMIT 50;`,
     [term, term]
@@ -57,161 +51,49 @@ export async function searchCustomers(queryStr: string): Promise<Customer[]> {
 
 export async function createCustomer(
   customer: Omit<Customer, 'id'>,
-  userId = 'system'
+  _userId = 'system'
 ): Promise<Customer> {
-  const deviceId = await getDeviceId();
-  const db = await getDatabase();
-  const now = Date.now();
-
-  // ─── Phone-based deduplication ─────────────────────────────────────────────
-  // If a customer with same phone already exists on this device, return it.
-  // This prevents duplicate UUID creation when 2 devices create the same person.
+  // Phone-based dedup: prevents duplicate UUIDs when 2 devices create the same person.
   if (customer.phone && customer.phone.trim()) {
-    const existing = await db.queryOne<any>(
+    const existing = await localQueryOne<any>(
       `SELECT * FROM customers WHERE phone = ? AND active = 1 LIMIT 1;`,
       [customer.phone.trim()]
     );
     if (existing) return mapSqliteCustomer(existing);
   }
 
-  const id = generateId();
-
-  const newCustomer: Customer = {
-    ...customer,
-    id,
-    balance: Number(customer.balance) || 0,
-    creditLimit: Number(customer.creditLimit) || 0,
-    createdAt: new Date(now),
-    updatedAt: new Date(now),
-  };
-
-  await commitLocalTransaction({
-    entityType: 'CUSTOMER',
-    entityId: id,
-    operation: 'CREATE',
-    eventType: 'CUSTOMER_CREATED',
-    deviceId,
-    userId,
-    payload: {
-      id,
-      name: newCustomer.name,
-      phone: newCustomer.phone || null,
-      email: newCustomer.email || null,
-      address: newCustomer.address || null,
-      creditLimit: newCustomer.creditLimit || 0,
-      currentBalance: newCustomer.balance || 0,
-      active: 1,
-      updatedAt: now,
-    },
-    execute: async (tx) => {
-      await tx.execute(
-        `INSERT INTO customers (
-          id, name, phone, email, address, credit_limit, current_balance, active, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?);`,
-        [
-          id,
-          newCustomer.name,
-          newCustomer.phone || null,
-          newCustomer.email || null,
-          newCustomer.address || null,
-          newCustomer.creditLimit || 0,
-          newCustomer.balance || 0,
-          now,
-        ]
-      );
-    },
+  const row = await insertRow('customers', {
+    name: customer.name,
+    phone: customer.phone || null,
+    email: customer.email || null,
+    address: customer.address || null,
+    credit_limit: Number(customer.creditLimit) || 0,
+    current_balance: Number(customer.balance) || 0,
+    active: 1,
   });
-
-  try {
-    await localDb.customers.put(newCustomer);
-  } catch {}
-
-  return newCustomer;
+  return mapSqliteCustomer(row);
 }
 
 export async function updateCustomer(
   id: string,
   updates: Partial<Customer>,
-  userId = 'system'
+  _userId = 'system'
 ): Promise<Customer> {
-  const deviceId = await getDeviceId();
   const existing = await getCustomerById(id);
   if (!existing) throw new Error(`Customer ${id} not found.`);
 
-  const now = Date.now();
-  const updated: Customer = {
-    ...existing,
-    ...updates,
-    id,
-    updatedAt: new Date(now),
-  };
+  const patch: Record<string, any> = {};
+  if (updates.name !== undefined) patch.name = updates.name;
+  if (updates.phone !== undefined) patch.phone = updates.phone || null;
+  if (updates.email !== undefined) patch.email = updates.email || null;
+  if (updates.address !== undefined) patch.address = updates.address || null;
+  if (updates.creditLimit !== undefined) patch.credit_limit = Number(updates.creditLimit) || 0;
+  if (updates.balance !== undefined) patch.current_balance = Number(updates.balance) || 0;
+  if (Object.keys(patch).length > 0) await updateRow('customers', id, patch);
 
-  await commitLocalTransaction({
-    entityType: 'CUSTOMER',
-    entityId: id,
-    operation: 'UPDATE',
-    eventType: 'CUSTOMER_UPDATED',
-    deviceId,
-    userId,
-    payload: {
-      id,
-      name: updated.name,
-      phone: updated.phone || null,
-      email: updated.email || null,
-      address: updated.address || null,
-      creditLimit: updated.creditLimit || 0,
-      currentBalance: updated.balance || 0,
-      updatedAt: now,
-    },
-    execute: async (tx) => {
-      await tx.execute(
-        `UPDATE customers SET
-          name = ?, phone = ?, email = ?, address = ?, credit_limit = ?, current_balance = ?, updated_at = ?
-         WHERE id = ?;`,
-        [
-          updated.name,
-          updated.phone || null,
-          updated.email || null,
-          updated.address || null,
-          updated.creditLimit || 0,
-          updated.balance || 0,
-          now,
-          id,
-        ]
-      );
-    },
-  });
-
-  try {
-    await localDb.customers.put(updated);
-  } catch {}
-
-  return updated;
+  return { ...existing, ...updates, id, updatedAt: new Date() };
 }
 
-export async function deleteCustomer(id: string, userId = 'system'): Promise<void> {
-  const deviceId = await getDeviceId();
-  const now = Date.now();
-
-  await commitLocalTransaction({
-    entityType: 'CUSTOMER',
-    entityId: id,
-    operation: 'DELETE',
-    eventType: 'CUSTOMER_DELETED',
-    deviceId,
-    userId,
-    payload: { id, deletedAt: now },
-    execute: async (tx) => {
-      await tx.execute(`UPDATE customers SET active = 0, updated_at = ? WHERE id = ?;`, [now, id]);
-      await tx.execute(
-        `INSERT OR REPLACE INTO tombstones (entity_type, entity_id, deleted_at, deleted_by)
-         VALUES ('CUSTOMER', ?, ?, ?);`,
-        [id, now, userId]
-      );
-    },
-  });
-
-  try {
-    await localDb.customers.delete(id);
-  } catch {}
+export async function deleteCustomer(id: string, _userId = 'system'): Promise<void> {
+  await softDeleteRow('customers', id, 'active');
 }

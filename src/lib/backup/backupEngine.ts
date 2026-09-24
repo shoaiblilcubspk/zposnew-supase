@@ -4,7 +4,7 @@
  */
 
 import { getDatabase } from '../db';
-import { getDeviceProfile } from '../mesh/deviceIdentity';
+import { getDeviceProfile } from '../deviceIdentity';
 import { computeSha256 } from '../media/localImageStore';
 
 export interface EncryptedBackupArchive {

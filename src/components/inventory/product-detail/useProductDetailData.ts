@@ -1,7 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
 import { Product } from '../../../types';
-import { localDb } from '../../../lib/localDb';
 import { productToppingsService } from '../../../lib/services';
 import { getProductStockHistory } from '../../../lib/services/inventory/inventoryLedgerRepository';
 
@@ -147,12 +145,9 @@ export function useProductDetailData(
     };
   }, [product.id, product.stock, isUpdating, showStockIn, showAdjustment, showRestock]);
 
-  const dexieHistory = useLiveQuery(
-    () => localDb.stockHistory.where('productId').equals(product.id).toArray(),
-    [product.id]
-  ) || [];
-
-  const productStockHistory = sqliteHistory.length > 0 ? sqliteHistory : dexieHistory;
+  // Legacy Dexie stock-history fallback removed (cloud-direct). Authoritative history comes
+  // from the inventory_ledger (sqliteHistory) below.
+  const productStockHistory = sqliteHistory;
 
   return {
     isUpdating, setIsUpdating,

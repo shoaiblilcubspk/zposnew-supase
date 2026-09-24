@@ -34,9 +34,12 @@ export function useExpenseManagerActions(opts: UseExpenseManagerActionsOpts) {
         useExpensesStore.getState().updateExpense(updated);
 
         try {
-          const { localDb } = await import('../../lib/localDb');
-          const linkedBill = (await localDb.supplierTransactions.toArray())
-            .find(t => t.referenceId === editingExpense.id);
+          const { localQueryOne } = await import('../../data');
+          const billRow = await localQueryOne<any>(
+            `SELECT id, supplier_id FROM purchase_records WHERE id = ? OR notes = ? LIMIT 1;`,
+            [editingExpense.id, editingExpense.id]
+          );
+          const linkedBill = billRow ? { id: billRow.id, supplierId: billRow.supplier_id, note: undefined as any } : null;
           const newAmount = Number(fullExpenseData.amount) || 0;
           if (supplierId && newAmount > 0) {
             if (linkedBill) {

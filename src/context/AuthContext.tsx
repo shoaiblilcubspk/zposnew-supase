@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '../types';
 import { sonner } from '../lib/sonner';
-import { initDb, queryOne, execute, TABLES } from '../lib/db';
+import { initDb } from '../lib/db';
+import { initDataLayer } from '../data';
 import {
   isFirstLaunch as checkFirstLaunch,
   loginWithPin,
-  mapDbRowToUser,
 } from '../lib/auth/localAuthService';
 import { useUsersStore } from '../stores/usersStore';
 
@@ -57,6 +57,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function initAuth() {
       try {
         await initDb();
+        // Bring up the Supabase-only data layer (mirror + pull + push worker) and WAIT for the
+        // initial pull so staff_users is populated before the first-launch check below.
+        try {
+          await initDataLayer();
+        } catch (e) {
+          console.warn('[dataLayer] init skipped:', (e as Error).message);
+        }
         const firstLaunch = await checkFirstLaunch();
         if (!mounted) return;
 
@@ -69,16 +76,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Check if there was a saved session
         const savedUserId = localStorage.getItem('pos_active_user_id');
         if (savedUserId) {
-          const row = await queryOne(
-            `SELECT * FROM ${TABLES.USERS} WHERE id = ? AND active = 1;`,
-            [savedUserId]
-          );
-          if (row) {
-            const restoredUser = mapDbRowToUser(row);
-            applyUserSession(restoredUser);
-          } else {
-            applyUserSession(null);
-          }
+          const { getUserById } = await import('../lib/services/users/userRepository');
+          const restoredUser = await getUserById(savedUserId);
+          applyUserSession(restoredUser && restoredUser.active ? restoredUser : null);
         }
       } catch (err) {
         console.error('Local auth initialization error:', err);
@@ -133,21 +133,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updatePassword = async (newPin: string): Promise<void> => {
     if (!profile) return;
-    const { hashPin } = await import('../lib/auth/pinCrypto');
-    const { fullHash } = await hashPin(newPin);
-    await execute(
-      `UPDATE ${TABLES.USERS} SET pin_hash = ?, updated_at = ? WHERE id = ?;`,
-      [fullHash, Date.now(), profile.id]
-    );
-    sonner.success('PIN updated successfully.');
+    const { resetUserPin } = await import('../lib/services/users/userRepository');
+    await resetUserPin(profile.id, newPin);
+    sonner.success('Password updated successfully.');
   };
 
   const refreshProfile = async (): Promise<void> => {
     if (!profile) return;
-    const row = await queryOne(`SELECT * FROM ${TABLES.USERS} WHERE id = ?;`, [profile.id]);
-    if (row) {
-      applyUserSession(mapDbRowToUser(row));
-    }
+    const { getUserById } = await import('../lib/services/users/userRepository');
+    const fresh = await getUserById(profile.id);
+    if (fresh) applyUserSession(fresh);
   };
 
   const onBootstrapComplete = (adminUser: User) => {

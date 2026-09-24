@@ -32,8 +32,13 @@ export function useAppPersistence() {
     }
   }, [appActiveSalesTab]);
 
-  // AUTO-PERSIST CART + TAB STATE TO LOCAL DB (Dexie)
+  // AUTO-PERSIST CART + TAB STATE TO LOCAL DB (Dexie) & localStorage
   useEffect(() => {
+    if (appSalesTabs && appSalesTabs.length > 0) {
+      try {
+        localStorage.setItem('pos_sales_tabs', JSON.stringify(appSalesTabs));
+      } catch {}
+    }
     const activeTab = appSalesTabs.find(t => t.id === appActiveSalesTab);
     if (activeTab) {
       salesTabsService.update(activeTab.id, activeTab).catch(err => {

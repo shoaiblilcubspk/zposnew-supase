@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Plus, Minus, Gift, Package } from 'lucide-react';
+import { ProductThumb } from '../../../shared/ui/ProductThumb';
 
 interface BundleCardProps {
   item: any;
@@ -47,7 +48,7 @@ export const BundleCard = memo(
       >
         <div className={`relative overflow-hidden bg-neutral-100 dark:bg-neutral-900 ${isTouchMode ? 'aspect-square' : 'aspect-[4/3]'}`}>
           {item.image ? (
-            <img src={item.image} className="w-full h-full object-cover" loading="lazy" />
+            <ProductThumb image={item.image} imgClassName="w-full h-full object-cover" />
           ) : visibleProducts.length > 0 ? (
             <div className={`grid h-full ${visibleProducts.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
               {visibleProducts.map((product: any, idx: number) => {
@@ -62,7 +63,7 @@ export const BundleCard = memo(
                 return (
                   <div key={product.id || idx} className={cellClasses}>
                     {product.image ? (
-                      <img src={product.image} className="w-full h-full object-cover" loading="lazy" />
+                      <ProductThumb image={product.image} imgClassName="w-full h-full object-cover" />
                     ) : item.bundleMinPrice !== null && item.bundleMaxPrice !== null && item.bundleMinPrice < item.bundleMaxPrice ? (
                       <span className="text-emerald-600 dark:text-emerald-400 font-mono font-medium text-[10px] sm:text-xs shrink-0">
                         {currency}{item.bundleMinPrice.toLocaleString()} – {currency}{item.bundleMaxPrice.toLocaleString()}

@@ -1,40 +1,37 @@
 import { useState, useEffect } from 'react';
-import Dexie from 'dexie';
 import { RealIcon } from '../../../shared/icons';
 import { formatCurrency } from '../../../lib/currencies';
-import { localDb } from '../../../lib/localDb';
+import { localQuery } from '../../../data';
 import { getStartOfDayInTimezone, getEndOfDayInTimezone } from '../../../lib/dateUtils';
-import { getAmountByMethod } from '../../../lib/services';
-import { useSettingsStore } from '../../../stores';
+import { getAmountByMethod, paymentModesService } from '../../../lib/services';
+import { getSalesByDateRange } from '../../../lib/services/sales/salesRepository';
+import { useSettingsStore, useSalesStore } from '../../../stores';
 
 export function WalletStrip({ currency, timezone }: { currency: string, timezone?: string }) {
   const appSettings = useSettingsStore(s => s.settings);
+  const salesVersion = useSalesStore(s => s.sales); // recompute when sales change (reactivity)
   const [modes, setModes] = useState<any[]>([]);
-  const [creditReceived, setCreditReceived] = useState(0);
+  const [, setCreditReceived] = useState(0);
 
   useEffect(() => {
     let alive = true;
     const load = async () => {
-      Dexie.ignoreTransaction(async () => {
-        // 1. Get mode structures
-      const m = await localDb.paymentModes.toArray();
+      // 1. Get mode structures
+      const m = await paymentModesService.getAll();
       const order = ['cash', 'card', 'online'];
       m.sort((a: any, b: any) => order.indexOf(a.id) - order.indexOf(b.id));
 
-      // 2. Fetch today's sales
+      // 2. Fetch today's sales (Sale[] from the mirror)
       const tz = timezone || 'Asia/Karachi';
       const start = getStartOfDayInTimezone(new Date(), tz);
       const end = getEndOfDayInTimezone(new Date(), tz);
-      const todaySales = await localDb.sales
-        .where('timestamp')
-        .between(start, end)
-        .toArray();
+      const todaySales = await getSalesByDateRange(start.getTime(), end.getTime()).catch(() => []);
 
       // 3. Compute totals
       const totals = { cash: 0, card: 0, online: 0 };
       let creditGivenTotal = 0;
       let creditReceivedTotal = 0;
-      todaySales.forEach(t => {
+      todaySales.forEach((t: any) => {
         const addToWallet = (method: 'cash' | 'card' | 'online', amt: number) => {
           totals[method] = Math.round((totals[method] + amt) * 100) / 100;
         };
@@ -66,45 +63,42 @@ export function WalletStrip({ currency, timezone }: { currency: string, timezone
         }
       });
 
-      // 4. Fetch today's payments & expenses
-      const todayPayments = await localDb.payments
-        .filter((p: any) => {
-          const t = new Date(p.createdAt || p.created_at || p.timestamp).getTime();
-          return t >= start.getTime() && t <= end.getTime();
-        })
-        .toArray();
-        
-      const todayExpenses = await localDb.expenses
-        .filter((e: any) => {
-          const t = new Date(e.createdAt || e.created_at || e.timestamp).getTime();
-          return t >= start.getTime() && t <= end.getTime();
-        })
-        .toArray();
+      // 4. Today's standalone payments (customer repayments in / supplier payments out) + expenses.
+      const startIso = start.toISOString();
+      const endIso = end.toISOString();
+      const todayPayments = await localQuery<any>(
+        `SELECT * FROM payments WHERE sale_id IS NULL AND created_at BETWEEN ? AND ?;`,
+        [startIso, endIso]
+      ).catch(() => []);
+      const todayExpenses = await localQuery<any>(
+        `SELECT * FROM expenses WHERE spent_at BETWEEN ? AND ?;`,
+        [startIso, endIso]
+      ).catch(() => []);
 
-      todayPayments.forEach(p => {
-        const amt = Number(p.amount);
-        const method = (p.paymentMethod || p.paymentType || p.method || 'cash') as 'cash' | 'card' | 'online';
-        if (p.direction === 'in') {
-          totals[method] = Math.round((totals[method] + amt) * 100) / 100;
-          creditReceivedTotal = Math.round((creditReceivedTotal + amt) * 100) / 100;
-        } else if (p.direction === 'out') {
-          totals[method] = Math.round((totals[method] - amt) * 100) / 100;
+      todayPayments.forEach((p: any) => {
+        const raw = Number(p.amount) || 0;
+        const method = (p.mode_code || 'cash') as 'cash' | 'card' | 'online';
+        if (raw >= 0) {
+          totals[method] = Math.round((totals[method] + raw) * 100) / 100;
+          creditReceivedTotal = Math.round((creditReceivedTotal + raw) * 100) / 100;
+        } else {
+          totals[method] = Math.round((totals[method] + raw) * 100) / 100;
         }
       });
 
-      todayExpenses.forEach(e => {
-        const amt = Number(e.amount);
-        const method = (e.paymentMethod || 'cash') as 'cash' | 'card' | 'online';
+      todayExpenses.forEach((e: any) => {
+        const amt = Number(e.amount) || 0;
+        const method = (e.payment_mode || 'cash') as 'cash' | 'card' | 'online';
         totals[method] = Math.round((totals[method] - amt) * 100) / 100;
       });
 
       // 5. Merge
-      const finalModes = m.map(mode => ({
+      const finalModes = m.map((mode: any) => ({
         ...mode,
         balance: totals[mode.id as 'cash' | 'card' | 'online'] || 0
       }));
 
-      if (appSettings?.enableCreditSales || appSettings?.enable_credit_sales) {
+      if (appSettings?.enableCreditSales || (appSettings as any)?.enable_credit_sales) {
         finalModes.push({
           id: 'credit',
           name: 'Credit',
@@ -112,28 +106,30 @@ export function WalletStrip({ currency, timezone }: { currency: string, timezone
           color: '#f59e0b',
           balance: creditGivenTotal - creditReceivedTotal,
           creditGiven: creditGivenTotal,
-          creditRecovered: creditReceivedTotal
-        });
+          creditRecovered: creditReceivedTotal,
+        } as any);
       }
 
       if (alive) {
         setModes(finalModes);
         setCreditReceived(creditReceivedTotal);
       }
-      });
     };
     load();
-    const subs: any[] = [];
-    try {
-      subs.push(localDb.sales.hook('creating').subscribe(() => load()));
-      subs.push(localDb.sales.hook('updating').subscribe(() => load()));
-      subs.push(localDb.sales.hook('deleting').subscribe(() => load()));
-      subs.push(localDb.payments.hook('creating').subscribe(() => load()));
-      subs.push(localDb.payments.hook('updating').subscribe(() => load()));
-      subs.push(localDb.payments.hook('deleting').subscribe(() => load()));
-    } catch { /* hooks unsupported */ }
-    return () => { alive = false; subs.forEach(s => s?.unsubscribe?.()); };
-  }, [timezone, appSettings]);
+    // Reactivity: re-run on explicit data-change events (Zustand sales dep covers most).
+    const onChange = () => load();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('sales-updated', onChange);
+      window.addEventListener('settings-updated', onChange);
+    }
+    return () => {
+      alive = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('sales-updated', onChange);
+        window.removeEventListener('settings-updated', onChange);
+      }
+    };
+  }, [timezone, appSettings, salesVersion]);
 
   if (!modes.length) return null;
   return (

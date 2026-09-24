@@ -1,9 +1,10 @@
 /**
- * Local SQLite Sales Repository
- * Authoritative local sales query engine.
+ * Sales Repository — Supabase-only cloud-direct (Phase 10i).
+ * Authoritative sales reads from the local mirror (snake_case). No P2P, no Dexie.
+ * Maps mirror rows to the camelCase `Sale`/`CartItem` domain types at this boundary.
  */
 
-import { getDatabase } from '../../db';
+import { localQuery, localQueryOne } from '../../../data';
 import { Sale, CartItem } from '../../../types';
 
 export function mapSqliteSale(row: any, items: CartItem[] = [], splitPayments?: any[]): Sale {
@@ -36,10 +37,12 @@ export function mapSqliteSale(row: any, items: CartItem[] = [], splitPayments?: 
     changeAmount: Number(row.change_amount) || 0,
     paymentMethod: (row.payment_method || 'cash') as any,
     status: (row.status || 'completed') as any,
+    saleType: (row.sale_type || undefined) as any,
     refundedAmount: Number(row.refunded_amount) || 0,
     notes: row.notes || undefined,
     editedFromInvoice: editedFromInv,
-    timestamp: new Date(Number(row.timestamp)),
+    // Cloud-direct schema uses ISO `sold_at` (server clock), not an epoch `timestamp`.
+    timestamp: row.sold_at ? new Date(row.sold_at) : (row.created_at ? new Date(row.created_at) : new Date()),
     receiptNumber: invoiceNum,
     items,
     extraCharges: extraList,
@@ -48,30 +51,8 @@ export function mapSqliteSale(row: any, items: CartItem[] = [], splitPayments?: 
   };
 }
 
-export async function getSaleById(id: string): Promise<Sale | null> {
-  const db = await getDatabase();
-  const saleRow = await db.queryOne(`SELECT * FROM sales WHERE id = ?;`, [id]);
-  if (!saleRow) return null;
-
-  const [itemRows, paymentRows] = await Promise.all([
-    db.query(
-      `SELECT si.*, p.image_hash as product_image, c.name as product_category
-       FROM sale_items si
-       LEFT JOIN products p ON si.product_id = p.id
-       LEFT JOIN categories c ON p.category_id = c.id
-       WHERE si.sale_id = ?;`,
-      [id]
-    ),
-    db.query(
-      `SELECT p.*, pm.name as mode_name 
-       FROM payments p 
-       LEFT JOIN payment_modes pm ON p.mode_id = pm.id 
-       WHERE p.sale_id = ?;`,
-      [id]
-    )
-  ]);
-
-  const items: CartItem[] = itemRows.map((r: any) => ({
+function mapItemRow(r: any): CartItem {
+  return {
     product: {
       id: r.product_id,
       name: r.name,
@@ -92,103 +73,76 @@ export async function getSaleById(id: string): Promise<Sale | null> {
     discountType: 'fixed',
     subtotal: Number(r.total_price) || 0,
     selectedVariantId: r.variant_id || undefined,
-  }));
+  };
+}
 
-  const splitPayments = paymentRows.length > 0 ? paymentRows.map((p: any) => ({
-    method: p.mode_name || p.mode_id,
-    amount: Number(p.amount) || 0,
-    reference: p.reference || undefined,
-  })) : undefined;
+const ITEM_SELECT = `
+  SELECT si.*, p.image_hash as product_image, c.name as product_category
+  FROM sale_items si
+  LEFT JOIN products p ON si.product_id = p.id
+  LEFT JOIN categories c ON p.category_id = c.id`;
+
+const PAYMENT_SELECT = `
+  SELECT p.*, pm.name as mode_name
+  FROM payments p
+  LEFT JOIN payment_modes pm ON p.mode_code = pm.code`;
+
+export async function getSaleById(id: string): Promise<Sale | null> {
+  const saleRow = await localQueryOne<any>(`SELECT * FROM sales WHERE id = ?;`, [id]);
+  if (!saleRow) return null;
+
+  const [itemRows, paymentRows] = await Promise.all([
+    localQuery<any>(`${ITEM_SELECT} WHERE si.sale_id = ?;`, [id]),
+    localQuery<any>(`${PAYMENT_SELECT} WHERE p.sale_id = ?;`, [id]),
+  ]);
+
+  const items = itemRows.map(mapItemRow);
+  const splitPayments = paymentRows.length > 0
+    ? paymentRows.map((p: any) => ({ method: p.mode_name || p.mode_code, amount: Number(p.amount) || 0, reference: p.reference || undefined }))
+    : undefined;
 
   return mapSqliteSale(saleRow, items, splitPayments);
 }
 
 export async function batchHydrateSaleItems(saleRows: any[]): Promise<Sale[]> {
   if (saleRows.length === 0) return [];
-  const db = await getDatabase();
   const saleIds = saleRows.map((r) => r.id);
   const placeholders = saleIds.map(() => '?').join(',');
 
   const [itemRows, paymentRows] = await Promise.all([
-    db.query(
-      `SELECT si.*, p.image_hash as product_image, c.name as product_category
-       FROM sale_items si
-       LEFT JOIN products p ON si.product_id = p.id
-       LEFT JOIN categories c ON p.category_id = c.id
-       WHERE si.sale_id IN (${placeholders});`,
-      saleIds
-    ),
-    db.query(
-      `SELECT p.*, pm.name as mode_name 
-       FROM payments p 
-       LEFT JOIN payment_modes pm ON p.mode_id = pm.id 
-       WHERE p.sale_id IN (${placeholders});`,
-      saleIds
-    )
+    localQuery<any>(`${ITEM_SELECT} WHERE si.sale_id IN (${placeholders});`, saleIds),
+    localQuery<any>(`${PAYMENT_SELECT} WHERE p.sale_id IN (${placeholders});`, saleIds),
   ]);
 
   const itemsBySaleId = new Map<string, CartItem[]>();
   for (const r of itemRows) {
-    if (!itemsBySaleId.has(r.sale_id)) {
-      itemsBySaleId.set(r.sale_id, []);
-    }
-    itemsBySaleId.get(r.sale_id)!.push({
-      product: {
-        id: r.product_id,
-        name: r.name,
-        price: Number(r.unit_price) || 0,
-        cost: Number(r.unit_cost) || 0,
-        stock: 0,
-        minStock: 0,
-        category: r.product_category || '',
-        image: r.product_image || undefined,
-        description: '',
-        taxable: true,
-        active: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      quantity: Number(r.quantity) || 1,
-      discount: Number(r.discount) || 0,
-      discountType: 'fixed',
-      subtotal: Number(r.total_price) || 0,
-      selectedVariantId: r.variant_id || undefined,
-    });
+    if (!itemsBySaleId.has(r.sale_id)) itemsBySaleId.set(r.sale_id, []);
+    itemsBySaleId.get(r.sale_id)!.push(mapItemRow(r));
   }
 
   const paymentsBySaleId = new Map<string, any[]>();
   for (const p of paymentRows) {
-    if (!paymentsBySaleId.has(p.sale_id)) {
-      paymentsBySaleId.set(p.sale_id, []);
-    }
-    paymentsBySaleId.get(p.sale_id)!.push({
-      method: p.mode_name || p.mode_id,
-      amount: Number(p.amount) || 0,
-      reference: p.reference || undefined,
-    });
+    if (!paymentsBySaleId.has(p.sale_id)) paymentsBySaleId.set(p.sale_id, []);
+    paymentsBySaleId.get(p.sale_id)!.push({ method: p.mode_name || p.mode_code, amount: Number(p.amount) || 0, reference: p.reference || undefined });
   }
 
-  return saleRows.map((r: any) =>
-    mapSqliteSale(r, itemsBySaleId.get(r.id) || [], paymentsBySaleId.get(r.id))
-  );
+  return saleRows.map((r: any) => mapSqliteSale(r, itemsBySaleId.get(r.id) || [], paymentsBySaleId.get(r.id)));
 }
 
 export async function getRecentSales(limit = 100): Promise<Sale[]> {
-  const db = await getDatabase();
-  const rows = await db.query(
-    `SELECT * FROM sales WHERE status NOT IN ('deleted', 'void') ORDER BY timestamp DESC LIMIT ?;`,
+  const rows = await localQuery<any>(
+    `SELECT * FROM sales WHERE status NOT IN ('deleted', 'void') ORDER BY sold_at DESC LIMIT ?;`,
     [limit]
   );
   return batchHydrateSaleItems(rows);
 }
 
 export async function getSalesByDateRange(startDate: number, endDate: number): Promise<Sale[]> {
-  const db = await getDatabase();
-  const rows = await db.query(
-    `SELECT * FROM sales 
-     WHERE timestamp >= ? AND timestamp <= ? AND status NOT IN ('deleted', 'void')
-     ORDER BY timestamp DESC;`,
-    [startDate, endDate]
+  const rows = await localQuery<any>(
+    `SELECT * FROM sales
+     WHERE sold_at >= ? AND sold_at <= ? AND status NOT IN ('deleted', 'void')
+     ORDER BY sold_at DESC;`,
+    [new Date(startDate).toISOString(), new Date(endDate).toISOString()]
   );
   return batchHydrateSaleItems(rows);
 }

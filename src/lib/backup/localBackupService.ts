@@ -5,7 +5,7 @@
  */
 
 import { createEncryptedBackup } from './backupEngine';
-import { getDeviceProfile } from '../mesh/deviceIdentity';
+import { getDeviceProfile } from '../deviceIdentity';
 
 export type LocalBackupFrequency = 'daily' | 'weekly' | 'monthly';
 
@@ -51,8 +51,8 @@ export function saveLocalBackupConfig(updates: Partial<LocalBackupConfig>): Loca
   return next;
 }
 
-async function isTauriEnvironment(): Promise<boolean> {
-  return typeof window !== 'undefined' && (Boolean((window as any).__TAURI__) || Boolean((window as any).__TAURI_INTERNALS__));
+async function isElectronEnvironment(): Promise<boolean> {
+  return typeof window !== 'undefined' && Boolean(window.electronAPI);
 }
 
 export async function runLocalDocumentsBackup(password?: string): Promise<{
@@ -70,40 +70,44 @@ export async function runLocalDocumentsBackup(password?: string): Promise<{
     // 1. Generate encrypted backup snapshot
     const { jsonString, filename, archive } = await createEncryptedBackup(backupSecret);
     const sizeBytes = archive.sizeBytes;
-    const isTauri = await isTauriEnvironment();
+    const isElectron = await isElectronEnvironment();
 
     let savedPath = `Documents/${BACKUP_SUBDIR}/${filename}`;
 
-    if (isTauri) {
+    if (isElectron) {
       try {
-        const { mkdir, writeTextFile, readDir, remove, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+        const electronAPI = window.electronAPI!;
+        const documentsPath = await electronAPI.fs.getDocumentsPath();
+        const backupDir = `${documentsPath}/${BACKUP_SUBDIR}`;
 
         // Ensure directory exists in Documents
-        await mkdir(BACKUP_SUBDIR, { baseDir: BaseDirectory.Document, recursive: true });
+        await electronAPI.fs.mkdir(backupDir, true);
 
         // Write new backup file
-        const fullRelPath = `${BACKUP_SUBDIR}/${filename}`;
-        await writeTextFile(fullRelPath, jsonString, { baseDir: BaseDirectory.Document });
+        const fullPath = `${backupDir}/${filename}`;
+        await electronAPI.fs.writeFile(fullPath, jsonString);
 
         // Auto-delete old backups if enabled
         const config = getLocalBackupConfig();
         if (config.autoDeleteOld) {
           try {
-            const entries = await readDir(BACKUP_SUBDIR, { baseDir: BaseDirectory.Document });
+            const entries = await electronAPI.fs.readdir(backupDir);
             const backupFiles = entries
-              .filter(e => e.name.startsWith('POS-BACKUP-') && e.name.endsWith('.zpos'))
-              .sort((a, b) => b.name.localeCompare(a.name)); // Descending by filename date
+              .filter((e: string) => e.startsWith('POS-BACKUP-') && e.endsWith('.zpos'))
+              .sort((a: string, b: string) => b.localeCompare(a)); // Descending by filename date
 
             if (backupFiles.length > config.keepCount) {
               const toDelete = backupFiles.slice(config.keepCount);
               for (const oldFile of toDelete) {
-                await remove(`${BACKUP_SUBDIR}/${oldFile.name}`, { baseDir: BaseDirectory.Document });
+                await electronAPI.fs.unlink(`${backupDir}/${oldFile}`);
               }
             }
           } catch {}
         }
+
+        savedPath = fullPath;
       } catch (fsErr: any) {
-        throw new Error(`Desktop filesystem write failed: ${fsErr.message}`);
+        throw new Error(`Electron filesystem write failed: ${fsErr.message}`);
       }
     } else {
       // Browser fallback: trigger file download & store in IndexedDB

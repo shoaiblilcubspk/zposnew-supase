@@ -1,7 +1,6 @@
 import { useCartStore, useAppStore, useProductsStore, useSettingsStore } from '../../../stores';
 import { useAuth } from '../../../context/AuthContext';
 import { sonner } from '../../../lib/sonner';
-import { localDb } from '../../../lib/localDb';
 import { Bundle } from '../../../types';
 import { CartItemListBody } from './CartItemListBody';
 
@@ -73,23 +72,9 @@ export function CartItemList({ activePromotions }: CartItemListProps) {
 
     let bundleDef = appBundles?.find(b => b.id === originalBundleDefId);
     if (!bundleDef) {
-      const localBundle = await localDb.bundles.get(originalBundleDefId);
-      if (localBundle) {
-        const bundleItems = await localDb.bundleItems.where('bundleId').equals(originalBundleDefId).toArray();
-        bundleDef = {
-          ...localBundle,
-          discountValue: Number(localBundle.discountValue) || 0,
-          discountType: localBundle.discountType || 'percentage',
-          active: localBundle.active !== false,
-          hideItemPrices: localBundle.hideItemPrices === true,
-          items: bundleItems.map((bi: any) => ({
-            id: bi.id,
-            bundleId: bi.bundleId,
-            productId: bi.productId,
-            quantity: Number(bi.quantity) || 1,
-          })),
-        } as Bundle;
-      }
+      const { bundlesService } = await import('../../../lib/services');
+      const all = await bundlesService.getAll().catch(() => [] as Bundle[]);
+      bundleDef = all.find((b) => b.id === originalBundleDefId);
     }
     if (!bundleDef) {
       console.warn(`[Cart] Cannot update bundle ${originalBundleDefId}: definition not found in state or localDb.`);

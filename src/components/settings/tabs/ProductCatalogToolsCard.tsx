@@ -29,7 +29,7 @@ export function ProductCatalogToolsCard() {
       </div>
 
       <p className="text-neutral-500 dark:text-neutral-400 leading-relaxed text-[12px]">
-        Export catalog items with photos compressed inside an images directory (ZIP), or clean spreadsheet/JSON format. Imported images automatically save to the local content-addressed media store and replicate over P2P mesh.
+        Export catalog items with photos compressed inside an images directory (ZIP), or clean spreadsheet/JSON format. Imported images automatically save to the local content-addressed media store and sync with cloud storage.
       </p>
 
       <div className="flex flex-wrap items-center gap-2.5 pt-1">

@@ -7,6 +7,7 @@ import { Modal } from './ui/Modal';
 import { cn } from '../lib/utils';
 import { compressImage } from './imageCompression';
 import { Button, EmptyState } from './ui';
+import { ProductThumb } from './ui/ProductThumb';
 
 interface MediaLibraryProps {
   isOpen: boolean;
@@ -181,11 +182,10 @@ export function MediaLibrary({ isOpen, onClose, onSelect, standalone }: MediaLib
                 className="group flex flex-col gap-1.5 cursor-pointer"
               >
                 <div className="relative aspect-square bg-neutral-100 dark:bg-surface rounded-md overflow-hidden border border-neutral-200 dark:border-white/[0.08] hover:border-primary/50 transition-colors">
-                  <img
-                    src={asset.image}
+                  <ProductThumb
+                    image={asset.image}
                     alt={asset.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
+                    imgClassName="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                     <MousePointer2 className="h-5 w-5 text-white" />

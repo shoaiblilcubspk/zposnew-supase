@@ -1,5 +1,5 @@
 import { AppSettings } from '../../types';
-import { SETTINGS_ID } from '../localDb';
+import { SETTINGS_ID } from '../ids';
 
 export const mapSettings = (item: any): AppSettings => {
   if (!item) return null as any;

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronRight } from 'lucide-react';
 import { Button, Avatar, RealIcon } from '../../shared/ui';
 import { can } from '../../lib/permissions';
+import { executeHardRefresh } from '../../lib/utils/hardRefresh';
 
 interface MobileMenuDrawerProps {
   isMobileMenuOpen: boolean;
@@ -13,6 +14,7 @@ interface MobileMenuDrawerProps {
   toggleTheme: () => void;
   handleLogout: () => void;
   onLockTerminal?: () => void;
+  forceSync?: () => Promise<void>;
 }
 
 export function MobileMenuDrawer({
@@ -24,6 +26,7 @@ export function MobileMenuDrawer({
   toggleTheme,
   handleLogout,
   onLockTerminal,
+  forceSync,
 }: MobileMenuDrawerProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -173,6 +176,25 @@ export function MobileMenuDrawer({
               </div>
               <span className="text-[10px] font-mono uppercase text-neutral-400 dark:text-neutral-500 bg-neutral-200/60 dark:bg-white/[0.08] px-1.5 py-0.5 rounded">
                 {appSettings.theme || 'dark'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={async () => {
+                onHideMobileMenu?.();
+                await executeHardRefresh(forceSync);
+              }}
+              className="flex items-center justify-between w-full h-10 px-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.05] transition-colors active:bg-black/[0.06] dark:active:bg-white/[0.08] text-neutral-800 dark:text-neutral-200"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-white dark:bg-white/[0.08] border border-black/[0.04] dark:border-white/[0.06] shadow-xs flex items-center justify-center shrink-0">
+                  <RealIcon name="refresh" size={20} />
+                </div>
+                <span className="text-[12.5px] font-medium tracking-tight">Hard Refresh</span>
+              </div>
+              <span className="text-[10px] font-mono uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                Resync
               </span>
             </button>
 

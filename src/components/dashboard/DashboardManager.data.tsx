@@ -2,7 +2,6 @@ import { useExpensesStore, useInventoryStore, useProductsStore, useSalesStore, u
 import { useMemo, useEffect, useState } from 'react';
 import { getTimezone, getStartOfDayInTimezone, getEndOfDayInTimezone } from '../../lib/dateUtils';
 import { getAmountByMethod } from '../../lib/services';
-import { localDb } from '../../lib/localDb';
 
 export function useDashboardData() {
   const appSettings = useSettingsStore(s => s.settings);
@@ -14,8 +13,8 @@ export function useDashboardData() {
 
   const timezone = getTimezone(appSettings.country);
 
-  const [dashboardSales, setDashboardSales] = useState([]);
-  const [recentSales, setRecentSales] = useState([]);
+  const [dashboardSales, setDashboardSales] = useState<any[]>([]);
+  const [recentSales, setRecentSales] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -23,22 +22,14 @@ export function useDashboardData() {
       const todayStart = getStartOfDayInTimezone(now, timezone).getTime();
       const todayEnd = getEndOfDayInTimezone(now, timezone).getTime();
 
-      // Fetch today's sales from localDb
-      const today = await localDb.sales
-        .filter(s => {
-          const ts = new Date(s.createdAt || s.timestamp || 0).getTime();
-          return ts >= todayStart && ts <= todayEnd;
-        })
-        .toArray();
-      setDashboardSales(today);
+      // Fetch today's sales from the local mirror.
+      const { getSalesByDateRange, getRecentSales } = await import('../../lib/services/sales/salesRepository');
+      const today = await getSalesByDateRange(todayStart, todayEnd).catch(() => []);
+      setDashboardSales(today as any);
 
-      // Fetch recent 5 sales
-      const recent = await localDb.sales
-        .orderBy('timestamp')
-        .reverse()
-        .limit(5)
-        .toArray();
-      setRecentSales(recent);
+      // Fetch recent 5 sales.
+      const recent = await getRecentSales(5).catch(() => []);
+      setRecentSales(recent as any);
     };
 
     fetchDashboardData();

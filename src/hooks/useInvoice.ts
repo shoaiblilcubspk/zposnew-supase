@@ -4,8 +4,7 @@
  */
 
 import { useSalesStore, useSettingsStore } from '../stores';
-import { localDb } from '../lib/localDb';
-import { query } from '../lib/db';
+import { localQuery } from '../data';
 import { settingsService } from '../lib/services/settingsService';
 import { generateNextInvoiceNumber, getNextInvoiceNumber, getDeviceId } from '../lib/services';
 
@@ -17,7 +16,7 @@ export function useInvoiceGeneration() {
     // 2. Scan highest counter from authoritative SQLite sales to guarantee 0 collisions
     let currentCounter = appSettings.invoiceCounter || 1;
     try {
-      const rows = await query<{ invoice_number: string }>(
+      const rows = await localQuery<{ invoice_number: string }>(
         `SELECT invoice_number FROM sales WHERE invoice_number IS NOT NULL ORDER BY created_at DESC LIMIT 100;`
       );
       for (const r of rows) {
@@ -30,18 +29,7 @@ export function useInvoiceGeneration() {
         }
       }
     } catch {
-      try {
-        const dexieSales = await localDb.sales.toArray();
-        for (const s of dexieSales) {
-          if (s.invoiceNumber) {
-            const parts = s.invoiceNumber.split('-');
-            const lastNum = parseInt(parts[parts.length - 1], 10);
-            if (!isNaN(lastNum) && lastNum > currentCounter) {
-              currentCounter = lastNum;
-            }
-          }
-        }
-      } catch {}
+      // Mirror not ready — fall back to the in-memory sales store counter below.
     }
 
     // 3. Generate clean, collision-free invoice number

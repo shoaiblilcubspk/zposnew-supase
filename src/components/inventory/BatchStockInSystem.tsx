@@ -145,8 +145,8 @@ export function BatchStockInSystem({ onClose, initialProduct }: BatchStockInSyst
               created_at: new Date().toISOString(),
             };
             
-            const { localDb } = await import('../../lib/localDb');
-            await localDb.stockHistory.add(localEntry);
+            const { stockHistoryService } = await import('../../lib/services/stockHistoryService');
+            await stockHistoryService.create(localEntry as any);
 
             // stock:0 is already achieved by the stock_history insert above (DB trigger).
             // Do NOT write products.stock directly (AGENTS.md hard limit / plan PART O).

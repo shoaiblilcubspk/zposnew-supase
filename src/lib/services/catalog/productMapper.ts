@@ -1,6 +1,6 @@
 /**
  * Product Mapping & Serialization Helpers
- * Bridges SQLite database columns, P2P outbox payloads, and in-memory Product domain models.
+ * Bridges SQLite database columns, cloud sync payloads, and in-memory Product domain models.
  */
 
 import { Product } from '../../../types';

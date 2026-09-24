@@ -13,6 +13,7 @@ export function GridDensityController() {
       localStorage.setItem('pos_grid_columns', String(cols));
       const existing = JSON.parse(localStorage.getItem('pos_local_prefs') || '{}');
       localStorage.setItem('pos_local_prefs', JSON.stringify({ ...existing, posGridColumns: cols }));
+      settingsService.update({ posGridColumns: cols }).catch(() => {});
     } catch (e) {}
     sonner.success(`Grid density set to ${cols === 0 ? 'Auto' : `${cols} columns`}`);
   };

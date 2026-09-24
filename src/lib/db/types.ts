@@ -26,7 +26,7 @@ export interface ISqliteTransaction {
 
 export interface ISqliteDriver {
   readonly name: string;
-  readonly platform: 'tauri' | 'capacitor' | 'wasm';
+  readonly platform: 'electron' | 'capacitor' | 'wasm';
   readonly isOpen: boolean;
 
   /** Open and initialize the database connection with pragmas */

@@ -106,5 +106,5 @@ export const normalizePaymentMethod = (method: string): string => {
 };
 
 
-export { generateId } from '../localDb';
+export { generateId } from '../ids';
 export { generateBarcodeValue } from '../../utils/barcode';

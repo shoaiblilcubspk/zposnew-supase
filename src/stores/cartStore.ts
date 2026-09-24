@@ -29,9 +29,6 @@ interface CartState {
   setSalesTabs: (tabs: SalesTab[]) => void;
 }
 
-const updateActiveTab = (st: CartState, updater: (tab: SalesTab) => SalesTab) =>
-  st.salesTabs.map((t) => (t.id === st.activeSalesTab ? updater(t) : t));
-
 const defaultInitialTab: SalesTab = {
   id: 'tab_default_1',
   name: 'Sale 1',
@@ -40,16 +37,61 @@ const defaultInitialTab: SalesTab = {
   createdAt: new Date(),
 };
 
+function getInitialSalesTabs(): SalesTab[] {
+  if (typeof localStorage === 'undefined') return [defaultInitialTab];
+  try {
+    const saved = localStorage.getItem('pos_sales_tabs');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.slice(0, 3);
+      }
+    }
+  } catch {}
+  return [defaultInitialTab];
+}
+
+function getInitialActiveSalesTab(tabs: SalesTab[]): string {
+  if (typeof localStorage === 'undefined') return tabs[0]?.id || 'tab_default_1';
+  try {
+    const saved = localStorage.getItem('pos_active_sales_tab');
+    if (saved && tabs.some((t) => t.id === saved)) {
+      return saved;
+    }
+  } catch {}
+  return tabs[0]?.id || 'tab_default_1';
+}
+
+function persistTabs(tabs: SalesTab[], activeId?: string) {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem('pos_sales_tabs', JSON.stringify(tabs));
+    if (activeId) {
+      localStorage.setItem('pos_active_sales_tab', activeId);
+    }
+  } catch {}
+}
+
+const updateActiveTab = (st: CartState, updater: (tab: SalesTab) => SalesTab) => {
+  const nextTabs = st.salesTabs.map((t) => (t.id === st.activeSalesTab ? updater(t) : t));
+  persistTabs(nextTabs, st.activeSalesTab);
+  return nextTabs;
+};
+
+const initialTabs = getInitialSalesTabs();
+const initialActiveTabId = getInitialActiveSalesTab(initialTabs);
+const initialActiveTab = initialTabs.find((t) => t.id === initialActiveTabId) || initialTabs[0];
+
 export const useCartStore = create<CartState>((set) => ({
-  salesTabs: [defaultInitialTab],
-  activeSalesTab: 'tab_default_1',
-  cart: [],
-  selectedCustomer: null,
-  billDiscountValue: 0,
-  billDiscountType: 'percentage',
-  notes: '',
-  editingSaleId: null,
-  salesmanId: null,
+  salesTabs: initialTabs,
+  activeSalesTab: initialActiveTabId,
+  cart: initialActiveTab?.cart || [],
+  selectedCustomer: initialActiveTab?.selectedCustomer || null,
+  billDiscountValue: initialActiveTab?.billDiscountValue || 0,
+  billDiscountType: initialActiveTab?.billDiscountType || 'percentage',
+  notes: initialActiveTab?.notes || '',
+  editingSaleId: initialActiveTab?.editingSaleId || null,
+  salesmanId: initialActiveTab?.salesmanId || null,
 
   setCart: (items) => set((st) => ({ cart: items, salesTabs: updateActiveTab(st, (t) => ({ ...t, cart: items })) })),
 
@@ -128,8 +170,10 @@ export const useCartStore = create<CartState>((set) => ({
 
   addSalesTab: (tab) => set((st) => {
     if (st.salesTabs.length >= 3) return st;
+    const nextTabs = [...st.salesTabs, tab];
+    persistTabs(nextTabs, tab.id);
     return {
-      salesTabs: [...st.salesTabs, tab],
+      salesTabs: nextTabs,
       activeSalesTab: tab.id,
       cart: tab.cart || [],
       selectedCustomer: tab.selectedCustomer || null,
@@ -143,6 +187,7 @@ export const useCartStore = create<CartState>((set) => ({
 
   updateSalesTab: ({ id, updates }) => set((st) => {
     const updatedTabs = updatedTabsFn(st.salesTabs, id, updates);
+    persistTabs(updatedTabs, st.activeSalesTab);
     if (id === st.activeSalesTab) {
       return {
         salesTabs: updatedTabs,
@@ -163,6 +208,7 @@ export const useCartStore = create<CartState>((set) => ({
     const remainingTabs = st.salesTabs.filter((t) => t.id !== id);
     const isCurrentActiveRemoved = st.activeSalesTab === id;
     const targetTabId = nextTabId || (remainingTabs.length > 0 ? remainingTabs[0].id : '');
+    persistTabs(remainingTabs, isCurrentActiveRemoved ? targetTabId : st.activeSalesTab);
     if (isCurrentActiveRemoved && targetTabId) {
       const nextTab = remainingTabs.find((t) => t.id === targetTabId);
       return {
@@ -182,6 +228,7 @@ export const useCartStore = create<CartState>((set) => ({
 
   setActiveSalesTab: (id) => set((st) => {
     const activeTab = st.salesTabs.find((t) => t.id === id);
+    persistTabs(st.salesTabs, id);
     return {
       activeSalesTab: id,
       cart: activeTab?.cart || [],
@@ -194,7 +241,11 @@ export const useCartStore = create<CartState>((set) => ({
     };
   }),
 
-  setSalesTabs: (tabs) => set({ salesTabs: tabs.slice(0, 3) }),
+  setSalesTabs: (tabs) => {
+    const sliced = tabs.slice(0, 3);
+    persistTabs(sliced);
+    set({ salesTabs: sliced });
+  },
 }));
 
 function updatedTabsFn(tabs: SalesTab[], id: string, updates: Partial<SalesTab>) {

@@ -46,7 +46,7 @@ export function GeneralStoreIdentity({ formData, setFormData, handleChange, hand
             currentLogo={formData.storeLogo}
             onLogoChange={(url: string | undefined) => {
               // Only update local form state — isDirty is set inside setFormData wrapper.
-              // Logo is saved + P2P shared ONLY when user clicks "Update System".
+              // Logo is saved + cloud synced ONLY when user clicks "Update System".
               setFormData((prev: any) => ({ ...prev, storeLogo: url ?? '' }));
             }}
           />

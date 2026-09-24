@@ -122,7 +122,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         localStorage.setItem('pos_local_prefs', JSON.stringify(updatedLocal));
       } catch {}
     }
-    const newSettings = { ...st.settings, ...payload } as AppSettings;
+    const directCols = typeof localStorage !== 'undefined' ? localStorage.getItem('pos_grid_columns') : null;
+    const finalGridCols = payload.posGridColumns !== undefined
+      ? payload.posGridColumns
+      : (directCols !== null ? Number(directCols) : st.settings.posGridColumns);
+
+    const newSettings = {
+      ...st.settings,
+      ...payload,
+      posGridColumns: finalGridCols,
+    } as AppSettings;
     if (newSettings.retailEnabled === false && newSettings.wholesaleEnabled === false) {
       newSettings.retailEnabled = true;
     }

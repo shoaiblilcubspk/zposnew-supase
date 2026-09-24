@@ -7,6 +7,7 @@ import { CartItem } from '../../../types';
 import { cn } from '../../../lib/utils';
 import { CartItemDiscountInput } from './CartItemDiscountInput';
 import { getExpiryStatus } from '../../../utils/expiryUtils';
+import { ProductThumb } from '../../../shared/ui/ProductThumb';
 
 interface CartItemCardProps {
   item: CartItem;
@@ -97,11 +98,11 @@ export function CartItemCard({
 
         {!isNested && (
           <div className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/5 shrink-0 flex items-center justify-center self-start mt-0.5 aspect-square">
-            {item.product.image ? (
-              <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
-            ) : (
-              <PackageIcon size="md" className="text-gray-300" />
-            )}
+            <ProductThumb
+              image={item.product.image}
+              alt={item.product.name}
+              fallback={<PackageIcon size="md" className="text-gray-300" />}
+            />
           </div>
         )}
 

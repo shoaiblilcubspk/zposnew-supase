@@ -15,7 +15,6 @@ import { MobileBottomNav } from '../components/layout/MobileBottomNav';
 import { AppRoutes } from '../appRoutes';
 import { LoadingView } from './LoadingView';
 import { useAppGlobalEffects } from './useAppGlobalEffects';
-import { useMeshBootstrap } from '../lib/mesh/useMeshBootstrap';
 
 export function AppContent() {
   const appSettings = useSettingsStore(s => s.settings);
@@ -54,8 +53,7 @@ export function AppContent() {
   }, []);
 
   const isLoggedIn = Boolean(user && appCurrentUser && appCurrentUser.active);
-  const meshEnabled = !isFirstLaunch && !loading;
-  useMeshBootstrap(meshEnabled);
+  // P2P mesh removed (Supabase-only cloud-direct). Sync now runs via initDataLayer() at boot.
   useAppGlobalEffects();
 
   return (
@@ -66,10 +64,10 @@ export function AppContent() {
         expand={false}
         visibleToasts={1}
         closeButton={false}
-        duration={2500}
+        duration={3500}
         theme="dark"
         toastOptions={{
-          className: '!rounded-full !px-4 !py-2.5 !bg-neutral-900/95 dark:!bg-[#1a1a1e]/95 !backdrop-blur-xl !border !border-white/10 !text-white !shadow-2xl !text-[13px] !font-medium !tracking-tight flex items-center gap-2.5',
+          className: '!rounded-[20px] !px-4 !py-2.5 !bg-neutral-900/95 dark:!bg-[#1a1a1e]/95 !backdrop-blur-xl !border !border-white/10 !text-white !shadow-2xl !text-[13px] !font-medium !tracking-tight flex items-center gap-2.5 !max-w-[min(calc(100vw-28px),760px)] !w-auto',
         }}
         style={{ zIndex: 999999 }}
       />

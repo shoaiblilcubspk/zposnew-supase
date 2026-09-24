@@ -105,7 +105,22 @@ export function buildKotEscpos(
 }
 
 export async function sendRawToPrinter(bytes: Uint8Array, config: PrinterConfig): Promise<boolean> {
-  // 1. Network Printing (TCP/IP socket or HTTP raw endpoint)
+  // 1. Electron Native Printing (Desktop)
+  if (typeof window !== 'undefined' && window.electronAPI) {
+    try {
+      const printers = await window.electronAPI.print.getPrinters();
+      const targetPrinter = config.address || printers[0];
+      if (targetPrinter) {
+        const dataArray = Array.from(bytes);
+        const success = await window.electronAPI.print.printRaw(targetPrinter, dataArray);
+        if (success) return true;
+      }
+    } catch (err) {
+      console.warn('[PrinterService] Electron print failed, falling back:', err);
+    }
+  }
+
+  // 2. Network Printing (TCP/IP socket or HTTP raw endpoint)
   if (config.transport === 'network' && config.address) {
     try {
       if (typeof window !== 'undefined' && (window as any).__TAURI__) {
@@ -119,13 +134,13 @@ export async function sendRawToPrinter(bytes: Uint8Array, config: PrinterConfig)
     }
   }
 
-  // 2. Mobile Bluetooth Print (Capacitor BLE)
+  // 3. Mobile Bluetooth Print (Capacitor BLE)
   if (config.transport === 'bluetooth') {
     console.log('[PrinterService] Dispatched to Bluetooth thermal printer');
     return true;
   }
 
-  // 3. Fallback: Log simulation
+  // 4. Fallback: Log simulation
   console.log(`[PrinterService] Printed ${bytes.length} ESC/POS bytes via ${config.transport}`);
   return true;
 }

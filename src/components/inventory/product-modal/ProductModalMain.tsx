@@ -56,6 +56,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
     setVariants,
     setVariantData,
     setModifiers,
+    setProductAddons,
     onClose,
   });
 

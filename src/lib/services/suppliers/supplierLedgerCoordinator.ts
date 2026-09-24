@@ -1,13 +1,13 @@
 /**
- * Supplier Ledger Coordinator
- * Authoritative ledger for supplier bills, payments, and accounts payable balances.
+ * Supplier Ledger Coordinator — Supabase-only cloud-direct (Phase 10m).
+ * Supplier bills increase accounts-payable (suppliers.balance) + log a purchase_records row;
+ * payments decrease it + append a negative payments row. Transaction history is derived from
+ * purchase_records (bills) + supplier payment rows. No P2P, no Dexie.
  */
 
-import { getDatabase } from '../../db';
 import { SupplierTransaction } from '../../../types';
-import { commitLocalTransaction } from '../../events';
-import { getDeviceId } from '../../mesh/deviceIdentity';
-import { localDb, generateId } from '../../localDb';
+import { localQuery, localQueryOne, atomicWrite, newOperationId, type AtomicOp } from '../../../data';
+import { safeRandomUUID } from '../../crypto/uuid';
 import { useInventoryStore } from '../../../stores/inventoryStore';
 
 export interface RecordBillParams {
@@ -28,147 +28,111 @@ export interface RecordPaymentParams {
   userId?: string;
 }
 
-export async function recordSupplierBill(params: RecordBillParams): Promise<string> {
-  const deviceId = await getDeviceId();
-  const now = Date.now();
-  const billId = params.referenceId || generateId();
-  const amount = Number(params.amount) || 0;
-  const supplierId = params.supplierId || (params as any).supplier_id;
-  if (!supplierId) {
-    throw new Error('Supplier ID is required to record bill');
-  }
+async function nextSupplierBalance(supplierId: string, delta: number): Promise<number> {
+  const row = await localQueryOne<{ balance: number }>(`SELECT balance FROM suppliers WHERE id = ?;`, [supplierId]);
+  return (row ? Number(row.balance) : 0) + delta;
+}
 
-  await commitLocalTransaction({
-    entityType: 'PURCHASE_RECORD',
-    entityId: billId,
-    operation: 'CREATE',
-    eventType: 'PURCHASE_CREATED',
-    deviceId,
-    userId: params.userId || 'system',
-    payload: {
-      id: billId,
-      supplierId,
-      amount,
-      note: params.note || null,
-      timestamp: now,
-    },
-    execute: async (tx) => {
-      // 1. Increment supplier balance
-      await tx.execute(
-        `UPDATE suppliers SET balance = balance + ?, updated_at = ? WHERE id = ?;`,
-        [amount, now, supplierId]
-      );
-
-      // 2. Insert into purchase_records
-      await tx.execute(
-        `INSERT INTO purchase_records (
-          id, supplier_id, invoice_number, total_amount, paid_amount, status, created_at
-        ) VALUES (?, ?, ?, ?, 0, 'received', ?);`,
-        [billId, supplierId, billId, amount, now]
-      );
-    },
-  });
-
+function syncSupplierStore(supplierId: string, newBal: number): void {
   try {
-    const s = await localDb.suppliers.get(supplierId);
-    if (s) {
-      const updated = {
-        ...s,
-        openingBalance: (s.openingBalance || 0) + amount,
-      };
-      await localDb.suppliers.update(supplierId, updated);
-      useInventoryStore.getState().updateSupplier(updated);
-    }
-    await localDb.supplierTransactions.add({
-      id: billId,
-      supplierId,
-      type: 'purchase',
-      sourceType: 'manual_bill',
-      amount,
-      note: params.note,
-      createdAt: params.date || new Date(now),
-    });
+    const s = useInventoryStore.getState().suppliers.find((x) => x.id === supplierId);
+    if (s) useInventoryStore.getState().updateSupplier({ ...s, openingBalance: newBal });
   } catch {}
+}
+
+export async function recordSupplierBill(params: RecordBillParams): Promise<string> {
+  const supplierId = params.supplierId || (params as any).supplier_id;
+  if (!supplierId) throw new Error('Supplier ID is required to record bill');
+  const billId = params.referenceId || safeRandomUUID();
+  const amount = Number(params.amount) || 0;
+  const newBal = await nextSupplierBalance(supplierId, amount); // payable increases
+
+  // ONE bundle: supplier balance (non-additive) + purchase_records log row.
+  const ops: AtomicOp[] = [
+    { table: 'suppliers', op: 'update', id: supplierId, patch: { balance: newBal } },
+    {
+      table: 'purchase_records', op: 'insert',
+      row: {
+        id: billId,
+        type: 'Bill',
+        supplier_id: supplierId,
+        product_name: params.note || 'Supplier Bill',
+        quantity: 0,
+        cost_price: 0,
+        total_amount: amount,
+        added_by: params.userId || 'system',
+        notes: params.note || null,
+        purchased_at: (params.date || new Date()).toISOString(),
+      },
+    },
+  ];
+  await atomicWrite(ops, { operation_id: newOperationId(), action: 'supplier_bill' });
+  syncSupplierStore(supplierId, newBal);
 
   return billId;
 }
 
 export async function recordSupplierPayment(params: RecordPaymentParams): Promise<string> {
-  const deviceId = await getDeviceId();
-  const now = Date.now();
-  const paymentId = params.referenceId || generateId();
-  const amount = Number(params.amount) || 0;
   const supplierId = params.supplierId || (params as any).supplier_id;
-  if (!supplierId) {
-    throw new Error('Supplier ID is required to record payment');
-  }
+  if (!supplierId) throw new Error('Supplier ID is required to record payment');
+  const paymentId = params.referenceId || safeRandomUUID();
+  const amount = Number(params.amount) || 0;
   const paymentMode = params.paymentMode || (params as any).payment_type || (params as any).paymentMethod || 'cash';
+  const newBal = await nextSupplierBalance(supplierId, -amount); // payable decreases
 
-  await commitLocalTransaction({
-    entityType: 'PAYMENT_MODE',
-    entityId: paymentId,
-    operation: 'CREATE',
-    eventType: 'SUPPLIER_PAYMENT_CREATED',
-    deviceId,
-    userId: params.userId || 'system',
-    payload: {
-      id: paymentId,
-      supplierId,
-      amount,
-      paymentMode,
-      note: params.note || null,
-      timestamp: now,
+  // ONE bundle: supplier balance (non-additive) + append-only payments row (cash outflow).
+  const ops: AtomicOp[] = [
+    { table: 'suppliers', op: 'update', id: supplierId, patch: { balance: newBal } },
+    {
+      table: 'payments', op: 'insert',
+      row: {
+        id: paymentId,
+        sale_id: null,
+        mode_code: paymentMode,
+        amount: -amount,
+        reference: `Supplier Payment: ${supplierId}`,
+      },
     },
-    execute: async (tx) => {
-      // 1. Decrement supplier balance (payable decreases)
-      await tx.execute(
-        `UPDATE suppliers SET balance = balance - ?, updated_at = ? WHERE id = ?;`,
-        [amount, now, supplierId]
-      );
-
-      // 2. Record cash outflow in payments
-      await tx.execute(
-        `INSERT INTO payments (id, sale_id, mode_id, amount, reference, created_at)
-         VALUES (?, NULL, ?, ?, ?, ?);`,
-        [paymentId, paymentMode, -amount, `Supplier Payment: ${supplierId}`, now]
-      );
-    },
-  });
-
-  try {
-    const s = await localDb.suppliers.get(supplierId);
-    if (s) {
-      const updated = {
-        ...s,
-        openingBalance: (s.openingBalance || 0) - amount,
-      };
-      await localDb.suppliers.update(supplierId, updated);
-      useInventoryStore.getState().updateSupplier(updated);
-    }
-    await localDb.supplierTransactions.add({
-      id: paymentId,
-      supplierId,
-      type: 'payment',
-      sourceType: 'payment',
-      amount,
-      note: params.note,
-      createdAt: new Date(now),
-    });
-  } catch {}
+  ];
+  await atomicWrite(ops, { operation_id: newOperationId(), action: 'supplier_payment' });
+  syncSupplierStore(supplierId, newBal);
 
   return paymentId;
 }
 
 export async function getSupplierBalance(supplierId: string): Promise<number> {
-  const db = await getDatabase();
-  const row = await db.queryOne<{ balance: number }>(
-    `SELECT balance FROM suppliers WHERE id = ?;`,
-    [supplierId]
-  );
+  const row = await localQueryOne<{ balance: number }>(`SELECT balance FROM suppliers WHERE id = ?;`, [supplierId]);
   return row ? Number(row.balance) : 0;
 }
 
 export async function getSupplierTransactions(supplierId: string): Promise<SupplierTransaction[]> {
-  const txs = await localDb.supplierTransactions.where('supplierId').equals(supplierId).toArray();
+  const bills = await localQuery<any>(
+    `SELECT * FROM purchase_records WHERE supplier_id = ? ORDER BY purchased_at DESC;`, [supplierId]
+  );
+  const payments = await localQuery<any>(
+    `SELECT * FROM payments WHERE reference = ? ORDER BY created_at DESC;`, [`Supplier Payment: ${supplierId}`]
+  );
+
+  const txs: SupplierTransaction[] = [
+    ...bills.map((b: any): SupplierTransaction => ({
+      id: b.id,
+      supplierId,
+      type: 'purchase',
+      sourceType: 'manual_bill',
+      amount: Number(b.total_amount) || 0,
+      note: b.notes || undefined,
+      createdAt: b.purchased_at ? new Date(b.purchased_at) : new Date(),
+    } as SupplierTransaction)),
+    ...payments.map((p: any): SupplierTransaction => ({
+      id: p.id,
+      supplierId,
+      type: 'payment',
+      sourceType: 'payment',
+      amount: Math.abs(Number(p.amount) || 0),
+      note: p.reference || undefined,
+      createdAt: p.created_at ? new Date(p.created_at) : new Date(),
+    } as SupplierTransaction)),
+  ];
+
   return txs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }

@@ -154,7 +154,7 @@ export function Settings() {
               {syncStatus === 'syncing' && (
                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-primary/10 rounded border border-primary/20">
                   <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                  <span className="text-[11px] font-medium text-primary">Mesh Syncing...</span>
+                  <span className="text-[11px] font-medium text-primary">Cloud Syncing...</span>
                 </div>
               )}
               {syncStatus === 'idle' && (

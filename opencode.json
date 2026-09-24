@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-opus-4-8",
+  "provider": {
+    "anthropic": {
+      "options": {
+        "apiKey": "sk-bKR1DZ9dahQngPRMEJKGLwgsOR5fqwlVM93uTsxBWie8Kwbd",
+        "baseURL": "https://api.justwoker.icu/v1"
+      }
+    }
+  }
+}

@@ -1,74 +1,97 @@
-import { generateId } from '../../localDb';
-import { commitLocalTransaction } from '../../events';
-import { getDeviceId } from '../../mesh/deviceIdentity';
+/**
+ * Catalog resolvers — Supabase-only cloud-direct (Phase 4: bundle-aware).
+ * Resolve a free-text category/supplier name to an id. The `*Op` variants return an
+ * atomicWrite insert op (when the entity is new) so category/supplier creation lives INSIDE
+ * the product's bundle (§1.5.1) — never a separate half-savable write. No P2P, no Dexie.
+ */
 
-export async function resolveCategoryId(category: string | undefined, db: any, now: number): Promise<string | null> {
-  if (!category || !category.trim()) return null;
+import { localQueryOne, insertRow, type AtomicInsert } from '../../../data';
+import { safeRandomUUID } from '../../crypto/uuid';
+
+export interface CatalogResolve {
+  id: string | null;
+  /** Present only when the entity is new and must be inserted as part of the bundle. */
+  op?: AtomicInsert;
+  created?: { kind: 'category' | 'supplier'; id: string; name: string };
+}
+
+/** Resolve a category name to an id; if new, return an insert op to include in the bundle. */
+export async function resolveCategoryOp(category: string | undefined): Promise<CatalogResolve> {
+  if (!category || !category.trim()) return { id: null };
   const name = category.trim();
-  const existing = (await db.queryOne(
+  const existing = await localQueryOne<{ id: string }>(
     `SELECT id FROM categories WHERE id = ? OR LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1;`,
     [name, name]
-  )) as { id: string } | null;
-  if (existing) return existing.id;
-  const catId = `CAT-${generateId()}`;
-  const deviceId = await getDeviceId();
+  );
+  if (existing) return { id: existing.id };
+  const id = safeRandomUUID();
+  return {
+    id,
+    op: { table: 'categories', op: 'insert', row: { id, name, active: 1 } },
+    created: { kind: 'category', id, name },
+  };
+}
 
-  await commitLocalTransaction({
-    entityType: 'CATEGORY',
-    entityId: catId,
-    operation: 'CREATE',
-    eventType: 'CATEGORY_CREATED',
-    deviceId,
-    userId: 'system',
-    payload: { id: catId, name, active: 1, color: null, icon: null, updatedAt: now },
-    execute: async (tx) => {
-      await tx.execute(
-        `INSERT OR IGNORE INTO categories (id, name, active, updated_at) VALUES (?, ?, 1, ?);`,
-        [catId, name, now]
-      );
-    },
-  });
+/** Resolve a supplier name to an id; if new, return an insert op to include in the bundle. */
+export async function resolveSupplierOp(supplier: string | undefined): Promise<CatalogResolve> {
+  if (!supplier || !supplier.trim()) return { id: null };
+  const name = supplier.trim();
+  const existing = await localQueryOne<{ id: string }>(
+    `SELECT id FROM suppliers WHERE id = ? OR LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1;`,
+    [name, name]
+  );
+  if (existing) return { id: existing.id };
+  const id = safeRandomUUID();
+  return {
+    id,
+    op: { table: 'suppliers', op: 'insert', row: { id, name, balance: 0, active: 1 } },
+    created: { kind: 'supplier', id, name },
+  };
+}
+
+export async function resolveCategoryId(
+  category: string | undefined,
+  _db?: any,
+  now: number = Date.now()
+): Promise<string | null> {
+  if (!category || !category.trim()) return null;
+  const name = category.trim();
+  const existing = await localQueryOne<{ id: string }>(
+    `SELECT id FROM categories WHERE id = ? OR LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1;`,
+    [name, name]
+  );
+  if (existing) return existing.id;
+
+  const row = await insertRow('categories', { name, active: 1 });
 
   try {
     const { useInventoryStore } = await import('../../../stores');
-    useInventoryStore.getState().addCategory({ id: catId, name, active: true, createdAt: new Date(now) });
+    useInventoryStore.getState().addCategory({ id: row.id, name, active: true, createdAt: new Date(now) });
   } catch {}
-  return catId;
+  return row.id;
 }
 
-export async function resolveSupplierId(supplier: string | undefined, db: any, now: number): Promise<string | null> {
+export async function resolveSupplierId(
+  supplier: string | undefined,
+  _db?: any,
+  now: number = Date.now()
+): Promise<string | null> {
   if (!supplier || !supplier.trim()) return null;
   const name = supplier.trim();
-  const existing = (await db.queryOne(
+  const existing = await localQueryOne<{ id: string }>(
     `SELECT id FROM suppliers WHERE id = ? OR LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1;`,
     [name, name]
-  )) as { id: string } | null;
+  );
   if (existing) return existing.id;
-  const suppId = `SUP-${generateId()}`;
-  const deviceId = await getDeviceId();
 
-  await commitLocalTransaction({
-    entityType: 'SUPPLIER',
-    entityId: suppId,
-    operation: 'CREATE',
-    eventType: 'SUPPLIER_CREATED',
-    deviceId,
-    userId: 'system',
-    payload: { id: suppId, name, balance: 0, active: 1, updatedAt: now },
-    execute: async (tx) => {
-      await tx.execute(
-        `INSERT OR IGNORE INTO suppliers (id, name, balance, active, updated_at) VALUES (?, ?, 0, 1, ?);`,
-        [suppId, name, now]
-      );
-    },
-  });
+  const row = await insertRow('suppliers', { name, balance: 0, active: 1 });
 
   try {
     const { useInventoryStore } = await import('../../../stores');
     useInventoryStore.getState().addSupplier({
-      id: suppId, name, email: '', phone: '', address: '', openingBalance: 0,
-      createdAt: new Date(now), updatedAt: new Date(now)
+      id: row.id, name, email: '', phone: '', address: '', openingBalance: 0,
+      createdAt: new Date(now), updatedAt: new Date(now),
     });
   } catch {}
-  return suppId;
+  return row.id;
 }

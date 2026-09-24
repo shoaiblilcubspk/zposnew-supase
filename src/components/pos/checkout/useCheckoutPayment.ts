@@ -2,7 +2,6 @@ import { useState, useRef } from 'react';
 import { Sale } from '../../../types';
 import { useProductsStore, useSalesStore, useCartStore, useUsersStore } from '../../../stores';
 import { salesService, productsService, generateId, adjustPaymentBalances, buildSalePaymentMoves } from '../../../lib/services';
-import { localDb } from '../../../lib/localDb';
 import { sonner } from '../../../lib/sonner';
 import { useAuth } from '../../../context/AuthContext';
 import { useInvoiceGeneration } from '../../../hooks/useInvoice';
@@ -96,7 +95,6 @@ export function useCheckoutPayment({
         const p = await productsService.getById(id);
         if (p) {
           useProductsStore.getState().updateProduct(p);
-          localDb.products.put(p as any).catch(() => {});
         }
       } catch { /* ignore */ }
     }

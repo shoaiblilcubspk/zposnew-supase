@@ -1,10 +1,10 @@
 /**
- * Sync Status Store (Zustand)
- * Real-time state for P2P sync indicators, pending counts, and peer metrics.
+ * Sync Status Store (Zustand) — Supabase-only cloud-direct.
+ * Reflects the cloud sync queue (device → Supabase). "Peers" no longer exist (P2P removed);
+ * connectedPeersCount stays 0. pendingOutboxCount = rows still pending in the src/data queue.
  */
 
 import { create } from 'zustand';
-import { getPendingOutboxCount } from './vectorClock';
 
 export interface SyncStatusState {
   pendingOutboxCount: number;
@@ -31,10 +31,11 @@ export const useSyncStatusStore = create<SyncStatusState>((set) => ({
 
   refreshPendingCount: async () => {
     try {
-      const count = await getPendingOutboxCount();
+      const { countPending } = await import('../../data');
+      const count = await countPending();
       set({ pendingOutboxCount: count });
     } catch {
-      // Ignore if DB is currently initializing
+      // Ignore if the local DB is still initializing.
     }
   },
 }));

@@ -81,12 +81,13 @@ export async function signWithSupervisor(
   password: string
 ): Promise<{ p_user_id: string; p_role: string; p_sig: string } | null> {
   try {
-    const { localDb } = await import('./localDb');
-    const user = await localDb.users
-      .where('email')
-      .equalsIgnoreCase(String(email || '').toLowerCase().trim())
-      .first();
-    if (!user || user.active === false) return null;
+    const { localQueryOne } = await import('../data');
+    const user = await localQueryOne<any>(
+      `SELECT id, role, is_active FROM staff_users
+       WHERE LOWER(TRIM(email)) = ? AND is_active = 1 LIMIT 1;`,
+      [String(email || '').toLowerCase().trim()]
+    );
+    if (!user || user.is_active === 0) return null;
     if (user.role !== 'admin') return null; // approvals are ADMIN-only (RBAC matrix)
     const hash = await sha256Hex(password);
     const message = `${hash}|${user.id}|${user.role}|${action}`;

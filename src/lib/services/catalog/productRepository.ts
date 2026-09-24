@@ -1,69 +1,59 @@
 /**
- * Local SQLite Product Repository
- * Authoritative local persistence and mutation of products with event outbox integration.
+ * Product Repository — Supabase-only cloud-direct (Phase 4: Atomic Action Bundle).
+ * Reads from the local mirror; every product create/update is ONE atomic bundle (§1.5):
+ * resolve-or-create category/supplier + product row + INITIAL/adjustment inventory_ledger +
+ * price_history — all commit together or not at all. Image is uploaded FIRST and linked inside
+ * the bundle; on failure the orphaned blob is deleted (§1.5.5). Rows are snake_case (Rule 3),
+ * mapped to the camelCase `Product` type at this boundary. No P2P, no Dexie.
  */
 
-import { getDatabase } from '../../db';
+import { localQuery, localQueryOne, softDeleteRow, atomicWrite, newOperationId, type AtomicOp } from '../../../data';
 import { Product } from '../../../types';
-import { commitLocalTransaction } from '../../events';
-import { getDeviceId } from '../../mesh/deviceIdentity';
-import { localDb, generateId } from '../../localDb';
-import { resolveCategoryId, resolveSupplierId } from './catalogResolvers';
+import { safeRandomUUID } from '../../crypto/uuid';
+import { resolveCategoryId, resolveSupplierId, resolveCategoryOp, resolveSupplierOp } from './catalogResolvers';
 import { mapSqliteProduct, serializeProductColumns } from './productMapper';
+import { resolveImageToHash, deleteOrphanImage } from '../../media/localImageStore';
+import { buildInventoryLedgerOp, dispatchInventoryTxEvent, type InventoryTxRecord } from '../inventory/inventoryLedgerRepository';
+import { buildPriceHistoryOp } from '../priceHistoryService';
 
 export { mapSqliteProduct };
 
+const PRODUCT_SELECT = `
+  SELECT p.*,
+         c.name AS category_name,
+         s.name AS supplier_name
+  FROM products p
+  LEFT JOIN categories c ON (p.category_id = c.id OR p.category_id = c.name)
+  LEFT JOIN suppliers s ON (p.supplier_id = s.id OR p.supplier_id = s.name)`;
+
 export async function getAllProducts(): Promise<Product[]> {
-  const db = await getDatabase();
-  const rows = await db.query(
-    `SELECT p.*,
-            c.name AS category_name,
-            s.name AS supplier_name
-     FROM products p
-     LEFT JOIN categories c ON (p.category_id = c.id OR p.category_id = c.name)
-     LEFT JOIN suppliers s ON (p.supplier_id = s.id OR p.supplier_id = s.name)
-     WHERE p.active = 1
-     ORDER BY p.name ASC;`
-  );
+  const rows = await localQuery<any>(`${PRODUCT_SELECT} WHERE p.active = 1 ORDER BY p.name ASC;`);
   return rows.map(mapSqliteProduct);
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
-  const db = await getDatabase();
-  const row = await db.queryOne(
-    `SELECT p.*,
-            c.name AS category_name,
-            s.name AS supplier_name
-     FROM products p
-     LEFT JOIN categories c ON (p.category_id = c.id OR p.category_id = c.name)
-     LEFT JOIN suppliers s ON (p.supplier_id = s.id OR p.supplier_id = s.name)
-     WHERE p.id = ?;`,
-    [id]
-  );
+  const row = await localQueryOne<any>(`${PRODUCT_SELECT} WHERE p.id = ?;`, [id]);
   return row ? mapSqliteProduct(row) : null;
 }
 
 export async function createProduct(
   product: Omit<Product, 'id'>,
-  userId: string = 'system'
+  userId: string = 'system',
+  operationId?: string
 ): Promise<Product> {
-  const db = await getDatabase();
-  const deviceId = await getDeviceId();
-
-  // 1. Check duplicate name locally in SQLite
-  const existing = await db.queryOne<{ id: string; name: string; stock: number }>(
-    `SELECT id, name, stock FROM products WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) AND active = 1;`,
+  // Friendly duplicate guards run BEFORE any write (§1.5 — clear error, zero partial state).
+  const existing = await localQueryOne<{ id: string; name: string; sku: string | null; stock: number }>(
+    `SELECT id, name, sku, stock FROM products WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) AND active = 1;`,
     [product.name]
   );
   if (existing) {
+    const identifier = existing.sku ? `SKU: ${existing.sku}, ` : '';
     throw new Error(
-      `Product "${product.name}" already exists (ID: ${existing.id}, Stock: ${existing.stock}). Update its stock instead of creating a duplicate.`
+      `Product "${product.name}" already exists (${identifier}Stock: ${existing.stock}). Update its stock instead of creating a duplicate.`
     );
   }
-
-  // 2. Check duplicate barcode if present
   if (product.barcode && product.barcode.trim()) {
-    const dupBarcode = await db.queryOne<{ id: string; name: string }>(
+    const dupBarcode = await localQueryOne<{ id: string; name: string }>(
       `SELECT id, name FROM products WHERE LOWER(TRIM(barcode)) = LOWER(TRIM(?)) AND active = 1;`,
       [product.barcode.trim()]
     );
@@ -72,227 +62,202 @@ export async function createProduct(
     }
   }
 
-  const id = generateId();
+  const id = safeRandomUUID();
   const now = Date.now();
+  const operation_id = operationId ?? newOperationId();
   const barcode = (product.barcode || product.barcodeValue || id).trim();
-  const categoryId = await resolveCategoryId(product.category, db, now);
-  const supplierId = await resolveSupplierId(product.supplier, db, now);
+  const cat = await resolveCategoryOp(product.category);
+  const sup = await resolveSupplierOp(product.supplier);
   const initialStock = product.stock !== undefined ? Number(product.stock) : (product.trackInventory ? 0 : 999999);
 
-  const newProduct: Product = {
-    ...product,
+  // Image FIRST (upload + content-address). Track whether THIS call created a new blob so a
+  // failed bundle can delete the orphan (§1.5.5).
+  const wasDataUri = typeof product.image === 'string' && product.image.trim().startsWith('data:');
+  const imageHash = await resolveImageToHash(product.image, undefined);
+  const cols = serializeProductColumns({ ...product, image: imageHash });
+
+  const ops: AtomicOp[] = [];
+  if (cat.op) ops.push(cat.op);
+  if (sup.op) ops.push(sup.op);
+
+  const productRow = {
     id,
-    category: product.category || '',
-    supplier: product.supplier || undefined,
+    name: product.name,
+    barcode: barcode || null,
+    sku: product.sku || null,
+    category_id: cat.id || null,
+    supplier_id: sup.id || null,
+    cost_price: product.cost || 0,
+    retail_price: product.price || 0,
     stock: initialStock,
-    barcode,
-    barcodeValue: barcode,
-    createdAt: new Date(now),
-    updatedAt: new Date(now),
-    active: true,
+    min_stock_alert: product.minStock || 5,
+    track_inventory: product.trackInventory ? 1 : 0,
+    image_hash: imageHash || null,
+    active: 1,
+    version: 1,
+    is_service: cols.isService,
+    require_serial: cols.requireSerial,
+    product_type: cols.productType,
+    variants_json: cols.variantsJson,
+    variant_data_json: cols.variantDataJson,
+    product_addons_json: cols.productAddonsJson,
+    expiry_date: cols.expiryDate,
+    expiry_alert_days: cols.expiryAlertDays,
   };
+  ops.push({ table: 'products', op: 'insert', row: productRow });
 
-  const cols = serializeProductColumns(newProduct);
+  // Append-only INITIAL stock ledger row (Rule 7), inside the same bundle (§1.5.6).
+  let ledgerRec: InventoryTxRecord | null = null;
+  if (product.trackInventory && initialStock > 0) {
+    ledgerRec = {
+      id: `itx_init_${id}`,
+      productId: id,
+      type: 'INITIAL',
+      quantity: initialStock,
+      balanceAfter: initialStock,
+      referenceType: 'AUDIT',
+      referenceId: id,
+      deviceId: '',
+      userId,
+      notes: 'Initial Stock on Create',
+      createdAt: now,
+    };
+    ops.push(buildInventoryLedgerOp(ledgerRec));
+  }
 
-  // Commit atomic SQLite mutation + sync_outbox event
-  await commitLocalTransaction({
-    entityType: 'PRODUCT',
-    entityId: id,
-    operation: 'CREATE',
-    eventType: 'PRODUCT_CREATED',
-    deviceId,
-    userId,
-    payload: {
-      id, name: newProduct.name, barcode: newProduct.barcode, sku: newProduct.sku || null,
-      categoryId: categoryId || null, supplierId: supplierId || null,
-      costPrice: newProduct.cost || 0, retailPrice: newProduct.price || 0,
-      stock: initialStock, initialStock, minStockAlert: newProduct.minStock || 5,
-      trackInventory: newProduct.trackInventory ? 1 : 0, imageHash: newProduct.image || null,
-      isService: cols.isService, requireSerial: cols.requireSerial, productType: cols.productType,
-      variantsJson: cols.variantsJson, variantDataJson: cols.variantDataJson, productAddonsJson: cols.productAddonsJson,
-      expiryDate: cols.expiryDate, expiryAlertDays: cols.expiryAlertDays,
-      active: 1, version: 1, createdAt: now, updatedAt: now,
-    },
-    execute: async (tx) => {
-      await tx.execute(
-        `INSERT INTO products (
-          id, name, barcode, sku, category_id, supplier_id,
-          cost_price, retail_price, stock, min_stock_alert,
-          track_inventory, image_hash, active, version,
-          is_service, require_serial, product_type,
-          variants_json, variant_data_json, product_addons_json,
-          expiry_date, expiry_alert_days, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-        [
-          id, newProduct.name, newProduct.barcode || null, newProduct.sku || null,
-          categoryId || null, supplierId || null,
-          newProduct.cost || 0, newProduct.price || 0, initialStock,
-          newProduct.minStock || 5, newProduct.trackInventory ? 1 : 0,
-          newProduct.image || null,
-          cols.isService, cols.requireSerial, cols.productType,
-          cols.variantsJson, cols.variantDataJson, cols.productAddonsJson,
-          cols.expiryDate, cols.expiryAlertDays,
-          now, now
-        ]
-      );
-
-      if (newProduct.trackInventory && initialStock > 0) {
-        try {
-          const { insertInventoryTransaction } = await import('../inventory/inventoryLedgerRepository');
-          await insertInventoryTransaction({
-            id: `itx_init_${id}`,
-            productId: id,
-            type: 'INITIAL',
-            quantity: initialStock,
-            balanceAfter: initialStock,
-            referenceType: 'AUDIT',
-            referenceId: id,
-            deviceId,
-            userId,
-            notes: 'Initial Stock on Create',
-            createdAt: now,
-          }, tx);
-        } catch {}
-      }
-    },
-  });
-
-  // Keep local cache synced
   try {
-    await localDb.products.put(newProduct);
+    await atomicWrite(ops, { operation_id, action: 'create_product' });
+  } catch (err) {
+    if (wasDataUri && imageHash) { try { await deleteOrphanImage(imageHash); } catch {} }
+    throw err;
+  }
+
+  // Post-commit reactive side effects (bundle already durable).
+  if (ledgerRec) dispatchInventoryTxEvent(ledgerRec);
+  try {
+    const { useInventoryStore } = await import('../../../stores');
+    if (cat.created) useInventoryStore.getState().addCategory({ id: cat.created.id, name: cat.created.name, active: true, createdAt: new Date(now) });
+    if (sup.created) useInventoryStore.getState().addSupplier({
+      id: sup.created.id, name: sup.created.name, email: '', phone: '', address: '', openingBalance: 0,
+      createdAt: new Date(now), updatedAt: new Date(now),
+    });
   } catch {}
 
-  return newProduct;
+  return mapSqliteProduct({ ...productRow, category_name: product.category, supplier_name: product.supplier });
 }
 
 export async function updateProduct(
   id: string,
   updates: Partial<Product>,
-  userId: string = 'system'
+  userId: string = 'system',
+  operationId?: string
 ): Promise<Product> {
-  const db = await getDatabase();
-  const deviceId = await getDeviceId();
   const existing = await getProductById(id);
   if (!existing) throw new Error(`Product ${id} not found.`);
 
   const now = Date.now();
-  const categoryId = updates.category !== undefined
-    ? await resolveCategoryId(updates.category, db, now)
-    : (existing.category ? await resolveCategoryId(existing.category, db, now) : null);
-  const supplierId = updates.supplier !== undefined
-    ? await resolveSupplierId(updates.supplier, db, now)
-    : (existing.supplier ? await resolveSupplierId(existing.supplier, db, now) : null);
+  const operation_id = operationId ?? newOperationId();
+  const cat = updates.category !== undefined
+    ? await resolveCategoryOp(updates.category)
+    : (existing.category ? await resolveCategoryOp(existing.category) : { id: null } as const);
+  const sup = updates.supplier !== undefined
+    ? await resolveSupplierOp(updates.supplier)
+    : (existing.supplier ? await resolveSupplierOp(existing.supplier) : { id: null } as const);
   const newStock = updates.stock !== undefined ? Number(updates.stock) : existing.stock;
-  const updatedProduct: Product = {
-    ...existing,
-    ...updates,
-    category: updates.category !== undefined ? updates.category : existing.category,
-    supplier: updates.supplier !== undefined ? updates.supplier : existing.supplier,
-    stock: newStock,
-    id,
-    updatedAt: new Date(now),
-  };
 
-  const cols = serializeProductColumns(updatedProduct);
+  const wasDataUri = updates.image !== undefined && typeof updates.image === 'string' && updates.image.trim().startsWith('data:');
+  const imageHash = updates.image !== undefined
+    ? await resolveImageToHash(updates.image, id)
+    : existing.image;
 
-  await commitLocalTransaction({
-    entityType: 'PRODUCT',
-    entityId: id,
-    operation: 'UPDATE',
-    eventType: 'PRODUCT_UPDATED',
-    deviceId,
-    userId,
-    payload: {
-      id, name: updatedProduct.name, barcode: updatedProduct.barcode || null,
-      sku: updatedProduct.sku || null, categoryId: categoryId || null,
-      supplierId: supplierId || null, costPrice: updatedProduct.cost || 0,
-      retailPrice: updatedProduct.price || 0, stock: newStock,
-      minStockAlert: updatedProduct.minStock || 5, trackInventory: updatedProduct.trackInventory ? 1 : 0,
-      imageHash: updatedProduct.image || null,
-      isService: cols.isService, requireSerial: cols.requireSerial, productType: cols.productType,
-      variantsJson: cols.variantsJson, variantDataJson: cols.variantDataJson, productAddonsJson: cols.productAddonsJson,
-      expiryDate: cols.expiryDate, expiryAlertDays: cols.expiryAlertDays,
-      active: updatedProduct.active ? 1 : 0, updatedAt: now,
-    },
-    execute: async (tx) => {
-      await tx.execute(
-        `UPDATE products SET
-          name = ?, barcode = ?, sku = ?, category_id = ?, supplier_id = ?,
-          cost_price = ?, retail_price = ?, stock = ?, min_stock_alert = ?,
-          track_inventory = ?, image_hash = ?, active = ?,
-          is_service = ?, require_serial = ?, product_type = ?,
-          variants_json = ?, variant_data_json = ?, product_addons_json = ?,
-          expiry_date = ?, expiry_alert_days = ?,
-          version = version + 1, updated_at = ?
-         WHERE id = ?;`,
-        [
-          updatedProduct.name, updatedProduct.barcode || null, updatedProduct.sku || null,
-          categoryId || null, supplierId || null,
-          updatedProduct.cost || 0, updatedProduct.price || 0, newStock,
-          updatedProduct.minStock || 5, updatedProduct.trackInventory ? 1 : 0,
-          updatedProduct.image || null, updatedProduct.active ? 1 : 0,
-          cols.isService, cols.requireSerial, cols.productType,
-          cols.variantsJson, cols.variantDataJson, cols.productAddonsJson,
-          cols.expiryDate, cols.expiryAlertDays,
-          now, id
-        ]
-      );
-      if (updatedProduct.trackInventory && existing.stock !== newStock) {
-        try {
-          const { insertInventoryTransaction } = await import('../inventory/inventoryLedgerRepository');
-          const diff = newStock - existing.stock;
-          await insertInventoryTransaction({
-            id: `itx_adj_${id}_${now}`,
-            productId: id,
-            type: diff > 0 ? 'RESTOCK' : 'ADJUSTMENT',
-            quantity: diff,
-            balanceAfter: newStock,
-            referenceType: 'ADJUSTMENT',
-            referenceId: id,
-            deviceId,
-            userId,
-            notes: `Stock adjustment (${existing.stock} -> ${newStock})`,
-            createdAt: now,
-          }, tx);
-        } catch {}
-      }
+  const merged: Product = { ...existing, ...updates, image: imageHash };
+  const cols = serializeProductColumns(merged);
+
+  const ops: AtomicOp[] = [];
+  if (cat.op) ops.push(cat.op);
+  if (sup.op) ops.push(sup.op);
+  ops.push({
+    table: 'products', op: 'update', id,
+    patch: {
+      name: merged.name,
+      barcode: merged.barcode || null,
+      sku: merged.sku || null,
+      category_id: cat.id || null,
+      supplier_id: sup.id || null,
+      cost_price: merged.cost || 0,
+      retail_price: merged.price || 0,
+      stock: newStock,
+      min_stock_alert: merged.minStock || 5,
+      track_inventory: merged.trackInventory ? 1 : 0,
+      image_hash: imageHash || null,
+      active: merged.active ? 1 : 0,
+      is_service: cols.isService,
+      require_serial: cols.requireSerial,
+      product_type: cols.productType,
+      variants_json: cols.variantsJson,
+      variant_data_json: cols.variantDataJson,
+      product_addons_json: cols.productAddonsJson,
+      expiry_date: cols.expiryDate,
+      expiry_alert_days: cols.expiryAlertDays,
     },
   });
 
+  // Append-only stock adjustment (Rule 7), inside the bundle (§1.5.6).
+  let ledgerRec: InventoryTxRecord | null = null;
+  if (merged.trackInventory && existing.stock !== newStock) {
+    const diff = newStock - existing.stock;
+    ledgerRec = {
+      id: `itx_adj_${id}_${now}`,
+      productId: id,
+      type: diff > 0 ? 'RESTOCK' : 'ADJUSTMENT',
+      quantity: diff,
+      balanceAfter: newStock,
+      referenceType: 'ADJUSTMENT',
+      referenceId: id,
+      deviceId: '',
+      userId,
+      notes: `Stock adjustment (${existing.stock} -> ${newStock})`,
+      createdAt: now,
+    };
+    ops.push(buildInventoryLedgerOp(ledgerRec));
+  }
+
+  // Price/cost change audit (append-only), inside the SAME bundle so it can never half-save.
+  const priceChanged = updates.price !== undefined && Number(existing.price || 0) !== Number(merged.price || 0);
+  const costChanged = updates.cost !== undefined && Number(existing.cost || 0) !== Number(merged.cost || 0);
+  if (priceChanged || costChanged) {
+    ops.push(buildPriceHistoryOp({
+      productId: id,
+      oldPrice: priceChanged ? Number(existing.price || 0) : null,
+      newPrice: priceChanged ? Number(merged.price || 0) : null,
+      oldCost: costChanged ? Number(existing.cost || 0) : null,
+      newCost: costChanged ? Number(merged.cost || 0) : null,
+      note: priceChanged && costChanged ? 'Price & cost updated' : (priceChanged ? 'Product price updated' : 'Product cost updated'),
+    }));
+  }
+
   try {
-    await localDb.products.put(updatedProduct);
+    await atomicWrite(ops, { operation_id, action: 'update_product' });
+  } catch (err) {
+    if (wasDataUri && imageHash && imageHash !== existing.image) { try { await deleteOrphanImage(imageHash); } catch {} }
+    throw err;
+  }
+
+  if (ledgerRec) dispatchInventoryTxEvent(ledgerRec);
+  try {
+    const { useInventoryStore } = await import('../../../stores');
+    if (cat.created) useInventoryStore.getState().addCategory({ id: cat.created.id, name: cat.created.name, active: true, createdAt: new Date(now) });
+    if (sup.created) useInventoryStore.getState().addSupplier({
+      id: sup.created.id, name: sup.created.name, email: '', phone: '', address: '', openingBalance: 0,
+      createdAt: new Date(now), updatedAt: new Date(now),
+    });
   } catch {}
 
-  return updatedProduct;
+  return { ...merged, id, stock: newStock, updatedAt: new Date(now) };
 }
 
-export async function deleteProduct(id: string, userId: string = 'system'): Promise<void> {
-  const deviceId = await getDeviceId();
-  const now = Date.now();
-
-  await commitLocalTransaction({
-    entityType: 'PRODUCT',
-    entityId: id,
-    operation: 'DELETE',
-    eventType: 'PRODUCT_DELETED',
-    deviceId,
-    userId,
-    payload: { id, deletedAt: now },
-    execute: async (tx) => {
-      // Soft-delete: active = 0
-      await tx.execute(`UPDATE products SET active = 0, updated_at = ? WHERE id = ?;`, [now, id]);
-      // Record tombstone
-      await tx.execute(
-        `INSERT OR REPLACE INTO tombstones (entity_type, entity_id, deleted_at, deleted_by)
-         VALUES ('PRODUCT', ?, ?, ?);`,
-        [id, now, userId]
-      );
-    },
-  });
-
-  try {
-    await localDb.products.delete(id);
-  } catch {}
+export async function deleteProduct(id: string, _userId: string = 'system'): Promise<void> {
+  await softDeleteRow('products', id, 'active');
 }
 
 export { bulkDeleteProducts, bulkUpdateProducts } from './productBulkOps';

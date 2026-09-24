@@ -1,14 +1,18 @@
 /**
- * Refund & Return Coordinator
- * Handles atomic item returns, stock restorations, and payment reversals in local SQLite.
+ * Refund & Return Coordinator — Supabase-only cloud-direct (Phase 3: Atomic Action Bundle).
+ * A return/refund is ONE atomic bundle (AGENTS.md §1.5): refund audit row + sale header
+ * update + append-only stock RETURN ledger + products.stock cache + negative payment row +
+ * customer credit reversal. A failure saves nothing (§1.5.6). Append-only ledgers
+ * (inventory_ledger, payments, customer_ledger, sale_refunds); the sale header is a normal
+ * UPDATE inside the same bundle. No P2P, no Dexie. Stock = ledger sum (Rule 7).
  */
 
 import { RefundRequest } from '../../../types';
-import { getDatabase } from '../../db';
-import { commitLocalTransaction } from '../../events';
-import { getDeviceId } from '../../mesh/deviceIdentity';
-import { localDb, generateId } from '../../localDb';
-import { insertInventoryTransaction } from '../inventory/inventoryLedgerRepository';
+import { localQuery, localQueryOne, atomicWrite, newOperationId, type AtomicOp } from '../../../data';
+import {
+  buildInventoryLedgerOp, dispatchInventoryTxEvent, type InventoryTxRecord,
+} from '../inventory/inventoryLedgerRepository';
+import { buildSaleAuditLogOp } from '../auditLogService';
 
 export function calculateRefundAmount(sale: any, items: Array<{ index: number; qty: number }>): number {
   if (!items?.length) return 0;
@@ -34,32 +38,22 @@ export function calculateRefundAmount(sale: any, items: Array<{ index: number; q
 export async function processSaleRefund(
   saleId: string,
   request?: RefundRequest,
-  cashierName = 'cashier'
+  cashierName = 'cashier',
+  operationId?: string
 ): Promise<boolean> {
-  const db = await getDatabase();
-  const deviceId = await getDeviceId();
   const now = Date.now();
+  const operation_id = operationId ?? newOperationId();
 
-  const saleRow = await db.queryOne<{
-    id: string;
-    invoice_number: string;
-    customer_id: string | null;
-    total_amount: number;
-    refunded_amount: number;
-    status: string;
-    payment_method: string;
-  }>(`SELECT * FROM sales WHERE id = ?;`, [saleId]);
-
+  const saleRow = await localQueryOne<any>(`SELECT * FROM sales WHERE id = ?;`, [saleId]);
   if (!saleRow) throw new Error(`Sale ${saleId} not found.`);
   if (saleRow.status === 'refunded') {
     console.warn(`[processSaleRefund] Sale ${saleId} is already fully refunded.`);
     return true;
   }
 
-  const saleItems = await db.query(`SELECT * FROM sale_items WHERE sale_id = ?;`, [saleId]);
+  const saleItems = await localQuery<any>(`SELECT * FROM sale_items WHERE sale_id = ?;`, [saleId]);
   const isFullRefund = !request || request.type === 'full';
 
-  // Determine items to return
   const returnList: Array<{ productId: string; variantId?: string; qty: number; refundPrice: number }> = [];
   let calculatedAmount = 0;
 
@@ -99,121 +93,113 @@ export async function processSaleRefund(
   const newRefundedTotal = currentRefunded + refundToApply;
   const newStatus = newRefundedTotal >= Number(saleRow.total_amount) ? 'refunded' : 'partially_refunded';
 
-  await commitLocalTransaction({
-    entityType: 'SALE',
-    entityId: saleId,
-    operation: 'UPDATE',
-    eventType: 'SALE_REFUNDED',
-    deviceId,
-    userId: cashierName,
-    payload: {
-      saleId,
-      invoiceNumber: saleRow.invoice_number,
-      refundAmount: refundToApply,
-      newRefundedTotal,
-      newStatus,
-      returnItems: returnList,
-      timestamp: now,
-    },
-    execute: async (tx) => {
-      // 1. Update Sale Header
-      await tx.execute(
-        `UPDATE sales SET refunded_amount = ?, status = ?, updated_at = ? WHERE id = ?;`,
-        [newRefundedTotal, newStatus, now, saleId]
-      );
+  const ops: AtomicOp[] = [];
+  const ledgerRecords: InventoryTxRecord[] = [];
 
-      // 2. Restore Inventory for Returned Items
-      for (const ret of returnList) {
-        const itxRefundId = `itx_refund_${saleId}_${ret.productId}_${now}`;
-
-        const curBalRow = await tx.queryOne<{ bal: number }>(
-          `SELECT COALESCE(SUM(quantity), 0) as bal FROM inventory_transactions WHERE product_id = ?;`,
-          [ret.productId]
-        );
-        const curBal = curBalRow ? Number(curBalRow.bal) : 0;
-        const balanceAfter = curBal + ret.qty;
-
-        // Append to inventory_transactions ledger with deterministic ID
-        await insertInventoryTransaction(
-          {
-            id: itxRefundId,
-            productId: ret.productId,
-            variantId: ret.variantId,
-            type: 'RETURN',
-            quantity: ret.qty,
-            balanceAfter,
-            referenceType: 'RETURN',
-            referenceId: saleId,
-            deviceId,
-            userId: cashierName,
-            notes: `Return: ${saleRow.invoice_number}`,
-            createdAt: now,
-          },
-          tx
-        );
-
-        // Authoritative ledger sum stock recomputation
-        await tx.execute(
-          `UPDATE products
-           SET stock = (
-             SELECT COALESCE(SUM(quantity), 0)
-             FROM inventory_transactions
-             WHERE product_id = ?
-           ),
-           updated_at = ?
-           WHERE id = ?;`,
-          [ret.productId, now, ret.productId]
-        );
-      }
-
-      // 3. Record Negative Outflow in Payments
-      await tx.execute(
-        `INSERT INTO payments (id, sale_id, mode_id, amount, reference, created_at)
-         VALUES (?, ?, ?, ?, ?, ?);`,
-        [generateId(), saleId, saleRow.payment_method, -refundToApply, 'Refund payout', now]
-      );
-
-      // 4. Update Customer Ledger if Credit Sale
-      if (saleRow.customer_id && saleRow.payment_method === 'credit') {
-        const cust = await tx.queryOne<{ current_balance: number }>(
-          `SELECT current_balance FROM customers WHERE id = ?;`,
-          [saleRow.customer_id]
-        );
-        const curBal = cust ? Number(cust.current_balance) : 0;
-        const newBal = curBal - refundToApply;
-
-        await tx.execute(
-          `UPDATE customers SET current_balance = ?, updated_at = ? WHERE id = ?;`,
-          [newBal, now, saleRow.customer_id]
-        );
-
-        await tx.execute(
-          `INSERT INTO customer_ledger (
-            id, customer_id, type, amount, balance_after, sale_id, payment_mode, notes, created_at
-          ) VALUES (?, ?, 'refund', ?, ?, ?, 'credit', ?, ?);`,
-          [generateId(), saleRow.customer_id, -refundToApply, newBal, saleId, `Refund: ${saleRow.invoice_number}`, now]
-        );
-      }
+  // 0. Refund audit row (append-only).
+  ops.push({
+    table: 'sale_refunds',
+    op: 'insert',
+    row: {
+      sale_id: saleId,
+      amount: refundToApply,
+      reason: request?.reason || null,
+      refunded_by: null,
+      device_id: saleRow.device_id || null,
+      items_json: JSON.stringify(returnList),
     },
   });
 
-  // Keep localDb and reactive Zustand store updated
+  // 1. Sale header update.
+  ops.push({ table: 'sales', op: 'update', id: saleId, patch: { refunded_amount: newRefundedTotal, status: newStatus } });
+
+  // 2. Restore inventory (append RETURN rows) + recompute stock cache from ledger sum + deltas.
+  const stockDelta = new Map<string, number>();
+  for (const ret of returnList) {
+    if (!ret.productId) continue;
+    const rec: InventoryTxRecord = {
+      id: `itx_refund_${saleId}_${ret.productId}_${now}`,
+      productId: ret.productId,
+      variantId: ret.variantId,
+      type: 'RETURN',
+      quantity: ret.qty,
+      referenceType: 'RETURN',
+      referenceId: saleId,
+      deviceId: saleRow.device_id || '',
+      userId: cashierName,
+      notes: `Return: ${saleRow.invoice_number}`,
+      createdAt: now,
+    };
+    ops.push(buildInventoryLedgerOp(rec));
+    ledgerRecords.push(rec);
+    stockDelta.set(ret.productId, (stockDelta.get(ret.productId) ?? 0) + ret.qty);
+  }
+  for (const [prodId, delta] of stockDelta) {
+    const balRow = await localQueryOne<{ bal: number }>(
+      `SELECT COALESCE(SUM(quantity), 0) as bal FROM inventory_ledger WHERE product_id = ?;`,
+      [prodId]
+    );
+    const existingSum = balRow ? Number(balRow.bal) : 0;
+    ops.push({ table: 'products', op: 'update', id: prodId, patch: { stock: existingSum + delta } });
+  }
+
+  // 3. Negative outflow payment row (append-only).
+  ops.push({
+    table: 'payments',
+    op: 'insert',
+    row: {
+      sale_id: saleId,
+      mode_code: saleRow.payment_method,
+      amount: -refundToApply,
+      reference: 'Refund payout',
+      device_id: saleRow.device_id || null,
+      user_id: cashierName,
+    },
+  });
+
+  // 4. Customer credit ledger reversal.
+  if (saleRow.customer_id && saleRow.payment_method === 'credit') {
+    const cust = await localQueryOne<{ current_balance: number }>(
+      `SELECT current_balance FROM customers WHERE id = ?;`,
+      [saleRow.customer_id]
+    );
+    const curBal = cust ? Number(cust.current_balance) : 0;
+    ops.push({ table: 'customers', op: 'update', id: saleRow.customer_id, patch: { current_balance: curBal - refundToApply } });
+    ops.push({
+      table: 'customer_ledger',
+      op: 'insert',
+      row: {
+        customer_id: saleRow.customer_id,
+        type: 'refund',
+        amount: -refundToApply,
+        sale_id: saleId,
+        payment_mode: 'credit',
+        notes: `Refund: ${saleRow.invoice_number}`,
+        device_id: saleRow.device_id || null,
+        user_id: cashierName,
+      },
+    });
+  }
+
+  // ── ONE atomic bundle ─────────────────────────────────────────────────────────
+  ops.push(buildSaleAuditLogOp({
+    saleId,
+    invoiceNumber: saleRow.invoice_number,
+    action: newStatus === 'refunded' ? 'refunded' : 'partially_refunded',
+    performedByName: cashierName,
+    note: `Refund ${refundToApply}${request?.reason ? ' — ' + request.reason : ''}`,
+  }));
+  await atomicWrite(ops, { operation_id, action: 'refund_sale' });
+  for (const rec of ledgerRecords) dispatchInventoryTxEvent(rec);
+
+  // Reactive store refresh.
   try {
-    const sale = await localDb.sales.get(saleId);
-    if (sale) {
-      await localDb.sales.update(saleId, {
-        refundedAmount: newRefundedTotal,
-        status: newStatus as any,
-      });
-      const { useProductsStore } = await import('../../../stores');
-      const { getProductById } = await import('../catalog/productRepository');
-      for (const ret of returnList) {
-        const fresh = await getProductById(ret.productId);
-        if (fresh) {
-          useProductsStore.getState().updateProduct(fresh);
-          await localDb.products.put(fresh as any);
-        }
-      }
+    const { useProductsStore } = await import('../../../stores');
+    const { getProductById } = await import('../catalog/productRepository');
+    for (const ret of returnList) {
+      if (!ret.productId) continue;
+      const fresh = await getProductById(ret.productId);
+      if (fresh) useProductsStore.getState().updateProduct(fresh);
     }
   } catch {}
 

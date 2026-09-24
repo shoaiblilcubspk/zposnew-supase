@@ -155,7 +155,7 @@ export function usePurchaseHistory() {
 
       const product = appProducts.find(p => p.id === recordData.productId);
       if (product) {
-        const freshProduct = await (await import('../../lib/localDb')).localDb.products.get(product.id);
+        const freshProduct = await (await import('../../lib/services')).productsService.getById(product.id);
         if (freshProduct) {
           useProductsStore.getState().updateProduct(freshProduct);
         }
@@ -177,11 +177,9 @@ export function usePurchaseHistory() {
     const result = await sonner.deleteConfirm('this record');
     if (result.isConfirmed) {
       try {
-        const { localDb } = await import('../../lib/localDb');
-
         await purchaseRecordsService.delete(record.id);
 
-        const freshProduct = await localDb.products.get(record.productId);
+        const freshProduct = await (await import('../../lib/services')).productsService.getById(record.productId);
         if (freshProduct) {
           useProductsStore.getState().updateProduct(freshProduct);
         }

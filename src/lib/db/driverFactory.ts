@@ -1,12 +1,12 @@
 /**
  * SQLite Driver Factory
- * Detects running environment (Tauri Desktop / Capacitor Mobile / Browser Dev)
+ * Detects running environment (Electron Desktop / Capacitor Mobile / Browser Dev)
  * and returns the appropriate ISqliteDriver implementation.
  */
 
 import { ISqliteDriver } from './types';
 import { WasmSqliteDriver } from './drivers/wasmDriver';
-import { TauriSqliteDriver } from './drivers/tauriDriver';
+import { ElectronSqliteDriver } from './drivers/electronDriver';
 import { CapacitorSqliteDriver } from './drivers/capacitorDriver';
 
 declare global {
@@ -16,19 +16,20 @@ declare global {
     Capacitor?: {
       isNativePlatform?: () => boolean;
     };
+    electronAPI?: any;
   }
 }
 
 let driverInstance: ISqliteDriver | null = null;
 
-export function detectPlatform(): 'tauri' | 'capacitor' | 'wasm' {
+export function detectPlatform(): 'electron' | 'capacitor' | 'wasm' {
   if (typeof window === 'undefined') {
     return 'wasm';
   }
 
-  // 1. Check for Tauri Desktop
-  if (window.__TAURI__ !== undefined || window.__TAURI_INTERNALS__ !== undefined) {
-    return 'tauri';
+  // 1. Check for Electron Desktop
+  if (window.electronAPI !== undefined) {
+    return 'electron';
   }
 
   // 2. Check for Capacitor Mobile
@@ -44,8 +45,8 @@ export function createDriver(): ISqliteDriver {
   const platform = detectPlatform();
 
   switch (platform) {
-    case 'tauri':
-      return new TauriSqliteDriver();
+    case 'electron':
+      return new ElectronSqliteDriver();
     case 'capacitor':
       return new CapacitorSqliteDriver();
     case 'wasm':

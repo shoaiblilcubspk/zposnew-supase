@@ -9,7 +9,6 @@ import {
   useExpensesStore,
   useAppStore,
 } from '../stores';
-import { localDb } from '../lib/localDb';
 import { sonner } from '../lib/sonner';
 import {
   productsService,
@@ -22,6 +21,9 @@ import {
   usersService,
   settingsService,
   salesTabsService,
+  salesmenService,
+  discountsService,
+  bundlesService,
 } from '../lib/services';
 import { useAuth } from './AuthContext';
 
@@ -102,10 +104,10 @@ export function useAppLoadData(
         paymentModesService.getAll().catch(() => []),
         usersService.getAll().catch(() => []),
         settingsService.get().catch(() => null),
-        localDb.salesmen.toArray().catch(() => []),
-        localDb.discounts.toArray().catch(() => []),
-        localDb.bundles.toArray().catch(() => []),
-        user ? salesTabsService.getByUserId(user.id).catch(() => []) : Promise.resolve([]),
+        salesmenService.getAll().catch(() => []),
+        discountsService.getAll().catch(() => []),
+        bundlesService.getAll().catch(() => []),
+        salesTabsService.getAll(user?.id).catch(() => []),
       ]);
 
       // 2. Hydrate Zustand stores instantly
@@ -114,6 +116,11 @@ export function useAppLoadData(
           const directTheme = localStorage.getItem('theme');
           if (directTheme === 'light' || directTheme === 'dark') {
             settings.theme = directTheme;
+          }
+          const directCols = localStorage.getItem('pos_grid_columns');
+          if (directCols !== null) {
+            const parsed = parseInt(directCols, 10);
+            if (!isNaN(parsed) && parsed >= 0 && parsed <= 8) settings.posGridColumns = parsed;
           }
           const localStr = localStorage.getItem('pos_local_prefs');
           if (localStr) {
@@ -140,14 +147,16 @@ export function useAppLoadData(
       useAppStore.getState().setDiscounts(discounts);
       useAppStore.getState().setBundles(bundles);
 
-      if (salesTabs.length > 0) {
+      // 3. Hydrate Sales Tabs without wiping existing open tabs
+      const existingTabs = useCartStore.getState().salesTabs;
+      if (salesTabs && salesTabs.length > 0) {
         useCartStore.getState().setSalesTabs(salesTabs);
         const savedActiveTab = localStorage.getItem('pos_active_sales_tab');
         const activeTabId = (savedActiveTab && salesTabs.find((t: any) => t.id === savedActiveTab))
           ? savedActiveTab
           : salesTabs[0].id;
         useCartStore.getState().setActiveSalesTab(activeTabId);
-      } else {
+      } else if (!existingTabs || existingTabs.length === 0) {
         const defaultTab = {
           id: 'tab_default_1',
           name: 'Sale 1',
@@ -157,8 +166,6 @@ export function useAppLoadData(
           userId: user?.id || 'local_user',
         };
         useCartStore.getState().setSalesTabs([defaultTab]);
-        useCartStore.getState().setActiveSalesTab('tab_default_1');
-        localDb.salesTabs.put(defaultTab).catch(() => {});
       }
 
       if (!initialized) setInitialized(true);

@@ -1,6 +1,7 @@
 import { ShoppingBagIcon } from '../../shared/icons';
 import { TYPOGRAPHY } from '../../shared/ui/typography';
 import { formatCurrency } from '../../lib/currencies';
+import { ProductThumb } from '../../shared/ui/ProductThumb';
 
 interface CompactItemRowProps {
   image?: string | null;
@@ -68,11 +69,11 @@ export function CompactItemRow({
         <span className={`flex items-center justify-center w-5 h-5 rounded-full bg-neutral-100 dark:bg-white/10 shrink-0 ${TYPOGRAPHY.kbd}`}>{index}</span>
       )}
       <div className={`${sizeMap[imageSize]} rounded-lg overflow-hidden bg-neutral-100 dark:bg-white/5 shrink-0 flex items-center justify-center aspect-square`}>
-        {image ? (
-          <img src={image} alt={name} className="w-full h-full object-cover" />
-        ) : (
-          <ShoppingBagIcon size={imageSize === 'sm' ? 'xs' : 'md'} className="text-neutral-400" />
-        )}
+        <ProductThumb
+          image={image}
+          alt={name}
+          fallback={<ShoppingBagIcon size={imageSize === 'sm' ? 'xs' : 'md'} className="text-neutral-400" />}
+        />
       </div>
       <div className="flex-1 min-w-0">
         <p className={TYPOGRAPHY.itemName}>

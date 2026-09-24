@@ -1,147 +1,61 @@
 /**
- * Local SQLite Category Repository
- * Authoritative local category queries and outbox mutations.
+ * Category repository — Supabase-only cloud-direct (Phase 10c).
+ * Reads from the local mirror (`src/data`), writes through the sync queue. No P2P, no Dexie.
+ * Rows are snake_case (Rule 3); we map to the camelCase `Category` domain type at this boundary.
  */
 
-import { getDatabase } from '../../db';
+import { localQuery, localQueryOne, insertRow, updateRow, softDeleteRow } from '../../../data';
 import { Category } from '../../../types';
-import { commitLocalTransaction } from '../../events';
-import { getDeviceId } from '../../mesh/deviceIdentity';
-import { localDb, generateId } from '../../localDb';
 
 export function mapSqliteCategory(row: any): Category {
   return {
     id: row.id,
     name: row.name,
-    description: '',
-    active: Boolean(row.active),
-    createdAt: new Date(row.updated_at),
+    description: row.description ?? '',
+    active: row.active === undefined ? true : Boolean(row.active),
+    createdAt: row.created_at ? new Date(row.created_at) : undefined,
   };
 }
 
 export async function getAllCategories(): Promise<Category[]> {
-  const db = await getDatabase();
-  const rows = await db.query(
-    `SELECT * FROM categories WHERE active = 1 ORDER BY name ASC;`
-  );
+  const rows = await localQuery<any>(`SELECT * FROM categories WHERE active = 1 ORDER BY name ASC;`);
   return rows.map(mapSqliteCategory);
 }
 
 export async function createCategory(
   nameOrObj: string | Category,
-  userId: string = 'system'
+  _userId: string = 'system'
 ): Promise<Category> {
-  const deviceId = await getDeviceId();
-  const db = await getDatabase();
-  const rawName = typeof nameOrObj === 'object' ? nameOrObj.name.trim() : (nameOrObj as string).trim();
-  const now = Date.now();
+  const rawName = (typeof nameOrObj === 'object' ? nameOrObj.name : nameOrObj).trim();
 
-  // ─── Name-based deduplication ────────────────────────────────────────────────
-  // Prevents 2 devices creating same category name with different UUIDs
-  const existing = await db.queryOne<any>(
+  // Name-based dedup: avoid two devices creating the same category under different UUIDs.
+  const existing = await localQueryOne<any>(
     `SELECT * FROM categories WHERE LOWER(name) = LOWER(?) AND active = 1 LIMIT 1;`,
     [rawName]
   );
   if (existing) return mapSqliteCategory(existing);
 
-  const id = typeof nameOrObj === 'object' ? nameOrObj.id || generateId() : generateId();
-  const name = rawName;
-
-  const category: Category = {
-    id,
-    name,
-    description: typeof nameOrObj === 'object' ? nameOrObj.description : undefined,
-    active: true,
-    createdAt: new Date(now),
-  };
-
-  await commitLocalTransaction({
-    entityType: 'CATEGORY',
-    entityId: id,
-    operation: 'CREATE',
-    eventType: 'CATEGORY_CREATED',
-    deviceId,
-    userId,
-    payload: {
-      id,
-      name,
-      active: 1,
-      updatedAt: now,
-    },
-    execute: async (tx) => {
-      await tx.execute(
-        `INSERT OR REPLACE INTO categories (id, name, active, updated_at)
-         VALUES (?, ?, 1, ?);`,
-        [id, name, now]
-      );
-    },
+  const id = typeof nameOrObj === 'object' && nameOrObj.id ? nameOrObj.id : undefined;
+  const row = await insertRow('categories', {
+    ...(id ? { id } : {}),
+    name: rawName,
+    active: 1,
   });
-
-  try {
-    await localDb.categories.put(category);
-  } catch {}
-
-  return category;
+  return mapSqliteCategory(row);
 }
 
 export async function updateCategory(
   id: string,
   updates: Partial<Category>,
-  userId: string = 'system'
+  _userId: string = 'system'
 ): Promise<void> {
-  const deviceId = await getDeviceId();
-  const now = Date.now();
-
-  await commitLocalTransaction({
-    entityType: 'CATEGORY',
-    entityId: id,
-    operation: 'UPDATE',
-    eventType: 'CATEGORY_UPDATED',
-    deviceId,
-    userId,
-    payload: {
-      id,
-      ...updates,
-      updatedAt: now,
-    },
-    execute: async (tx) => {
-      if (updates.name !== undefined) {
-        await tx.execute(
-          `UPDATE categories SET name = ?, active = ?, updated_at = ? WHERE id = ?;`,
-          [updates.name, updates.active !== undefined ? (updates.active ? 1 : 0) : 1, now, id]
-        );
-      }
-    },
-  });
-
-  try {
-    await localDb.categories.update(id, updates);
-  } catch {}
+  const patch: Record<string, any> = {};
+  if (updates.name !== undefined) patch.name = updates.name;
+  if (updates.active !== undefined) patch.active = updates.active ? 1 : 0;
+  if (Object.keys(patch).length === 0) return;
+  await updateRow('categories', id, patch);
 }
 
-export async function deleteCategory(id: string, userId: string = 'system'): Promise<void> {
-  const deviceId = await getDeviceId();
-  const now = Date.now();
-
-  await commitLocalTransaction({
-    entityType: 'CATEGORY',
-    entityId: id,
-    operation: 'DELETE',
-    eventType: 'CATEGORY_DELETED',
-    deviceId,
-    userId,
-    payload: { id, deletedAt: now },
-    execute: async (tx) => {
-      await tx.execute(`UPDATE categories SET active = 0, updated_at = ? WHERE id = ?;`, [now, id]);
-      await tx.execute(
-        `INSERT OR REPLACE INTO tombstones (entity_type, entity_id, deleted_at, deleted_by)
-         VALUES ('CATEGORY', ?, ?, ?);`,
-        [id, now, userId]
-      );
-    },
-  });
-
-  try {
-    await localDb.categories.delete(id);
-  } catch {}
+export async function deleteCategory(id: string, _userId: string = 'system'): Promise<void> {
+  await softDeleteRow('categories', id, 'active');
 }

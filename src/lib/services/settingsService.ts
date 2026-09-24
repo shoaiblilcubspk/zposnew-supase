@@ -1,105 +1,101 @@
+/**
+ * Settings Service — Supabase-only cloud-direct (Phase 10L).
+ * `AppSettings` is split across two single-row tables in the mirror: `store_settings`
+ * (identity + finance + business rules) and `receipt_settings` (receipt + barcode layout).
+ * Device-local keys (theme, grid, printer, etc. — Rule 12) live in localStorage only and are
+ * NEVER written to Supabase. No P2P, no Dexie.
+ */
+
 import { AppSettings } from '../../types';
-import { localDb, SETTINGS_ID } from '../localDb';
-import { isDefaultPlaceholderSettings } from './settings/settingsHelper';
+import { localQueryOne, insertRow, updateRow } from '../../data';
+import { mapSettings, toRemoteSettings } from './settingsMappers';
+import { DEVICE_LOCAL_SETTINGS_KEYS } from './settings/settingsHelper';
+
+const STORE_ROW_ID = '00000000-0000-4000-8000-000000000001';
+const RECEIPT_ROW_ID = '00000000-0000-4000-8000-000000000002';
+
+// Column whitelists — decide which snake_case field belongs to which table.
+const STORE_COLS = new Set([
+  'store_name', 'store_address', 'store_phone', 'store_email', 'store_website', 'store_logo',
+  'tax_rate', 'tax_id', 'currency', 'country', 'language', 'business_type',
+  'invoice_prefix', 'invoice_counter', 'invoice_pad_digits', 'custom_receipt_number',
+  'po_prefix', 'po_counter', 'retail_enabled', 'wholesale_enabled', 'default_sale_type',
+  'sound_enabled', 'allow_negative_stock', 'refund_approval_threshold', 'enable_credit_sales',
+  'cashier_can_credit', 'allow_credit_over_limit', 'enable_split_payment', 'enable_extra_charges',
+  'enable_purchase_orders',
+]);
+const RECEIPT_COLS = new Set([
+  'receipt_paper_size', 'receipt_density', 'receipt_template', 'receipt_font_scale',
+  'receipt_font_bold', 'receipt_font_weight', 'receipt_padding_top', 'receipt_padding_bottom',
+  'receipt_padding_left', 'receipt_padding_right', 'receipt_offset_x', 'receipt_header_offset_x',
+  'receipt_footer_offset_x', 'receipt_header', 'receipt_footer', 'receipt_show_footer',
+  'receipt_show_logo', 'receipt_show_tax', 'receipt_show_discount', 'receipt_show_store_name',
+  'receipt_show_store_address', 'receipt_show_store_phone', 'receipt_show_store_email',
+  'receipt_show_customer_name', 'receipt_show_customer_phone', 'receipt_show_notes',
+  'receipt_show_barcode', 'receipt_show_delivery_address', 'receipt_show_qr_code',
+  'barcode_paper_size', 'barcode_a4_columns', 'barcode_a4_rows', 'barcode_show_price',
+  'barcode_show_name', 'barcode_show_sku', 'barcode_show_category', 'barcode_show_barcode',
+  'barcode_show_qr', 'barcode_scale', 'barcode_height', 'barcode_padding', 'barcode_border',
+  'barcode_qr_size', 'barcode_name_lines', 'barcode_font_size', 'barcode_content_scale',
+  'barcode_margin_x', 'barcode_margin_y', 'barcode_gap_x', 'barcode_gap_y', 'barcode_bar_width',
+]);
+
+/** Booleans -> 0/1 and numeric strings -> numbers so integer columns accept the value. */
+function coerce(v: any): any {
+  if (typeof v === 'boolean') return v ? 1 : 0;
+  if (typeof v === 'string' && v !== '' && !isNaN(Number(v)) && /^-?\d+(\.\d+)?$/.test(v)) return Number(v);
+  return v;
+}
+
+function splitRemote(remote: Record<string, any>): { store: Record<string, any>; receipt: Record<string, any> } {
+  const store: Record<string, any> = {};
+  const receipt: Record<string, any> = {};
+  for (const [k, v] of Object.entries(remote)) {
+    if (STORE_COLS.has(k)) store[k] = coerce(v);
+    else if (RECEIPT_COLS.has(k)) receipt[k] = coerce(v);
+    // else: device-local / non-persisted column — ignored (localStorage handles it).
+  }
+  return { store, receipt };
+}
+
+function readLocalPrefs(): Record<string, any> {
+  const prefs: Record<string, any> = {};
+  try {
+    if (typeof localStorage === 'undefined') return prefs;
+    Object.assign(prefs, JSON.parse(localStorage.getItem('pos_local_prefs') || '{}'));
+    const theme = localStorage.getItem('theme');
+    if (theme === 'light' || theme === 'dark') prefs.theme = theme;
+    const cols = localStorage.getItem('pos_grid_columns');
+    if (cols !== null) { const n = parseInt(cols, 10); if (!isNaN(n) && n >= 0 && n <= 8) prefs.posGridColumns = n; }
+    const icon = localStorage.getItem('pos_icon_style');
+    if (icon === '3d' || icon === 'system') prefs.iconStyle = icon;
+  } catch {}
+  return prefs;
+}
+
+async function upsertSingleton(table: 'store_settings' | 'receipt_settings', id: string, cols: Record<string, any>): Promise<void> {
+  if (Object.keys(cols).length === 0) return;
+  const existing = await localQueryOne<{ id: string }>(`SELECT id FROM ${table} WHERE id = ?;`, [id]);
+  if (existing) {
+    await updateRow(table, id, cols);
+  } else {
+    await insertRow(table, { id, ...cols });
+  }
+}
 
 export const settingsService = {
   async get(): Promise<AppSettings | null> {
-    let sqliteSettings: any = null;
-    let sqliteTime = 0;
-    try {
-      const { getDatabase } = await import('../db');
-      const db = await getDatabase();
-      const row = await db.queryOne<{ value: string; updated_at: number }>(
-        `SELECT value, updated_at FROM settings WHERE key = 'app_settings';`
-      );
-      if (row?.value) {
-        sqliteSettings = JSON.parse(row.value);
-        sqliteTime = Number(row.updated_at) || 0;
-      }
-    } catch {}
+    const storeRow = await localQueryOne<any>(`SELECT * FROM store_settings LIMIT 1;`);
+    const receiptRow = await localQueryOne<any>(`SELECT * FROM receipt_settings LIMIT 1;`);
+    const prefs = readLocalPrefs();
 
-    const local = await localDb.appSettings.get(SETTINGS_ID);
+    if (!storeRow && !receiptRow && Object.keys(prefs).length === 0) return null;
 
-    // Self-healing bridge: If Dexie has real settings but SQLite is missing or placeholder
-    if (local && !isDefaultPlaceholderSettings(local) && (!sqliteSettings || isDefaultPlaceholderSettings(sqliteSettings))) {
-      const now = local.updatedAt ? new Date(local.updatedAt).getTime() : Date.now();
-      try {
-        const { getDatabase } = await import('../db');
-        const db = await getDatabase();
-        await db.execute(
-          `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
-           ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at;`,
-          ['app_settings', JSON.stringify(local), now]
-        );
-        await db.execute(
-          `UPDATE shop SET
-            name = COALESCE(?, name),
-            currency = COALESCE(?, currency),
-            tax_rate = COALESCE(?, tax_rate),
-            logo_url = CASE WHEN ? IS NOT NULL THEN ? ELSE logo_url END,
-            address = COALESCE(?, address),
-            phone = COALESCE(?, phone),
-            updated_at = ?;`,
-          [
-            local.storeName || null,
-            local.currency || null,
-            local.taxRate !== undefined ? Number(local.taxRate) : null,
-            local.storeLogo !== undefined ? (local.storeLogo || '') : null,
-            local.storeLogo !== undefined ? (local.storeLogo || '') : null,
-            local.storeAddress || null,
-            local.storePhone || null,
-            now,
-          ]
-        );
-        sqliteSettings = local;
-        sqliteTime = now;
-
-        // Push durable outbox event to peer mesh
-        const { commitLocalTransaction } = await import('../events');
-        const { getDeviceId } = await import('../mesh/deviceIdentity');
-        const deviceId = await getDeviceId();
-        await commitLocalTransaction({
-          entityType: 'SETTINGS',
-          entityId: 'app_settings',
-          operation: 'UPDATE',
-          eventType: 'SETTINGS_UPDATED',
-          deviceId,
-          userId: 'admin',
-          payload: local,
-          execute: async () => {},
-        }).catch(() => {});
-      } catch (err) {
-        console.warn('[settingsService] Bridge commit error:', err);
-      }
-    }
-
-    let localPrefs: any = {};
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localPrefs = JSON.parse(localStorage.getItem('pos_local_prefs') || '{}');
-        const directTheme = localStorage.getItem('theme');
-        if (directTheme === 'light' || directTheme === 'dark') localPrefs.theme = directTheme;
-        const directCols = localStorage.getItem('pos_grid_columns');
-        if (directCols !== null) {
-          const parsed = parseInt(directCols, 10);
-          if (!isNaN(parsed) && parsed >= 0 && parsed <= 8) localPrefs.posGridColumns = parsed;
-        }
-        const directIcon = localStorage.getItem('pos_icon_style');
-        if (directIcon === '3d' || directIcon === 'system') localPrefs.iconStyle = directIcon;
-      }
-    } catch {}
-
-    if (!sqliteSettings && !local && Object.keys(localPrefs).length === 0) return null;
-
-    // SQLite is the authoritative local source of truth (always wins over Dexie cache).
-    // Layer: Dexie (fallback/cache) ← SQLite (authoritative) ← localStorage (device-local only).
-    // DEVICE_LOCAL_SETTINGS_KEYS always come from localStorage — they must never be overwritten by P2P sync.
-    const { DEVICE_LOCAL_SETTINGS_KEYS } = await import('./settings/settingsHelper');
-    const merged: any = { ...(local || {}), ...(sqliteSettings || {}) };
+    const merged = mapSettings({ ...(storeRow || {}), ...(receiptRow || {}) });
     for (const key of DEVICE_LOCAL_SETTINGS_KEYS) {
-      if (localPrefs[key] !== undefined) merged[key] = localPrefs[key];
+      if (prefs[key as keyof typeof prefs] !== undefined) (merged as any)[key] = prefs[key];
     }
-    return merged as AppSettings;
+    return merged;
   },
 
   async fetchRemote(): Promise<AppSettings | null> {
@@ -107,86 +103,32 @@ export const settingsService = {
   },
 
   async update(updates: Partial<AppSettings>): Promise<void> {
-    const existing = await this.get();
-    const now = new Date();
-    const updated = {
-      ...(existing || {}),
-      ...updates,
-      id: SETTINGS_ID,
-      updatedAt: now,
-    } as AppSettings;
-
-    if (!updated.createdAt) updated.createdAt = now;
-
-    // 1. Dexie update
-    await localDb.appSettings.put(updated);
-
-    // 2. localStorage preferences
+    // 1. Device-local keys -> localStorage only (Rule 12).
     if (typeof localStorage !== 'undefined') {
       try {
-        const localPrefs = JSON.parse(localStorage.getItem('pos_local_prefs') || '{}');
-        const nextPrefs = { ...localPrefs, ...updates };
-        localStorage.setItem('pos_local_prefs', JSON.stringify(nextPrefs));
+        const prefs = JSON.parse(localStorage.getItem('pos_local_prefs') || '{}');
+        const next = { ...prefs, ...updates };
+        localStorage.setItem('pos_local_prefs', JSON.stringify(next));
         if (updates.theme) localStorage.setItem('theme', updates.theme);
-        if (typeof updates.posGridColumns === 'number') {
-          localStorage.setItem('pos_grid_columns', String(updates.posGridColumns));
-        }
+        if (typeof updates.posGridColumns === 'number') localStorage.setItem('pos_grid_columns', String(updates.posGridColumns));
         if (updates.iconStyle) localStorage.setItem('pos_icon_style', updates.iconStyle);
       } catch {}
     }
 
-    // 3. Commit into SQLite & emit P2P outbox event
-    try {
-      const { commitLocalTransaction } = await import('../events');
-      const { getDeviceId } = await import('../mesh/deviceIdentity');
-      const deviceId = await getDeviceId();
+    // 2. Shared keys -> store_settings / receipt_settings singleton rows (synced).
+    const remote = toRemoteSettings(updates);
+    delete remote.updated_at; // server trigger owns updated_at
+    const { store, receipt } = splitRemote(remote);
+    await upsertSingleton('store_settings', STORE_ROW_ID, store);
+    await upsertSingleton('receipt_settings', RECEIPT_ROW_ID, receipt);
 
-      await commitLocalTransaction({
-        entityType: 'SETTINGS',
-        entityId: 'app_settings',
-        operation: 'UPDATE',
-        eventType: 'SETTINGS_UPDATED',
-        deviceId,
-        userId: 'admin',
-        payload: updated,
-        execute: async (tx) => {
-          await tx.execute(
-            `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
-             ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at;`,
-            ['app_settings', JSON.stringify(updated), now.getTime()]
-          );
-          await tx.execute(
-            `UPDATE shop SET
-              name = COALESCE(?, name),
-              currency = COALESCE(?, currency),
-              tax_rate = COALESCE(?, tax_rate),
-              logo_url = CASE WHEN ? IS NOT NULL THEN ? ELSE logo_url END,
-              address = COALESCE(?, address),
-              phone = COALESCE(?, phone),
-              updated_at = ?;`,
-            [
-              updated.storeName || null,
-              updated.currency || null,
-              updated.taxRate !== undefined ? Number(updated.taxRate) : null,
-              updated.storeLogo !== undefined ? (updated.storeLogo || '') : null,
-              updated.storeLogo !== undefined ? (updated.storeLogo || '') : null,
-              updated.storeAddress || null,
-              updated.storePhone || null,
-              now.getTime(),
-            ]
-          );
-        },
-      });
-    } catch (e) {
-      console.error('[settingsService] Failed to commit settings to SQLite/outbox:', e);
-    }
-
-    // 4. 0ms instant UI reflection via Zustand & Event
+    // 3. 0ms UI reflection.
     try {
+      const merged = await this.get();
       const { useSettingsStore } = await import('../../stores/settingsStore');
-      useSettingsStore.getState().setSettings(updated);
+      if (merged) useSettingsStore.getState().setSettings(merged);
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('settings-updated', { detail: updated }));
+        window.dispatchEvent(new CustomEvent('settings-updated', { detail: merged }));
       }
     } catch {}
   },

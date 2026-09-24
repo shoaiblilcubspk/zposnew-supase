@@ -13,7 +13,7 @@ import { settingsService } from '../services/settingsService';
 import { salesService } from '../services/salesService';
 import { expensesService } from '../services/expensesService';
 import { bundlesService } from '../services/bundlesService';
-import { localDb } from '../localDb';
+import { salesmenService } from '../services/usersService';
 
 import { useProductsStore } from '../../stores/productsStore';
 import { useCustomersStore } from '../../stores/customersStore';
@@ -49,7 +49,7 @@ export async function refreshAllStoresFromLocalDb(): Promise<void> {
       paymentModesService.getAll().catch(() => []),
       usersService.getAll().catch(() => []),
       settingsService.get().catch(() => null),
-      localDb.salesmen.toArray().catch(() => []),
+      salesmenService.getAll().catch(() => []),
       discountsService.getAll().catch(() => []),
       salesService.getAll().catch(() => []),
       expensesService.getAll().catch(() => []),

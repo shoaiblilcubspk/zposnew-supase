@@ -1,3 +1,5 @@
+import { useState, useEffect, useRef } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { HelpTooltip } from '../../../shared/ui/HelpTooltip';
 import type { ProductFormData } from './useProductForm';
 import type { Product, ProductVariant, VariantData, ProductAddon } from '../../../types';
@@ -29,13 +31,49 @@ export function ProductAdvanced({
   appProducts,
   product,
 }: ProductAdvancedProps) {
-  return (
-    <div className="space-y-4 pt-4 border-t border-neutral-200 dark:border-white/[0.08]">
-      <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2">
-        <span className="w-3.5 h-0.5 bg-emerald-500 rounded-full"></span>
-        {"Universal POS Enhancements"}
-      </h3>
+  const [expanded, setExpanded] = useState(false);
+  const autoOpenedRef = useRef(false);
 
+  // Auto-open (once) when editing a product that already uses any of these fields.
+  useEffect(() => {
+    if (autoOpenedRef.current) return;
+    const hasAdvanced = Boolean(
+      formData.isService ||
+      formData.requireSerial ||
+      (formData.expiryDate && formData.expiryDate.trim()) ||
+      (productAddons && productAddons.length > 0) ||
+      formData.productType === 'variable'
+    );
+    if (product && hasAdvanced) {
+      setExpanded(true);
+      autoOpenedRef.current = true;
+    }
+  }, [product, formData.isService, formData.requireSerial, formData.expiryDate, formData.productType, productAddons]);
+
+  return (
+    <div className="pt-4 border-t border-neutral-200 dark:border-white/[0.08]">
+      {/* Collapsible header */}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        className="w-full flex items-center justify-between gap-2 py-1 text-left select-none cursor-pointer group"
+      >
+        <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center gap-2">
+          <span className="w-3.5 h-0.5 bg-emerald-500 rounded-full"></span>
+          {"Universal POS Enhancements"}
+        </h3>
+        <ChevronDown
+          className={`w-4 h-4 text-neutral-500 dark:text-neutral-400 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {/* Collapsible body — stays mounted (state preserved), animates via grid-rows */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-4 pt-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <label className="flex items-start gap-3 cursor-pointer group p-3 bg-white dark:bg-surface rounded-md border border-neutral-300 dark:border-white/[0.12] hover:bg-neutral-50 dark:hover:bg-white/[0.02] transition-colors">
           <input
@@ -165,6 +203,9 @@ export function ProductAdvanced({
         appProducts={appProducts}
         product={product}
       />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

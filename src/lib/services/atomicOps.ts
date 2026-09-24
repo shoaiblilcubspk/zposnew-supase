@@ -1,7 +1,7 @@
 /**
  * Atomic Ops Compatibility Facade
  * Kept for legacy error classes and compatibility helpers.
- * Authoritative transactions are executed locally via SQLite and replicated via P2P outbox.
+ * Authoritative transactions are executed locally via SQLite and synchronized with Supabase cloud.
  */
 
 export const activeReturns = new Set<string>();

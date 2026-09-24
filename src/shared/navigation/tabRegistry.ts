@@ -30,7 +30,7 @@ export const MAIN_NAV_ITEMS: NavTabItem[] = [
 // ── 2. Settings Sub-Tabs ───────────────────────────────────────────────────
 export const SETTINGS_TABS: NavTabItem[] = [
   { id: 'general', label: 'General Settings', realIcon: 'generalSettings' },
-  { id: 'mesh', label: 'Device Mesh (P2P)', realIcon: 'device' },
+  { id: 'mesh', label: 'Cloud Sync', realIcon: 'device' },
   { id: 'receipt', label: 'Receipt Design', realIcon: 'receipt' },
   { id: 'security', label: 'Security & Account', realIcon: 'security' },
   { id: 'backup', label: 'Backup & Restore', realIcon: 'database' },

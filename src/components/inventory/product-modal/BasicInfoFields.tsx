@@ -1,6 +1,5 @@
 import { Camera, Wand2, Plus } from 'lucide-react';
 import { SegmentedControl, Button, Select } from '../../../shared/ui';
-import { BarcodePreview } from '../../../shared/ui/BarcodePreview';
 import type { ProductFormFieldsProps } from './ProductFormFieldsMain';
 
 export function BasicInfoFields(props: ProductFormFieldsProps) {
@@ -121,11 +120,6 @@ export function BasicInfoFields(props: ProductFormFieldsProps) {
             <Button type="button" variant="ghost" onClick={onGenerateBarcode} title="Generate Barcode" className="!min-h-0 !w-8 !h-8 !p-0 !rounded !bg-emerald-500/10 hover:!bg-emerald-500/20 border border-emerald-500/20 !text-emerald-600 dark:!text-emerald-400 shrink-0" icon={<Wand2 className="w-3.5 h-3.5" />} />
             <Button type="button" variant="ghost" onClick={onOpenScanner} title="Camera Scanner" className="!min-h-0 !w-8 !h-8 !p-0 !rounded !bg-neutral-100 dark:!bg-surface hover:!bg-neutral-200 dark:hover:!bg-white/5 border border-neutral-200 dark:border-white/[0.08] !text-neutral-600 dark:!text-neutral-400 shrink-0" icon={<Camera className="w-3.5 h-3.5" />} />
           </div>
-          {formData.barcode && (
-            <div className="mt-2">
-              <BarcodePreview value={formData.barcode} />
-            </div>
-          )}
         </div>
       </div>
     </div>

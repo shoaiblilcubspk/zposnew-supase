@@ -42,7 +42,7 @@ export const categoriesService = {
   }
 };
 
-// discountsService now backed by SQLite + P2P outbox events (no longer Dexie-only)
+// discountsService now backed by SQLite mirror (no longer Dexie-only)
 export const discountsService = {
   async getAll(): Promise<Discount[]> {
     return getAllDiscounts();

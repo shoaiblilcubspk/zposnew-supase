@@ -1,5 +1,4 @@
 import { purchaseRecordsService, productsService } from './services';
-import { localDb } from './localDb';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { useProductsStore } from '../stores/productsStore';
 
@@ -86,7 +85,7 @@ export async function commitStockInToInventory({
     useInventoryStore.getState().addPurchaseRecord(newRecord);
 
     // Read fresh product from authoritative SQLite productsService (with localDb fallback)
-    const freshProduct = (await productsService.getById(item.id)) || (await localDb.products.get(item.id));
+    const freshProduct = await productsService.getById(item.id);
     if (freshProduct) {
       lastProduct = freshProduct;
       useProductsStore.getState().updateProduct(freshProduct);

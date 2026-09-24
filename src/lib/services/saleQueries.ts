@@ -1,19 +1,16 @@
 /**
- * Local SQLite Sales Queries & Reports
- * Directly queries local SQLite database for sales history, search, and date-filtered report sets.
+ * Sales Queries & Reports — Supabase-only cloud-direct (Phase 10i).
+ * Reads sales history/report sets from the local mirror; updates go through the sync queue.
+ * Cloud-direct schema uses ISO `sold_at` (server clock), not an epoch `timestamp`.
  */
 
 import { Sale } from '../../types';
-import { getDatabase } from '../db';
-import { localDb } from '../localDb';
+import { localQuery, localQueryOne, updateRow } from '../../data';
 import { mapSqliteSale, batchHydrateSaleItems } from './sales/salesRepository';
-import { commitLocalTransaction } from '../events';
-import { getDeviceId } from '../mesh/deviceIdentity';
 
 export async function getAllSales(): Promise<Sale[]> {
-  const db = await getDatabase();
-  const rows = await db.query(
-    `SELECT * FROM sales WHERE status NOT IN ('deleted', 'void') ORDER BY timestamp DESC;`
+  const rows = await localQuery<any>(
+    `SELECT * FROM sales WHERE status NOT IN ('deleted', 'void') ORDER BY sold_at DESC;`
   );
   return batchHydrateSaleItems(rows);
 }
@@ -33,91 +30,49 @@ export async function searchSales(filters: {
   salesman?: string;
   saleType?: string;
 }): Promise<Sale[]> {
-  const db = await getDatabase();
   const conditions: string[] = ["status NOT IN ('deleted', 'void')"];
   const params: any[] = [];
 
-  if (filters.startDate) {
-    conditions.push('timestamp >= ?');
-    params.push(filters.startDate.getTime());
-  }
-  if (filters.endDate) {
-    conditions.push('timestamp <= ?');
-    params.push(filters.endDate.getTime());
-  }
+  if (filters.startDate) { conditions.push('sold_at >= ?'); params.push(filters.startDate.toISOString()); }
+  if (filters.endDate) { conditions.push('sold_at <= ?'); params.push(filters.endDate.toISOString()); }
   if (filters.invoiceNumber) {
     conditions.push('(invoice_number LIKE ? OR customer_name LIKE ?)');
     params.push(`%${filters.invoiceNumber}%`, `%${filters.invoiceNumber}%`);
   }
-  if (filters.customerId) {
-    conditions.push('customer_id = ?');
-    params.push(filters.customerId);
-  }
-  if (filters.paymentMethod) {
-    conditions.push('payment_method = ?');
-    params.push(filters.paymentMethod);
-  }
-  if (filters.status) {
-    conditions.push('status = ?');
-    params.push(filters.status);
-  }
-  if (filters.cashier) {
-    conditions.push('user_id = ?');
-    params.push(filters.cashier);
-  }
+  if (filters.customerId) { conditions.push('customer_id = ?'); params.push(filters.customerId); }
+  if (filters.paymentMethod) { conditions.push('payment_method = ?'); params.push(filters.paymentMethod); }
+  if (filters.status) { conditions.push('status = ?'); params.push(filters.status); }
+  if (filters.cashier) { conditions.push('user_id = ?'); params.push(filters.cashier); }
+  if (filters.saleType) { conditions.push('sale_type = ?'); params.push(filters.saleType); }
 
-  const sql = `SELECT * FROM sales WHERE ${conditions.join(' AND ')} ORDER BY timestamp DESC LIMIT 200;`;
-  const rows = await db.query(sql, params);
+  const sql = `SELECT * FROM sales WHERE ${conditions.join(' AND ')} ORDER BY sold_at DESC LIMIT 200;`;
+  const rows = await localQuery<any>(sql, params);
   return batchHydrateSaleItems(rows);
 }
 
 export async function updateSale(id: string, updates: Partial<Sale>): Promise<Sale> {
-  const db = await getDatabase();
-  const existing = await localDb.sales.get(id);
-  const updated = { ...existing, ...updates, updatedAt: new Date() } as Sale;
-  const deviceId = await getDeviceId();
-  const now = Date.now();
+  const existingRow = await localQueryOne<any>(`SELECT * FROM sales WHERE id = ?;`, [id]);
+  const patch: Record<string, any> = {};
+  if (updates.notes !== undefined) patch.notes = updates.notes || null;
+  if (updates.status !== undefined) patch.status = updates.status || 'completed';
+  if (Object.keys(patch).length > 0) await updateRow('sales', id, patch);
 
-  await commitLocalTransaction({
-    entityType: 'SALE',
-    entityId: id,
-    operation: 'UPDATE',
-    eventType: 'SALE_UPDATED',
-    deviceId,
-    userId: updated.userId || 'system',
-    payload: { id, ...updates, updatedAt: now },
-    execute: async (tx) => {
-      await tx.execute(
-        `UPDATE sales SET notes = ?, status = ?, updated_at = ? WHERE id = ?;`,
-        [updated.notes || null, updated.status || 'completed', now, id]
-      );
-    },
-  });
-
-  try {
-    await localDb.sales.put(updated);
-  } catch {}
-
-  return updated;
+  const mergedRow = { ...(existingRow || { id }), ...patch };
+  return mapSqliteSale(mergedRow);
 }
 
 export async function getReportSalesLocal(startDate: Date, endDate: Date): Promise<Sale[]> {
-  const db = await getDatabase();
-  const rows = await db.query(
+  const rows = await localQuery<any>(
     `SELECT * FROM sales
      WHERE status NOT IN ('refunded', 'deleted', 'pending', 'void')
-       AND timestamp >= ? AND timestamp <= ?
-     ORDER BY timestamp DESC;`,
-    [startDate.getTime(), endDate.getTime()]
+       AND sold_at >= ? AND sold_at <= ?
+     ORDER BY sold_at DESC;`,
+    [startDate.toISOString(), endDate.toISOString()]
   );
 
-  // Hydrate items from sale_items for reporting breakdowns
   const sales = rows.map((r: any) => mapSqliteSale(r));
   for (const s of sales) {
-    const itemRows = await db.query(
-      `SELECT * FROM sale_items WHERE sale_id = ?;`,
-      [s.id]
-    );
+    const itemRows = await localQuery<any>(`SELECT * FROM sale_items WHERE sale_id = ?;`, [s.id]);
     s.items = itemRows.map((r: any) => ({
       id: r.id,
       productId: r.product_id,
@@ -143,13 +98,12 @@ export async function getReportSales(startDate: Date, endDate: Date): Promise<Sa
 }
 
 export async function getReportRefundsLocal(startDate: Date, endDate: Date): Promise<Sale[]> {
-  const db = await getDatabase();
-  const rows = await db.query(
+  const rows = await localQuery<any>(
     `SELECT * FROM sales
      WHERE status IN ('refunded', 'partially_refunded')
-       AND timestamp >= ? AND timestamp <= ?
-     ORDER BY timestamp DESC;`,
-    [startDate.getTime(), endDate.getTime()]
+       AND sold_at >= ? AND sold_at <= ?
+     ORDER BY sold_at DESC;`,
+    [startDate.toISOString(), endDate.toISOString()]
   );
   return rows.map((r: any) => mapSqliteSale(r));
 }
@@ -158,38 +112,11 @@ export async function getReportRefunds(startDate: Date, endDate: Date): Promise<
   return getReportRefundsLocal(startDate, endDate);
 }
 
+/**
+ * Legacy back-fill of sale_items.unit_cost was a one-time migration against the OLD DB.
+ * In the cloud-direct fresh-start model there is nothing to patch, so this is a no-op.
+ */
 export async function patchLegacySales(): Promise<number> {
-  const db = await getDatabase();
-  const deviceId = await getDeviceId();
-  const now = Date.now();
-
-  const itemsWithoutCost = await db.query<any>(
-    `SELECT si.id, p.cost_price, si.sale_id
-     FROM sale_items si
-     JOIN products p ON si.product_id = p.id
-     WHERE si.unit_cost IS NULL OR si.unit_cost = 0;`
-  );
-
-  let patched = 0;
-  for (const item of itemsWithoutCost) {
-    const cost = Number(item.cost_price) || 0;
-    await commitLocalTransaction({
-      entityType: 'SALE_ITEM',
-      entityId: item.id,
-      operation: 'UPDATE',
-      eventType: 'SALE_ITEM_COST_UPDATED',
-      deviceId,
-      userId: 'system',
-      payload: { id: item.id, saleId: item.sale_id, unitCost: cost, updatedAt: now },
-      execute: async (tx) => {
-        await tx.execute(
-          `UPDATE sale_items SET unit_cost = ?, updated_at = ? WHERE id = ?;`,
-          [cost, now, item.id]
-        );
-      },
-    });
-    patched++;
-  }
-
-  return patched;
+  return 0;
 }
+

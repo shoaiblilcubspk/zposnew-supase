@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { can } from '../../lib/permissions';
 import { RealIcon } from '../../shared/ui';
 import { useSyncStatusStore } from '../../lib/sync/syncStatusStore';
+import { executeHardRefresh } from '../../lib/utils/hardRefresh';
+import { sonner } from '../../lib/sonner';
 
 interface HeaderActionsProps {
   appSettings: any;
@@ -20,12 +23,31 @@ export function HeaderActions({
   handleLogout,
   onLockTerminal,
   onShowMobileMenu,
+  forceSync,
 }: HeaderActionsProps) {
   const navigate = useNavigate();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const pendingCount = useSyncStatusStore((s) => s.pendingOutboxCount);
   const connectedPeers = useSyncStatusStore((s) => s.connectedPeersCount);
   const isSyncing = useSyncStatusStore((s) => s.isSyncing);
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('pos_hard_refresh_toast') === '1') {
+        sessionStorage.removeItem('pos_hard_refresh_toast');
+        sonner.success('System refreshed & synchronized');
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const onHardRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    await executeHardRefresh(forceSync);
+  };
 
   return (
     <div className="flex items-center gap-1.5 flex-shrink-0 select-none">
@@ -53,6 +75,20 @@ export function HeaderActions({
             size={20}
             className="w-4.5 h-4.5 md:w-5 md:h-5"
           />
+        </button>
+
+        {/* Hard Refresh Button — All Platforms (macOS DMG, Windows EXE, Linux, Browser, Android APK, iOS) */}
+        <button
+          type="button"
+          onClick={onHardRefresh}
+          disabled={isRefreshing}
+          aria-label="Hard Refresh"
+          title="Hard Refresh & Clean Resync"
+          className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 lg:w-8.5 lg:h-8.5 rounded-full hover:bg-white dark:hover:bg-white/10 active:scale-90 transition-all duration-150 cursor-pointer text-neutral-700 dark:text-neutral-300 group"
+        >
+          <div className={isRefreshing ? 'animate-spin' : 'transition-transform duration-300 group-hover:rotate-180'}>
+            <RealIcon name="refresh" size={20} className="w-4.5 h-4.5 md:w-5 md:h-5" />
+          </div>
         </button>
 
         {/* Desktop Only: Settings & Exit */}

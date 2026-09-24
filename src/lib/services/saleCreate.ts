@@ -1,6 +1,6 @@
 /**
  * Local-First Sale Creation Pipeline
- * Commits sales directly to local SQLite database in < 10ms and replicates via P2P outbox.
+ * Commits sales directly to local SQLite database in < 10ms and syncs with Supabase cloud.
  */
 
 import { Sale } from '../../types';

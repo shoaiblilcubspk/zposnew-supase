@@ -184,6 +184,7 @@ export function Header({
           toggleTheme={toggleTheme}
           handleLogout={handleLogout}
           onLockTerminal={onLockTerminal}
+          forceSync={forceSync}
         />
       )}
     </header>

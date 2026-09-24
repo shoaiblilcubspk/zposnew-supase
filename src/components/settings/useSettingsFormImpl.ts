@@ -30,7 +30,7 @@ export function useSettingsForm() {
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [formData, setFormDataState] = useState<any>(buildInitialFormData(appSettings));
 
-  // isDirty = user has unsaved changes. While true, remote P2P sync must NOT overwrite the form.
+  // isDirty = user has unsaved changes. While true, remote cloud sync must NOT overwrite the form.
   // Resets to false after save (Update System) or discard.
   const isDirty = useRef(false);
 
@@ -50,7 +50,7 @@ export function useSettingsForm() {
     }
   }, [appSettings]);
 
-  // Listen for P2P-pushed settings events — same dirty guard.
+  // Listen for remote settings events — same dirty guard.
   // Prevents logo/name/address from being clobbered while user is actively editing.
   useEffect(() => {
     const onSettingsUpdated = (e: any) => {
@@ -64,7 +64,7 @@ export function useSettingsForm() {
 
   const canEditSettings = true;
 
-  // Marks form dirty — used for fields that require "Update System" to save + P2P share
+  // Marks form dirty — used for fields that require "Update System" to save + cloud sync
   const setFormData = (updater: any) => {
     isDirty.current = true;
     setFormDataState(updater);
@@ -126,7 +126,7 @@ export function useSettingsForm() {
       return;
     }
 
-    // Non-instant field — mark form dirty. User must click "Update System" to save + P2P share.
+    // Non-instant field — mark form dirty. User must click "Update System" to save + cloud sync.
     isDirty.current = true;
     setFormDataState((prev: any) => ({
       ...prev,
@@ -134,7 +134,7 @@ export function useSettingsForm() {
     }));
   };
 
-  // "Update System" button — ONLY place where store identity + all settings save + P2P propagate
+  // "Update System" button — ONLY place where store identity + all settings save + cloud sync
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canEditSettings) {
@@ -156,15 +156,15 @@ export function useSettingsForm() {
         receiptFontWeight: parseInt((formData as any).receiptFontWeight?.toString() || '600'),
       } as unknown as AppSettings;
 
-      // Saves to local SQLite + Dexie + creates P2P outbox event → all devices auto-receive
+      // Saves to local mirror and queues cloud sync to Supabase
       await settingsService.update(updatedSettings as any);
       useSettingsStore.getState().setSettings(updatedSettings as any);
 
-      // Form is now in sync with saved state — allow remote P2P events to update it again
+      // Form is now in sync with saved state — allow remote sync events to update it again
       isDirty.current = false;
 
       setSyncStatus('success');
-      sonner.success('Settings saved & shared to all devices! 🌐');
+      sonner.success('Settings saved & synced to cloud!');
     } catch (error) {
       console.error('Error saving settings:', error);
       setSyncStatus('idle');

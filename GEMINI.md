@@ -1,4 +1,4 @@
-# Zaynahs POS — Master Rules (Local-First P2P)
+# Zaynahs POS — Master Rules (Supabase-Only Cloud-Direct Architecture)
 
 > Single source of truth for ALL AI agents. Short, clear, no band-aids.
 
@@ -7,7 +7,7 @@
 ## 🏢 Business Scope
 - **Universal POS** — Clothing, Pharmacy, Restaurant, Retail, Electronics, Grocery. No niche-hardcoding.
 - **Terminology:** product / item / category / variant / modifier / addon
-- **Single-tenant:** 1 Store = Autonomous Mesh Network. No workspace_id, no shift_id.
+- **Single-tenant:** 1 Store = Autonomous Cloud-Connected Terminal. No workspace_id, no shift_id.
 - **Language:** Roman Urdu responses, short, direct action.
 
 ---
@@ -16,39 +16,39 @@
 
 ### Target Stack
 - **Frontend:** React + Vite + TypeScript + Tailwind CSS
-- **Desktop:** Tauri (Rust runtime + Native SQLite)
+- **Desktop:** Electron / Tauri (Native SQLite + OS Filesystem)
 - **Mobile:** Capacitor (Native SQLite Plugin)
-- **Local Database:** SQLite (Complete, autonomous local DB per device)
-- **Sync Engine:** Event-Sourced P2P via WebRTC Data Channels (Outbox/Inbox)
-- **Signaling Only:** Supabase Realtime (presence & WebRTC handshakes only — **NO Cloud Database**)
+- **Local Database:** SQLite mirror cache (`zaynahs_cloud.sqlite`)
+- **Cloud Database:** Supabase PostgreSQL (Single source of truth, RLS enabled on all tables)
+- **Sync Engine:** Client write-through + local `sync_queue` + background `syncWorker` (device↔Supabase only, never device↔device)
 - **State:** Zustand stores (`src/stores/`) — one store per domain
-- **Services:** `src/lib/services/` — one file per entity (interfacing directly with local storage engine)
+- **Data Layer:** `src/data/` (atomic write, sync worker, pull sync, local schema)
 - **UI:** Shared components from `src/shared/ui/` and `src/shared/modules/`
 
 ### Stock & Transaction Architecture
-- **Local SQLite = Single authoritative source of truth on each terminal.**
-- Stock changes ONLY via append-only `inventory_transactions` (`INVENTORY_IN`, `INVENTORY_OUT`, `AUDIT`).
-- Every sale, return, and payment commits locally in `< 10ms` inside a single atomic SQLite transaction.
-- **Offline First:** POS operates 100% offline indefinitely. Terminal never blocks a sale due to network or cloud issues.
-- **Stock Conflicts (P2P):** If two offline terminals sell the last items simultaneously, both sales commit. On sync, ledger calculates `Oversold` state — zero dropped bills, zero data loss.
+- **Supabase PostgreSQL = Single authoritative source of truth.** Local SQLite = High-performance offline cache.
+- Stock changes ONLY via append-only `inventory_ledger` (`IN`, `OUT`, `ADJUST`, `AUDIT`). Direct stock mutation is strictly forbidden.
+- Current stock is ALWAYS a computed aggregate (`SUM(quantity)` from `inventory_ledger`), never a directly-edited field.
+- **Atomic Action Bundles (Hard Rule):** Every multi-table mutation (sale, refund, void, stock adjustment, product creation) commits in ONE atomic transaction locally via `atomicWrite` and pushes as ONE idempotent Postgres RPC call using `operation_id` (UUID v4).
+- **Offline First:** POS operates 100% offline seamlessly. Bills commit locally in `< 10ms` to SQLite and enqueue in `sync_queue`. Upon internet reconnection, the sync worker pushes queued bundles to Supabase.
 
 ### Sync Model
-- Local change → Atomic SQLite Tx → Create Event → Save to `sync_outbox`.
-- Background P2P worker sends missing events over WebRTC.
-- Receiving peer checks `event_id` deduplication, validates signature, and commits to local SQLite.
-- Supabase Cloud DB is **NOT** used for products, sales, inventory, customers, or reports.
+- Local Action → `atomicWrite([...ops], { operation_id, action })` → Commit SQLite + `sync_queue` in ONE transaction.
+- Background worker pushes bundle to Supabase RPC (`UNIQUE(operation_id)` enforces idempotency).
+- Periodic pull sync fetches server updates using `updated_at` timestamps and updates local SQLite mirror.
+- P2P / WebRTC / device-to-device sync is **STRICTLY BANNED**. All data flows device ↔ Supabase only.
 
 ### 🖥️ Local Runtime & Desktop Execution Rule
-- **Flexible Runtime:** Run via `npm run dev` or `npm run tauri dev` based on development workflow needs. Shared architecture ensures logic parity across browser and desktop.
+- **Flexible Runtime:** Run via `npm run dev` or `npm run electron:dev` based on development workflow needs. Shared architecture ensures logic parity across browser and desktop.
 - **Local SQLite & AppData location:** SQLite DB and binary media are stored in OS native app-data directory:
-  `$APPDATA / ~/Library/Application Support/<app-id>/` (`database.sqlite`, `images/`, `receipts/`, `backups/`, `sync/`).
+  `$APPDATA / ~/Library/Application Support/<app-id>/` (`zaynahs_cloud.sqlite`, `images/`, `receipts/`, `backups/`).
 - **Production Packaging:** Production installers (EXE/DMG/APK/IPA) are built at release time, not required after routine feature edits.
 
-### 🌐 4 Golden Rules for Connection & Free-Tier Optimization
+### 🌐 Cloud Connection & Free-Tier Optimization Rules
 1. **Singleton Client:** Supabase client hamesha cached singleton instance rahe (`getSupabase()`). Har call par naya client create karna strictly banned hai (prevents connection leaks).
-2. **`useEffect` Cleanup:** Realtime subscription create hone par unmount callback me `supabase.removeChannel(channel)` lazmi call ho.
-3. **No Heavy Realtime on DB Tables:** Postgres table level realtime 100% OFF. Supabase sirf WebRTC SDP/ICE signaling aur presence broadcast ke liye use hoga.
-4. **Media / Assets over WebRTC P2P:** Binary data aur images local filesystem + WebRTC P2P DataChannels se sync honge, cloud storage ya cloud DB se nahi (0 server egress/storage cost).
+2. **`useEffect` Cleanup:** Realtime channel subscription create hone par unmount callback me `supabase.removeChannel(channel)` lazmi call ho.
+3. **No Heavy Realtime on DB Tables:** Postgres table level realtime 100% OFF. Supabase data fetch via standard REST/RPC and background pull sync.
+4. **Media Storage:** Product images upload to Supabase Storage (`product-images` private bucket) and cache locally in filesystem.
 
 ---
 
@@ -56,7 +56,7 @@
 
 ### File Size & Code Limits
 - **MAX 300 lines per file.** If bigger → split into sub-components/modules immediately. No excuses.
-- Services: one file per entity in `src/lib/services/`
+- Repositories & Data services: one file per entity in `src/lib/services/` interfacing with `src/data/`
 - Components: split into sub-components in sub-folders. Ensure logic is isolated.
 
 ### State Management
@@ -90,55 +90,39 @@
 ---
 
 ## 🔐 Auth & Security
-- **First-Run Authentication & Shop Initialization:**
-  - Supabase Auth completely decoupled — zero cloud dependency.
-  - On first launch (when no local shop exists), application presents "Create New Shop" flow.
-  - Shop identity (`SHOP_ID`), root admin account, first device (`DEVICE_ID`), and ECDSA keypair are created in atomic local SQLite transaction.
-  - Initial device is registered as the root/owner administrative device.
-  - Subsequent terminals join via ephemeral QR pairing + explicit admin approval.
-  - Plaintext PINs, passwords, and private keys are NEVER transmitted over P2P or QR.
-- **Local PIN Authentication:** Fast login via salted Argon2id/PBKDF2 PIN hash stored in local SQLite with progressive lockout.
-- **Roles & Permissions:**
-  - **Admin:** Full access, user CRUD, device pairing, PIN reset, sensitive settings, staff management.
-  - **Manager:** Operational control, inventory restock, discounts, sales, reports.
-  - **Cashier:** Terminal sales, receipts, customer lookup.
-  - **Salesman:** Sales creation with commission/attribution.
-- **Decentralized User Management & P2P Lifecycle:**
-  - Users are created in local SQLite with salted PIN hash (PBKDF2/Argon2id).
-  - User mutations generate durable events (`USER_CREATED`, `USER_UPDATED`, `USER_ROLE_UPDATED`, `USER_PIN_RESET`, `USER_STATUS_CHANGED`) in `sync_outbox`.
-  - Plaintext PINs are NEVER transferred over P2P or QR.
-  - All operations record attribution: `USER_ID + DEVICE_ID + EVENT_ID`.
-  - Soft Deletes Only: Users are never hard-deleted; deactivating sets `active = 0` (`status = 'disabled'`), immediately revoking login locally and across all synced terminals.
-- **Recovery Code:** Master recovery code generated locally on first launch for emergency admin PIN reset without cloud dependency.
-- **P2P Security:** End-to-end encrypted WebRTC channels with per-device keypairs.
-- **Detailed Specification:** See `docs/USER & ROLE SETUP — FIRST INSTALL TO DAILY SALES.md` and `docs/USERS_AND_ROLES.md`.
+- **Staff Users & Role-Based Access:**
+  - Login via username + password against `staff_users` table (seeded with default admin).
+  - PIN codes and license keys are completely eliminated.
+  - Roles: `admin`, `manager`, `cashier`, `salesman`.
+  - Permissions are enforced server-authoritatively via Supabase RLS and client-side guards.
+- **Row Level Security (RLS):**
+  - EVERY table in Supabase has RLS enabled with explicit policies.
+  - Client operations run using authenticated staff session / ANON key with RLS protection.
+- **Device Identity:**
+  - Simple local `device_id` generated on first run for audit trail attribution (`created_by`, `device_id`). No cryptographic P2P pairing keys.
 
 ---
 
 ## ⚡ Key Principles
 1. **Data integrity > everything.** Financial and inventory movements are append-only.
-2. **Zero bill drops.** A sale committed by a cashier is permanent and never rolled back by remote sync.
-3. **Idempotent event sync.** Every event has a unique `event_id`. Duplicate arrival = no-op.
-4. **Soft deletes & Tombstones.** Deleting records sets `active = false` with `tombstones` entry.
+2. **Zero bill drops.** A sale committed locally is permanent; queued bundle retries until Supabase ACK.
+3. **Idempotency via `operation_id`.** Every multi-table action carries a UUID v4 `operation_id`. Replay returns original result without duplication.
+4. **Soft deletes & Tombstones.** Deleting records sets `deleted_at = now()` / `is_active = false`.
 5. **Universal code.** Clean, shop-agnostic architecture.
 6. **Time formatting.** Always `formatAppTime/Date/DateTime` from `src/lib/dateUtils.ts`.
 7. **Strict compliance:** Do exactly what the user explicitly instructs. No half-measures.
-8. **Schema & Backup/Import Sync:** Whenever database schema or tables change, Backup/Restore (`.zpos`) and Product Catalog Import/Export MUST be updated synchronously.
-9. **100% Automated Cloud Setup:** Supabase setup (Indian region `ap-south-1` project, keys, `pos-backups` bucket, RLS policies) is executed automatically via Management API (`node scripts/setup-supabase.mjs`) using `SUPABASE_MGMT_API_KEY` from `.env.local`. Zero manual dashboard steps.
-10. **100% Zero-Refresh Reactivity (0ms Screen Updates):** Tamam POS operations (Sales, Deletions, Restock, Adjustments, Wallets, Badges, Expenses, Ledger) ko 100% reactive hona lazmi hai — yani jo action hua, wo 0 millisecond me screen par reflect ho bina kisi refresh ke. Native desktop (EXE/DMG) aur mobile apps me refresh ka koi concept nahi hota. Disconnected static snapshots and manual reload dependencies are strictly prohibited.
-11. **Cross-Platform Parity (EXE / DMG / APK / IPA), Smooth-Fast 60 FPS & Zero-Cache Mandate:** Windows (.exe), macOS (.dmg), Android (.apk), and iOS (.ipa) builds share 100% identical business logic. Stale browser/service worker caches are strictly prohibited; 0ms reactive UI updates are backed solely by authoritative local SQLite. All POS data replicates in real time across LAN without internet and over WAN with internet.
-12. **Permanent Architectural Fix (Zero Band-Aids):** Kabhi bhi kisi calculation, stock mismatch, ya logic bug par temporary patch ya superficial band-aid na lagayein. Har issue ko uske fundamental architectural root cause par solve karein aur us se link tamam systems (`UI → Tx Coordinator → Ledger → Outbox → P2P Mesh → Remote Handler → Store → LocalDB → Reconciler → Reports`) ko complete 360-degree synchronize karein taake flow kabhi break na ho.
-13. **Continuous P2P Sync & Full-Stack Parity Verification Mandate:** Koi bhi new feature ya field (product attributes, expiry dates, salesman attribution, user permissions, serial/IMEI, barcodes) add ya update hone par uska complete chain (`Types → SQLite Schema & Migration → CRUD Queries → Outbox Event → P2P Mesh Sync → Remote Event Handlers → Zustand Store → UI & Receipts → Reports → Backup/Restore & Import/Export`) lazmi 100% synchronized aur verified hona chahiye. Koi bhi field local DB me save hokar P2P sync ya reporting me drop nahi honi chahiye.
-14. **Deep Root-Cause Engineering & Silent Bug Elimination (Claude Standard):** Kabhi bhi superficial code reading ya guessing na karein. JavaScript aur distributed systems mein silent bugs (jaise `Number(date)` returning `NaN`, Symmetric NAT blocking WebRTC without TURN, type coercion mismatches, silent JSON drops, clock skew, outbox queue stalls) bina kisi error ke system ko tor dete hain. Har issue ko line-by-line actual runtime values trace karke mathematical/architectural origin par pakdein, centralized battle-tested utility banayein (e.g. `safeTs()`, `iceConfig.ts`), aur pure codebase mein sweep karke 100% immune karein.
-15. **Mandatory Next Version Bump & Universal Build Naming Rule (Zero Stale Versions):** Har update, bug fix, ya rebuild se pehle version bump karna (`package.json`, `tauri.conf.json`, `build.gradle`, `project.pbxproj`) lazmi hai. Tamam installers aur output binaries (`.apk`, `.ipa`, `.dmg`, `.exe`, `.msi`) ke file name mein explicitly version number (`Zaynahs-POS-v<version>.*`) shamil hona compulsory hai taake update ka har jagah foran pata chal sake.
+8. **Schema & Backup/Import Sync:** Whenever database schema or tables change, Supabase migrations, localSchema mirror, and Backup/Restore MUST be updated synchronously.
+9. **100% Zero-Refresh Reactivity (0ms Screen Updates):** Tamam POS operations (Sales, Deletions, Restock, Adjustments, Wallets, Badges, Expenses, Ledger) ko 100% reactive hona lazmi hai — yani jo action hua, wo 0 millisecond me screen par reflect ho bina kisi refresh ke.
+10. **Cross-Platform Parity (EXE / DMG / APK / IPA), Smooth-Fast 60 FPS & Zero-Cache Mandate:** Windows (.exe), macOS (.dmg), Android (.apk), and iOS (.ipa) builds share 100% identical business logic. Stale browser/service worker caches are strictly prohibited; 0ms reactive UI updates are backed solely by authoritative local SQLite mirror.
+11. **Permanent Architectural Fix (Zero Band-Aids):** Kabhi bhi kisi calculation, stock mismatch, ya logic bug par temporary patch ya superficial band-aid na lagayein. Har issue ko uske fundamental architectural root cause par solve karein.
 
 ---
 
 ## 📁 Feature Workflow
-1. Local Database Model / Table update
-2. Types (`types/index.ts`)
-3. Service file (`src/lib/services/`)
-4. Zustand store update
-5. UI Component (shared UI, under 300 lines)
-6. Backup & Import/Export sync update
-7. Docs update
+1. Supabase Migration (`supabase/migrations/xxxx_*.sql`) + update `supabase/MASTER_SCHEMA.sql` and `supabase/SCHEMA.md`
+2. Local Schema Mirror (`src/data/localSchema.ts`)
+3. Types (`types/index.ts`)
+4. Data Service / Repository (`src/lib/services/` -> `src/data/`)
+5. Zustand store update
+6. UI Component (shared UI, under 300 lines)
+7. Backup & Import/Export sync update

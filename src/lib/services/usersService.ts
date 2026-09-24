@@ -1,5 +1,5 @@
 import { User } from '../../types';
-import { localDb, generateId } from '../localDb';
+import { localQuery, localQueryOne, insertRow, updateRow, softDeleteRow } from '../../data';
 import { generateBarcodeValue } from '../../utils/barcode';
 import { 
   getAllUsers, 
@@ -11,7 +11,15 @@ import {
 
 export const salesmenService = {
   async getAll() {
-    return await localDb.salesmen.toArray();
+    const rows = await localQuery<any>(`SELECT * FROM salesmen WHERE active = 1 ORDER BY name ASC;`);
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      phone: r.phone || undefined,
+      active: Boolean(r.active),
+      createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+      updatedAt: r.updated_at ? new Date(r.updated_at) : undefined,
+    }));
   },
 
   async fetchRemote(): Promise<any[]> {
@@ -19,35 +27,36 @@ export const salesmenService = {
   },
 
   async create(salesman: any) {
-    const id = generateId();
-    const newSalesman = {
-      ...salesman,
-      id,
-      active: salesman.active ?? true,
-      createdAt: new Date(),
-    };
-    await localDb.salesmen.put(newSalesman);
-    return newSalesman;
+    const row = await insertRow('salesmen', {
+      ...(salesman.id ? { id: salesman.id } : {}),
+      name: salesman.name || '',
+      phone: salesman.phone || null,
+      active: salesman.active === false ? 0 : 1,
+    });
+    return { id: row.id, name: row.name, phone: row.phone || undefined, active: true, createdAt: new Date() };
   },
 
   async update(id: string, updates: any) {
-    await localDb.salesmen.update(id, { ...updates, updatedAt: new Date() });
-    return await localDb.salesmen.get(id);
+    const patch: Record<string, any> = {};
+    if (updates.name !== undefined) patch.name = updates.name;
+    if (updates.phone !== undefined) patch.phone = updates.phone || null;
+    if (updates.active !== undefined) patch.active = updates.active ? 1 : 0;
+    if (Object.keys(patch).length > 0) await updateRow('salesmen', id, patch);
+    return localQueryOne<any>(`SELECT * FROM salesmen WHERE id = ?;`, [id]);
   },
 
   async delete(id: string) {
-    await localDb.salesmen.delete(id);
+    await softDeleteRow('salesmen', id, 'active');
   },
 };
 
 export const usersService = {
   async getAll(): Promise<User[]> {
     try {
-      const sqliteUsers = await getAllUsers();
-      if (sqliteUsers && sqliteUsers.length > 0) return sqliteUsers;
-    } catch {}
-    const users = await localDb.users.toArray();
-    return users.filter((u: any) => !u.deleted_at && !u.deletedAt);
+      return await getAllUsers();
+    } catch {
+      return [];
+    }
   },
 
   async fetchRemote(): Promise<User[]> {
@@ -93,13 +102,14 @@ export const usersService = {
 };
 
 export const seedMissingBarcodes = async (): Promise<{ count: number; updated: string[] }> => {
-  const products = await localDb.products.toArray();
-  const missing = products.filter(p => !p.barcode || !p.barcodeValue);
+  const { productsService } = await import('./productsService');
+  const products = await productsService.getAll();
+  const missing = products.filter((p) => !p.barcode || !p.barcodeValue);
   const updatedNames: string[] = [];
 
   for (const prod of missing) {
     const val = prod.barcode || generateBarcodeValue(prod.name || prod.id);
-    await localDb.products.where('id').equals(prod.id).modify({ barcodeValue: val, barcode: val });
+    await productsService.update(prod.id, { barcode: val, barcodeValue: val } as any);
     updatedNames.push(prod.name);
   }
 

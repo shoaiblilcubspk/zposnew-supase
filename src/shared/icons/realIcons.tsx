@@ -83,7 +83,7 @@ export const REAL_ICONS = {
   lock: encodeURI('/Icons/Profile Lock.webp'),
   moon: encodeURI('/Icons/Moon dark theme.webp'),
   sun: encodeURI('/Icons/Sun light theme.webp'),
-  refresh: '/Icons/Reports.webp',
+  refresh: '/Icons/Refresh.webp',
   exit: '/Icons/Exit.webp',
   logout: '/Icons/Exit.webp',
   account: encodeURI('/Icons/Account and privacy.webp'),
