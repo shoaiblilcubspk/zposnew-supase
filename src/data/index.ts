@@ -14,7 +14,7 @@ export {
 export type { SyncedTable } from './localSchema';
 export {
   enqueue, enqueueInTx, getPending, countPending, markSynced, markError, markFailed,
-  getFailed, getActiveQueue, countFailed, retryFailed, pruneSynced,
+  getFailed, getActiveQueue, countFailed, retryFailed, discardFailed, pruneSynced,
 } from './syncQueue';
 export type { SyncQueueRow, SyncOperationType, EnqueueInput, BundleRow, BundlePayload } from './syncQueue';
 export { startSyncWorker, stopSyncWorker, flushQueue } from './syncWorker';

@@ -111,6 +111,10 @@
   allowlist-checked against the 34 synced tables. EXECUTE granted to `anon, authenticated`.
 - **0014**: delete op casts `id::text = $1` so it works for uuid and text primary keys
   (fixes SQLSTATE 42883 "uuid = text").
+- **0016**: INSERT lists ONLY the payload's columns (`insert (cols) select cols from
+  jsonb_populate_record`), so omitted columns keep their table DEFAULT instead of an explicit
+  NULL — a partial insert (e.g. first settings save without `store_name`) no longer violates a
+  NOT NULL default column.
 
 ### Repair safety net (0015)
 - **repair_quarantine**: `id`, `table_name`, `row_id`, `payload` (jsonb), `reason`, `created_at`.

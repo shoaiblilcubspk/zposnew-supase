@@ -149,6 +149,15 @@ export async function retryFailed(operationId: string): Promise<void> {
   );
 }
 
+/** Permanently drop a failed bundle from the queue (user chose Discard). Local-only cleanup;
+ *  nothing was written to the cloud for a failed bundle, so there is nothing to undo there. */
+export async function discardFailed(operationId: string): Promise<void> {
+  await localExecute(
+    `DELETE FROM sync_queue WHERE operation_id=? AND status='failed'`,
+    [operationId]
+  );
+}
+
 /** Housekeeping: drop old synced rows so the queue stays small. */
 export async function pruneSynced(keepHours = 24): Promise<void> {
   const cutoff = new Date(Date.now() - keepHours * 3600_000).toISOString();

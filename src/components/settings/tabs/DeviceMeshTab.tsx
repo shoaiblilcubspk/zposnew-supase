@@ -7,7 +7,7 @@
  */
 import React from 'react';
 import {
-  countPending, countFailed, getActiveQueue, retryFailed, flushQueue, type SyncQueueRow,
+  countPending, countFailed, getActiveQueue, retryFailed, discardFailed, flushQueue, type SyncQueueRow,
 } from '../../../data';
 
 const ACTION_LABELS: Record<string, string> = {
@@ -89,6 +89,9 @@ export function DeviceMeshTab() {
   const retry = async (operationId: string) => {
     await retryFailed(operationId); await flushQueue(); await refresh();
   };
+  const discard = async (operationId: string) => {
+    await discardFailed(operationId); await refresh();
+  };
 
   return (
     <div className="p-4 text-neutral-800 dark:text-neutral-200">
@@ -138,13 +141,23 @@ export function DeviceMeshTab() {
                   )}
                 </div>
                 {row.status === 'failed' && (
-                  <button
-                    type="button"
-                    onClick={() => void retry(row.operation_id)}
-                    className="shrink-0 rounded border border-white/[0.08] px-2 py-0.5 text-[11px] hover:bg-white/[0.04]"
-                  >
-                    Retry
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => void retry(row.operation_id)}
+                      className="rounded border border-white/[0.08] px-2 py-0.5 text-[11px] hover:bg-white/[0.04]"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void discard(row.operation_id)}
+                      className="rounded border border-white/[0.08] px-2 py-0.5 text-[11px] text-red-500 hover:bg-red-500/10"
+                      title="Remove this failed change from the queue"
+                    >
+                      Discard
+                    </button>
+                  </div>
                 )}
               </div>
             );
