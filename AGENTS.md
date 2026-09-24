@@ -148,6 +148,11 @@ use the `atomicWrite` single-op path and need **no** RPC unless they touch 2+ ta
       outside the data layer.**
 - [ ] **The write-guard test passes (`tests/writeGuard.test.mjs`).**
 - [ ] Bundle Registry updated.
+- [ ] **Permanent fix — no patch/band-aid, no per-shop special-casing (§1.6, §2.12).**
+- [ ] **On ANY schema change: numbered migration added + `supabase/MASTER_SCHEMA.sql` and
+      `supabase/SCHEMA.md` regenerated (running MASTER_SCHEMA on an empty project = full schema).**
+- [ ] **`docs/NEW_CLONE_SETUP.md` still accurate — a fresh `git clone` stays ready-to-use for
+      any new shop (env + `node scripts/supabase-migrate.mjs` only, zero code edits).**
 
 ### 1.5.12 FUTURE-PROOF RULE: Bundle + Sync for Every Change (PERMANENT)
 
