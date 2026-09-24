@@ -2,14 +2,11 @@
  * useProductImage
  * Resolves a product image value into a renderable URL.
  *
- * Accepts either:
- *  - a content-addressed SHA-256 hash (new architecture, AGENTS.md 2.8)
- *  - a legacy base64 data URI or http(s) URL (backward compatibility)
- *
- * For a hash, it resolves the local blob to an object URL. If the blob is
- * missing locally (e.g. product synced from a peer but image not yet
- * transferred), it requests the image from peers and reactively updates
- * once the transfer completes.
+ * Accepts either a content-addressed SHA-256 hash (new architecture) or a legacy base64/URL.
+ * For a hash it resolves the local blob to an object URL; if missing locally it downloads from
+ * the Supabase Storage bucket and caches it. If the download isn't ready yet (slow/offline), it
+ * retries a few times with backoff and re-resolves when the device comes back online or the
+ * blob is saved — so a valid cloud image never gets stuck as a broken icon.
  */
 
 import { useEffect, useState } from 'react';
@@ -22,6 +19,7 @@ export function useProductImage(value: string | undefined | null): string | unde
 
   useEffect(() => {
     let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
     if (!value) {
       setUrl(undefined);
@@ -34,23 +32,32 @@ export function useProductImage(value: string | undefined | null): string | unde
       return;
     }
 
-    const resolve = async () => {
+    // Content-addressed hash: resolve from local store, else pull from the bucket. Retry a few
+    // times with backoff so a slow/failed first fetch self-heals without a manual refresh.
+    const RETRY_DELAYS = [800, 2000, 5000];
+    const resolve = async (attempt = 0) => {
       const resolved = await getImageUrl(value);
       if (cancelled) return;
-      // Cloud-direct: images resolve from the local content-addressed store (hydrated from
-      // Supabase Storage). If not present yet, it will appear once the asset is cached.
-      setUrl(resolved || undefined);
+      if (resolved) {
+        setUrl(resolved);
+      } else if (attempt < RETRY_DELAYS.length) {
+        timers.push(setTimeout(() => void resolve(attempt + 1), RETRY_DELAYS[attempt]));
+      } else {
+        setUrl(undefined); // give up for now — ProductThumb shows the fallback placeholder
+      }
     };
 
-    resolve();
+    void resolve();
 
-    const unsub = onImageSaved((savedHash) => {
-      if (savedHash === value) resolve();
-    });
+    const unsub = onImageSaved((savedHash) => { if (savedHash === value) void resolve(); });
+    const onOnline = () => void resolve();
+    if (typeof window !== 'undefined') window.addEventListener('online', onOnline);
 
     return () => {
       cancelled = true;
+      timers.forEach(clearTimeout);
       unsub();
+      if (typeof window !== 'undefined') window.removeEventListener('online', onOnline);
     };
   }, [value]);
 

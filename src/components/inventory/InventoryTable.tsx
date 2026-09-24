@@ -1,6 +1,7 @@
 import { CheckSquare, MinusSquare, Square, Package, Power, Trash2 } from 'lucide-react';
 import { Button, Badge, Pagination } from '../../shared/ui';
 import { BarcodePreview } from '../../shared/ui/BarcodePreview';
+import { ProductThumb } from '../../shared/ui/ProductThumb';
 import { Product } from '../../types';
 import { useSettingsStore } from '../../stores';
 import { productsService } from '../../lib/services';
@@ -95,7 +96,7 @@ export function InventoryTable({
                 <td className="p-4 text-left">
                   <div className="flex items-center gap-4 cursor-pointer group" onClick={() => handleEditProduct(product)}>
                     <div className="h-8 w-8 bg-neutral-100 dark:bg-neutral-900 rounded border border-neutral-200 dark:border-white/[0.08] flex items-center justify-center overflow-hidden shrink-0">
-                      {product.image ? <img src={product.image} className="h-full w-full object-cover" /> : <Package className="h-4 w-4 text-neutral-400" />}
+                      {product.image ? <ProductThumb image={product.image} alt={product.name} fallback={<Package className="h-4 w-4 text-neutral-400" />} /> : <Package className="h-4 w-4 text-neutral-400" />}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-neutral-900 dark:text-white text-[13px] tracking-[-0.01em] truncate max-w-[200px] group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{product.name}</p>
@@ -228,7 +229,7 @@ export function InventoryTable({
                 <div className="flex flex-col gap-2.5">
                   <div className="aspect-square w-full bg-neutral-100 dark:bg-neutral-800 rounded flex items-center justify-center overflow-hidden border border-neutral-200 dark:border-white/[0.08] flex-shrink-0 relative">
                     {product.image ? (
-                      <img src={product.image} className="h-full w-full object-cover" />
+                      <ProductThumb image={product.image} alt={product.name} fallback={<Package className="h-6 w-6 text-neutral-400" />} />
                     ) : (
                       <Package className="h-6 w-6 text-neutral-400" />
                     )}

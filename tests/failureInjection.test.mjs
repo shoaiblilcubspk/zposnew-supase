@@ -16,6 +16,7 @@
 import Database from 'better-sqlite3';
 import { setLocalDbForTesting } from '../src/data/localDb.ts';
 import { atomicWrite } from '../src/data/writeThrough.ts';
+import { resolveImageRecord } from '../src/lib/media/localImageStore.ts';
 
 function makeTx(db) {
   return {
@@ -106,12 +107,69 @@ async function testIdempotentRetrySameOpId() {
   assert(q === 1, 'exactly one queue bundle for the reused operation_id');
 }
 
+// ── Phase 7 (image): product + product_images + ledger all-or-nothing ───────────
+
+function freshProductDb() {
+  const db = new Database(':memory:');
+  db.exec(`
+    CREATE TABLE products (id TEXT PRIMARY KEY, operation_id TEXT UNIQUE, name TEXT, image_hash TEXT,
+      stock NUMERIC, active INTEGER, created_at TEXT, updated_at TEXT);
+    CREATE TABLE product_images (id TEXT PRIMARY KEY, operation_id TEXT UNIQUE, product_id TEXT,
+      image_hash TEXT, storage_path TEXT, mime_type TEXT, file_size INTEGER, created_at TEXT, updated_at TEXT);
+    CREATE TABLE inventory_ledger (id TEXT PRIMARY KEY, operation_id TEXT UNIQUE, product_id TEXT,
+      quantity NUMERIC, type TEXT, reference_id TEXT, created_at TEXT);
+    CREATE TABLE sync_queue (operation_id TEXT PRIMARY KEY, table_name TEXT, operation_type TEXT,
+      payload TEXT, status TEXT, retry_count INTEGER, last_error TEXT, created_at TEXT, updated_at TEXT);
+  `);
+  setLocalDbForTesting(makeDriver(db));
+  return db;
+}
+
+async function testProductImageBundleAllOrNothing() {
+  console.log('\n[5] create_product with image: product + product_images + ledger together or nothing');
+  // Success: all three rows present, one bundle.
+  let db = freshProductDb();
+  const pid = 'prod-1';
+  const hash = 'c'.repeat(64);
+  await atomicWrite([
+    { table: 'products', op: 'insert', row: { id: pid, name: 'Jeans', image_hash: hash, stock: 100, active: 1 } },
+    { table: 'product_images', op: 'insert', row: { product_id: pid, image_hash: hash, storage_path: `${hash}.webp`, mime_type: 'image/webp', file_size: 0 } },
+    { table: 'inventory_ledger', op: 'insert', row: { product_id: pid, quantity: 100, type: 'INITIAL', reference_id: pid } },
+  ], { action: 'create_product' });
+  const n = (t) => db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n;
+  assert(n('products') === 1 && n('product_images') === 1 && n('inventory_ledger') === 1, 'success: product + image link + ledger all written');
+
+  // Failure on the product_images op -> nothing persists (no half-saved product/image/stock).
+  db = freshProductDb();
+  await expectThrow(() => atomicWrite([
+    { table: 'products', op: 'insert', row: { id: 'p2', name: 'Shirt', image_hash: hash, stock: 5, active: 1 } },
+    { table: 'product_images', op: 'insert', row: { product_id: 'p2', image_hash: hash, bogus: 'x' } },
+    { table: 'inventory_ledger', op: 'insert', row: { product_id: 'p2', quantity: 5, type: 'INITIAL', reference_id: 'p2' } },
+  ], { action: 'create_product' }), 'throws when the product_images op fails');
+  const m = (t) => db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n;
+  assert(m('products') === 0 && m('product_images') === 0 && m('inventory_ledger') === 0, 'failure: ZERO product, image, and ledger rows');
+  assert(m('sync_queue') === 0, 'failure: no bundle queued');
+}
+
+async function testResolverNeverEmpty() {
+  console.log('\n[6] image resolver classifies inputs (never an empty/invalid write value)');
+  const empty = await resolveImageRecord('');
+  assert(empty.value === undefined && empty.isHash === false, 'empty input -> no image, no product_images row');
+  const hash = 'd'.repeat(64);
+  const h = await resolveImageRecord(hash);
+  assert(h.value === hash && h.isHash === true, 'existing hash -> isHash true (product_images row written)');
+  const url = await resolveImageRecord('https://example.com/x.png');
+  assert(url.value === 'https://example.com/x.png' && url.isHash === false, 'legacy URL -> kept as-is, no product_images row');
+}
+
 async function main() {
   console.log('PHASE 7 — failure-injection suite');
   await testRowWriteFailure();
   await testQueueWriteFailure();
   await testAppendOnlyGuards();
   await testIdempotentRetrySameOpId();
+  await testProductImageBundleAllOrNothing();
+  await testResolverNeverEmpty();
   console.log(`\nAll ${passed} assertions passed.`);
 }
 

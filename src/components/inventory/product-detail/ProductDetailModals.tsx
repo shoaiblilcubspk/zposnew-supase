@@ -1,4 +1,5 @@
 import { Loader2, Save, PackagePlus, Package } from 'lucide-react';
+import { ProductThumb } from '../../../shared/ui/ProductThumb';
 import { Modal, BottomSheet, SearchableSelect, ToggleSwitch, Button, Badge } from '../../../shared/ui';
 import { formatCurrency } from '../../../lib/currencies';
 import type { ProductDetailController } from './useProductDetail';
@@ -103,7 +104,9 @@ export function ProductDetailModals({ d }: { d: ProductDetailController }) {
         <div className="space-y-4">
           <div className="flex items-center gap-3 bg-neutral-50 dark:bg-surface border border-neutral-200 dark:border-white/[0.08] rounded-md p-3">
             {product.image ? (
-              <img src={product.image} alt={product.name} className="w-10 h-10 rounded object-cover bg-neutral-100 dark:bg-white/5" />
+              <div className="w-10 h-10 rounded overflow-hidden bg-neutral-100 dark:bg-white/5 shrink-0">
+                <ProductThumb image={product.image} alt={product.name} fallback={<div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center"><Package className="w-5 h-5" /></div>} />
+              </div>
             ) : (
                 <div className="w-10 h-10 rounded bg-primary/10 text-primary flex items-center justify-center shrink-0">
                   <Package className="w-5 h-5" />

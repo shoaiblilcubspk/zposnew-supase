@@ -88,7 +88,7 @@ async function main() {
   console.log(`repair-halfsaved — ${APPLY ? 'APPLY (writing changes)' : 'DRY-RUN (read-only)'}`);
 
   const [products, ledger, sales, saleItems, payments, productImages] = await Promise.all([
-    fetchAll('products', 'id,stock,track_inventory,active'),
+    fetchAll('products', 'id,stock,track_inventory,active,image_hash'),
     fetchAll('inventory_ledger', 'id,product_id,type,reference_id,reference_type'),
     fetchAll('sales', 'id,status,invoice_number,device_id'),
     fetchAll('sale_items', 'id,sale_id,product_id,variant_id,quantity'),
@@ -174,6 +174,35 @@ async function main() {
   const orphanImages = productImages.filter((pi) => pi.product_id && !productIds.has(pi.product_id));
   log('orphan product_images (no product)', orphanImages.length, orphanImages.slice(0, 5).map((pi) => pi.id).join(', '));
   if (APPLY) for (const pi of orphanImages) { await quarantine('product_images', pi, 'orphan: no product'); fixes++; }
+
+  // 7. Products with an image_hash but NO product_images row -> re-link (if the bucket file
+  //    exists). This is the image write-gap from the bundle refactor.
+  const imgLinks = new Set(productImages.map((pi) => `${pi.product_id}:${pi.image_hash}`));
+  const missingLinks = products.filter(
+    (p) => p.active === 1 && p.image_hash && !imgLinks.has(`${p.id}:${p.image_hash}`)
+  );
+  let relinkable = [];
+  let needReupload = [];
+  for (const p of missingLinks) {
+    const { data: list } = await sb.storage.from('product-images').list('', { search: `${p.image_hash}.webp` });
+    const exists = list && list.find((f) => f.name === `${p.image_hash}.webp`);
+    (exists ? relinkable : needReupload).push(p);
+  }
+  log('products with image_hash but no product_images row (bucket file present -> re-link)',
+    relinkable.length, relinkable.slice(0, 5).map((p) => p.id).join(', '));
+  log('products whose image FILE is missing from the bucket (re-upload needed)',
+    needReupload.length, needReupload.slice(0, 5).map((p) => p.id).join(', '));
+  if (APPLY) {
+    for (const p of relinkable) {
+      const { error } = await sb.from('product_images').insert({
+        id: uuid(), operation_id: uuid(), product_id: p.id, image_hash: p.image_hash,
+        storage_path: `${p.image_hash}.webp`, mime_type: 'image/webp', file_size: 0,
+        created_at: iso(), updated_at: iso(),
+      });
+      if (error) throw new Error(`re-link ${p.id}: ${error.message}`);
+      fixes++;
+    }
+  }
 
   const totalIssues = report.reduce((a, r) => a + r.count, 0);
   console.log('\n────────────────────────────────────────');

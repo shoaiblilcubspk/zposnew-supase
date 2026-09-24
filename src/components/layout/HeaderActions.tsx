@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { can } from '../../lib/permissions';
 import { RealIcon } from '../../shared/ui';
 import { useSyncStatusStore } from '../../lib/sync/syncStatusStore';
+import { SyncStatusWidget } from './SyncStatusWidget';
 import { executeHardRefresh } from '../../lib/utils/hardRefresh';
 import { sonner } from '../../lib/sonner';
 
@@ -29,7 +30,7 @@ export function HeaderActions({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const pendingCount = useSyncStatusStore((s) => s.pendingOutboxCount);
-  const connectedPeers = useSyncStatusStore((s) => s.connectedPeersCount);
+  const failedCount = useSyncStatusStore((s) => s.failedCount);
   const isSyncing = useSyncStatusStore((s) => s.isSyncing);
 
   useEffect(() => {
@@ -51,6 +52,8 @@ export function HeaderActions({
 
   return (
     <div className="flex items-center gap-1.5 flex-shrink-0 select-none">
+      {/* Real cloud-sync indicator (pending / failed / synced from the local queue) */}
+      <SyncStatusWidget />
       {/* Unified Apple Control Cluster — Compact on Mobile, Spacious on Desktop */}
       <div className="flex items-center h-8.5 md:h-10 px-1 md:px-1.5 rounded-full bg-neutral-100/80 dark:bg-white/[0.06] border border-neutral-200/80 dark:border-white/[0.1] shadow-xs backdrop-blur-md">
         {/* Lock Terminal Button */}
@@ -127,7 +130,7 @@ export function HeaderActions({
         <button
           type="button"
           onClick={() => onShowMobileMenu?.()}
-          title={`${appCurrentUser?.name || 'User'} (${appCurrentUser?.role || 'Admin'}) · ${connectedPeers > 0 ? `${connectedPeers} Peers` : 'Local Terminal'}`}
+          title={`${appCurrentUser?.name || 'User'} (${appCurrentUser?.role || 'Admin'}) · ${failedCount > 0 ? `${failedCount} failed to sync` : pendingCount > 0 ? `${pendingCount} pending sync` : 'Cloud synced'}`}
           className="group relative flex items-center gap-1.5 md:gap-2 pl-0.5 pr-2 md:pr-3 h-7 md:h-8.5 rounded-full hover:bg-white dark:hover:bg-white/10 active:scale-95 transition-all duration-150 cursor-pointer shrink-0"
         >
           {/* Avatar with cleanly positioned external status dot */}
@@ -146,7 +149,7 @@ export function HeaderActions({
             {/* Embedded Status indicator — positioned outside the avatar to prevent clipping */}
             <span
               className={`absolute -bottom-0.5 -right-0.5 w-2 md:w-2.5 h-2 md:h-2.5 rounded-full ring-1.5 md:ring-2 ring-white dark:ring-[#121214] ${
-                isSyncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
+                failedCount > 0 ? 'bg-red-500' : isSyncing ? 'bg-amber-500 animate-pulse' : pendingCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'
               }`}
             />
           </div>

@@ -12,7 +12,7 @@ import { Product } from '../../../types';
 import { safeRandomUUID } from '../../crypto/uuid';
 import { resolveCategoryId, resolveSupplierId, resolveCategoryOp, resolveSupplierOp } from './catalogResolvers';
 import { mapSqliteProduct, serializeProductColumns } from './productMapper';
-import { resolveImageToHash, deleteOrphanImage } from '../../media/localImageStore';
+import { resolveImageRecord, deleteOrphanImage, isImageHash } from '../../media/localImageStore';
 import { buildInventoryLedgerOp, dispatchInventoryTxEvent, type InventoryTxRecord } from '../inventory/inventoryLedgerRepository';
 import { buildPriceHistoryOp } from '../priceHistoryService';
 
@@ -72,8 +72,8 @@ export async function createProduct(
 
   // Image FIRST (upload + content-address). Track whether THIS call created a new blob so a
   // failed bundle can delete the orphan (§1.5.5).
-  const wasDataUri = typeof product.image === 'string' && product.image.trim().startsWith('data:');
-  const imageHash = await resolveImageToHash(product.image, undefined);
+  const img = await resolveImageRecord(product.image);
+  const imageHash = img.value;
   const cols = serializeProductColumns({ ...product, image: imageHash });
 
   const ops: AtomicOp[] = [];
@@ -106,6 +106,20 @@ export async function createProduct(
   };
   ops.push({ table: 'products', op: 'insert', row: productRow });
 
+  // Link the image inside the SAME bundle (synced product_images row) — never a separate write.
+  if (img.isHash && img.value) {
+    ops.push({
+      table: 'product_images', op: 'insert',
+      row: {
+        product_id: id,
+        image_hash: img.value,
+        storage_path: `${img.value}.webp`,
+        mime_type: img.mimeType,
+        file_size: img.size,
+      },
+    });
+  }
+
   // Append-only INITIAL stock ledger row (Rule 7), inside the same bundle (§1.5.6).
   let ledgerRec: InventoryTxRecord | null = null;
   if (product.trackInventory && initialStock > 0) {
@@ -128,7 +142,7 @@ export async function createProduct(
   try {
     await atomicWrite(ops, { operation_id, action: 'create_product' });
   } catch (err) {
-    if (wasDataUri && imageHash) { try { await deleteOrphanImage(imageHash); } catch {} }
+    if (img.uploaded && img.value) { try { await deleteOrphanImage(img.value); } catch {} }
     throw err;
   }
 
@@ -165,10 +179,10 @@ export async function updateProduct(
     : (existing.supplier ? await resolveSupplierOp(existing.supplier) : { id: null } as const);
   const newStock = updates.stock !== undefined ? Number(updates.stock) : existing.stock;
 
-  const wasDataUri = updates.image !== undefined && typeof updates.image === 'string' && updates.image.trim().startsWith('data:');
-  const imageHash = updates.image !== undefined
-    ? await resolveImageToHash(updates.image, id)
-    : existing.image;
+  const img = updates.image !== undefined
+    ? await resolveImageRecord(updates.image)
+    : { value: existing.image, isHash: isImageHash(existing.image || ''), mimeType: 'image/webp', size: 0, uploaded: false };
+  const imageHash = img.value;
 
   const merged: Product = { ...existing, ...updates, image: imageHash };
   const cols = serializeProductColumns(merged);
@@ -201,6 +215,26 @@ export async function updateProduct(
       expiry_alert_days: cols.expiryAlertDays,
     },
   });
+
+  // Link a NEW image inside the SAME bundle (only if it's a hash not already linked).
+  if (updates.image !== undefined && img.isHash && img.value) {
+    const alreadyLinked = await localQueryOne<{ id: string }>(
+      `SELECT id FROM product_images WHERE product_id = ? AND image_hash = ? LIMIT 1;`,
+      [id, img.value]
+    );
+    if (!alreadyLinked) {
+      ops.push({
+        table: 'product_images', op: 'insert',
+        row: {
+          product_id: id,
+          image_hash: img.value,
+          storage_path: `${img.value}.webp`,
+          mime_type: img.mimeType,
+          file_size: img.size,
+        },
+      });
+    }
+  }
 
   // Append-only stock adjustment (Rule 7), inside the bundle (§1.5.6).
   let ledgerRec: InventoryTxRecord | null = null;
@@ -239,7 +273,7 @@ export async function updateProduct(
   try {
     await atomicWrite(ops, { operation_id, action: 'update_product' });
   } catch (err) {
-    if (wasDataUri && imageHash && imageHash !== existing.image) { try { await deleteOrphanImage(imageHash); } catch {} }
+    if (img.uploaded && img.value && img.value !== existing.image) { try { await deleteOrphanImage(img.value); } catch {} }
     throw err;
   }
 

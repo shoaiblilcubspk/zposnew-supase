@@ -105,7 +105,7 @@ export function MediaLibrary({ isOpen, onClose, onSelect, standalone }: MediaLib
     }
 
     appProducts
-      .filter((p: any) => !!p.image && typeof p.image === 'string' && (p.image.startsWith('http') || p.image.startsWith('data:image')))
+      .filter((p: any) => !!p.image && typeof p.image === 'string')
       .forEach((p: any) => {
         if (!uniqueImages.has(p.image)) {
           uniqueImages.set(p.image, {
@@ -121,7 +121,7 @@ export function MediaLibrary({ isOpen, onClose, onSelect, standalone }: MediaLib
     // Scan bundles (deals) for custom banners to enable image reuse
     if (appBundles) {
       appBundles
-        .filter((b: any) => !!b.image && typeof b.image === 'string' && (b.image.startsWith('http') || b.image.startsWith('data:image')))
+        .filter((b: any) => !!b.image && typeof b.image === 'string')
         .forEach((b: any) => {
           if (!uniqueImages.has(b.image)) {
             uniqueImages.set(b.image, {

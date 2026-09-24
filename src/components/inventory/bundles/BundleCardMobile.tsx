@@ -1,4 +1,5 @@
 import { Gift, Package, ChevronUp, ChevronDown, ToggleLeft, ToggleRight, Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { ProductThumb } from '../../../shared/ui/ProductThumb';
 import { Button, Badge } from '../../../shared/ui';
 import { formatCurrency } from '../../../lib/currencies';
 import type { Bundle } from '../../../types';
@@ -111,7 +112,7 @@ export function BundleCardMobile({ bundle, appSettings, isExpandedLocal, canMana
               title={`${product.name} (x${bi.quantity})`}
             >
               {product.image ? (
-                <img src={product.image} className="h-full w-full object-cover" />
+                <ProductThumb image={product.image} fallback={<div className="h-full w-full flex items-center justify-center bg-primary/10"><Package className="h-3 w-3 text-primary" /></div>} />
               ) : (
                 <div className="h-full w-full flex items-center justify-center bg-primary/10">
                   <Package className="h-3 w-3 text-primary" />

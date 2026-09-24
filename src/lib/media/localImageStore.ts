@@ -326,6 +326,43 @@ export async function resolveImageToHash(
   return trimmed;
 }
 
+export interface ResolvedImageRecord {
+  /** The value to store in products.image_hash: a content hash, a legacy URL, or undefined. */
+  value: string | undefined;
+  /** True when `value` is a content-addressed hash (=> a product_images row should be written). */
+  isHash: boolean;
+  mimeType: string;
+  size: number;
+  /** True when this call decoded + uploaded a NEW blob (=> orphan-delete on bundle failure). */
+  uploaded: boolean;
+}
+
+/**
+ * Resolve a product image input into a record used to build the product bundle:
+ *  - empty            -> { value: undefined, isHash: false }
+ *  - existing hash    -> { value: hash, isHash: true }        (already uploaded)
+ *  - base64 data URI  -> upload first, { value: hash, isHash: true, uploaded: true }
+ *  - http/legacy URL  -> { value: url, isHash: false }        (no product_images row)
+ * Upload happens FIRST (§1.5.5); the caller links it inside the bundle and deletes the orphan
+ * on failure.
+ */
+export async function resolveImageRecord(value: string | undefined | null): Promise<ResolvedImageRecord> {
+  const empty: ResolvedImageRecord = { value: undefined, isHash: false, mimeType: 'image/webp', size: 0, uploaded: false };
+  if (!value) return empty;
+  const trimmed = value.trim();
+  if (!trimmed) return empty;
+  if (isImageHash(trimmed)) {
+    return { value: trimmed, isHash: true, mimeType: 'image/webp', size: 0, uploaded: false };
+  }
+  if (trimmed.startsWith('data:')) {
+    const decoded = decodeDataUri(trimmed);
+    if (!decoded) return { value: trimmed, isHash: false, mimeType: 'image/webp', size: 0, uploaded: false };
+    const { hash, size } = await saveImage(decoded.bytes, decoded.mimeType);
+    return { value: hash, isHash: true, mimeType: decoded.mimeType, size, uploaded: true };
+  }
+  return { value: trimmed, isHash: false, mimeType: 'image/webp', size: 0, uploaded: false };
+}
+
 export async function listMissingImages(): Promise<string[]> {
   try {
     const db = await getDatabase();

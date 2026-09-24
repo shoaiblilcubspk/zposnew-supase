@@ -1,4 +1,5 @@
 import { Package } from 'lucide-react';
+import { ProductThumb } from '../../../shared/ui/ProductThumb';
 import { formatCurrency } from '../../../lib/currencies';
 import type { Bundle, Product } from '../../../types';
 
@@ -23,7 +24,7 @@ export function BundleCardExpanded({ bundle, products, appSettings, totalPrice, 
           <div key={bi.id} className="flex items-center gap-3">
             <div className="h-7 w-7 bg-primary/10 rounded-lg flex items-center justify-center shrink-0 overflow-hidden border border-gray-100 dark:border-white/5">
               {product.image ? (
-                <img src={product.image} className="h-full w-full object-cover" />
+                <ProductThumb image={product.image} fallback={<Package className="h-3.5 w-3.5 text-primary" />} />
               ) : (
                 <Package className="h-3.5 w-3.5 text-primary" />
               )}

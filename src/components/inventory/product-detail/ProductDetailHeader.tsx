@@ -1,4 +1,5 @@
 import { ArrowLeft, Package, Camera, BadgeInfo, ShieldAlert, Edit3, X } from 'lucide-react';
+import { ProductThumb } from '../../../shared/ui/ProductThumb';
 import { Button, Badge } from '../../../shared/ui';
 import type { ProductDetailController } from './useProductDetail';
 
@@ -15,7 +16,7 @@ export function ProductDetailHeader({ d }: { d: ProductDetailController }) {
 
         <div className="relative group/img mt-2 sm:mt-0">
           <div className="w-16 h-16 rounded-md bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08] flex items-center justify-center overflow-hidden flex-shrink-0">
-            {formData.image ? <img src={formData.image} className="h-full w-full object-cover" /> : <Package className="h-6 w-6 text-neutral-400" />}
+            {formData.image ? <ProductThumb image={formData.image} fallback={<Package className="h-6 w-6 text-neutral-400" />} /> : <Package className="h-6 w-6 text-neutral-400" />}
           </div>
 
           {isEditMode && formData.image && (

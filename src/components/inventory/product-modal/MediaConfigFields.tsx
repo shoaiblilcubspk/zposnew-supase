@@ -1,5 +1,6 @@
 import { Camera, X } from 'lucide-react';
 import { Button } from '../../../shared/ui';
+import { ProductThumb } from '../../../shared/ui/ProductThumb';
 import type { ProductFormFieldsProps } from './ProductFormFieldsMain';
 
 export function MediaConfigFields(props: ProductFormFieldsProps) {
@@ -22,7 +23,9 @@ export function MediaConfigFields(props: ProductFormFieldsProps) {
           <div className="relative w-20 h-20 rounded-md bg-neutral-50 dark:bg-surface border border-neutral-300 dark:border-white/[0.12] flex items-center justify-center shrink-0">
             {formData.image ? (
               <>
-                <img src={formData.image} alt="Product" className="w-full h-full object-cover rounded-md" />
+                <div className="w-full h-full rounded-md overflow-hidden">
+                  <ProductThumb image={formData.image} alt="Product" fallback={<Camera className="w-5 h-5 text-neutral-400" />} />
+                </div>
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, image: '' }))}

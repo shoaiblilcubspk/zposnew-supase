@@ -1,4 +1,5 @@
 import { X, Info, Package } from 'lucide-react';
+import { ProductThumb } from '../../../shared/ui/ProductThumb';
 import { Button } from '../../../shared/ui';
 import { SharedSearchBar, SharedProductList } from '../../../shared/modules/search-and-list';
 import { formatCurrency } from '../../../lib/currencies';
@@ -80,7 +81,7 @@ export function FormItems({
             return (
               <div key={item.productId} className="flex items-center gap-2.5 p-2 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08]">
                 <div className="h-7 w-7 bg-neutral-100 dark:bg-white/5 rounded border border-neutral-200 dark:border-white/[0.08] flex items-center justify-center shrink-0">
-                  {product.image ? <img src={product.image} className="h-full w-full rounded object-cover" /> : <Package className="h-3.5 w-3.5 text-neutral-400" />}
+                  {product.image ? <ProductThumb image={product.image} fallback={<Package className="h-3.5 w-3.5 text-neutral-400" />} /> : <Package className="h-3.5 w-3.5 text-neutral-400" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[12px] font-medium text-neutral-900 dark:text-white uppercase truncate">{product.name}</p>

@@ -119,8 +119,8 @@ Update this table whenever a bundle is added or changed.
 
 | Action | Tables written | RPC | Status |
 |---|---|---|---|
-| create_product | categories/suppliers (resolve-or-create), products, inventory_ledger (INITIAL) | apply_bundle (generic) | ✅ done (Phase 4) |
-| update_product | categories/suppliers (resolve-or-create), products, inventory_ledger (adjustment), price_history | apply_bundle (generic) | ✅ done (Phase 4) |
+| create_product | categories/suppliers (resolve-or-create), products, product_images, inventory_ledger (INITIAL) | apply_bundle (generic) | ✅ done (Phase 4; image link in-bundle) |
+| update_product | categories/suppliers (resolve-or-create), products, product_images (on image change), inventory_ledger (adjustment), price_history | apply_bundle (generic) | ✅ done (Phase 4; image link in-bundle) |
 | create_sale | sales, sale_items, inventory_ledger, products(stock), payments, customers(balance), customer_ledger, sale_audit_log | apply_bundle (generic) | ✅ done (Phase 3) |
 | void_sale | sale_voids, sales(status), inventory_ledger, products(stock), payments, customers(balance), customer_ledger, sale_audit_log | apply_bundle (generic) | ✅ done (Phase 3) |
 | refund_sale | sale_refunds, sales(refunded/status), inventory_ledger, products(stock), payments, customers(balance), customer_ledger, sale_audit_log | apply_bundle (generic) | ✅ done (Phase 3) |
@@ -186,6 +186,43 @@ use the `atomicWrite` single-op path and need **no** RPC unless they touch 2+ ta
 
 6. **When in doubt, STOP and ask.** If a task genuinely cannot follow this rule, halt and raise
    it with the maintainer. Never silently bypass the bundle/sync system.
+
+---
+
+## 1.6 CLONE-READY: One Codebase, Any Shop (NO PER-SHOP PATCHES)
+
+> The repo is a **product**, not one shop's install. A fresh `git clone` must become a fully
+> working POS for **any** new shop by running the automated setup — with **zero** code edits,
+> zero hard-coded shop data, and zero manual dashboard clicks.
+
+1. **No per-shop patches, ever.** Never hard-code a shop's name, id, products, categories,
+   customers, invoice prefix, credentials, Supabase URL/keys, or any tenant data into source.
+   All of that comes from `.env.local` (connection) + runtime data (entered in-app / seeded
+   generically). A fix for a bug must be **generic** — it fixes the behaviour for every shop,
+   not one shop's data. If you catch yourself special-casing one shop's row/name/id, STOP.
+
+2. **Fresh clone → working system via automation only.** A new shop is provisioned by:
+   (a) put Supabase project credentials in `.env.local`, (b) run `node scripts/supabase-migrate.mjs`
+   (all numbered migrations, in order, idempotent), (c) the app boots, pulls, and is usable.
+   No step may require editing code or clicking in the Supabase dashboard (Rule 2.9). Storage
+   buckets, RLS, RPCs, seeds are all created by migrations/scripts.
+
+3. **Everything reproducible from the repo.** `supabase/migrations/*` + `MASTER_SCHEMA.sql`
+   are the single source of truth for the entire cloud (tables, RLS, buckets, RPCs, seeds).
+   Running `MASTER_SCHEMA.sql` on an empty project MUST produce the complete, current schema.
+   No schema exists only in someone's dashboard.
+
+4. **Generic seeds only.** Seeded rows are role/config defaults that every shop needs (roles,
+   payment modes, default admin `admin`/`admin`). Never seed a specific shop's catalog/customers.
+
+5. **Data cleanup is data, not code.** A bad/duplicate/half-saved row is fixed with the repair
+   script (`scripts/repair-halfsaved.mjs`) or normal in-app actions — never by adding code that
+   targets that specific row. Display/logic bugs are fixed generically for all rows.
+
+6. **New-clone guide is mandatory + current.** `docs/NEW_CLONE_SETUP.md` is the complete,
+   no-questions agent guide to stand up a new shop end-to-end (API/CLI, migrations, bucket, RLS,
+   seeds, env, verification). Whenever setup/provisioning changes, update that guide in the same
+   task. A new clone must be doable by following that one doc alone.
 
 ---
 
