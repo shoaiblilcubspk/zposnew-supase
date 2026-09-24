@@ -107,7 +107,7 @@ export async function getSupplierBalance(supplierId: string): Promise<number> {
 
 export async function getSupplierTransactions(supplierId: string): Promise<SupplierTransaction[]> {
   const bills = await localQuery<any>(
-    `SELECT * FROM purchase_records WHERE supplier_id = ? ORDER BY purchased_at DESC;`, [supplierId]
+    `SELECT * FROM purchase_records WHERE supplier_id = ? AND deleted_at IS NULL ORDER BY purchased_at DESC;`, [supplierId]
   );
   const payments = await localQuery<any>(
     `SELECT * FROM payments WHERE reference = ? ORDER BY created_at DESC;`, [`Supplier Payment: ${supplierId}`]

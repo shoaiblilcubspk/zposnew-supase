@@ -116,6 +116,13 @@
   NULL — a partial insert (e.g. first settings save without `store_name`) no longer violates a
   NOT NULL default column.
 
+### Soft-delete tombstones (0017)
+- `deleted_at timestamptz` on **expenses**, **purchase_records**, **bundle_items** (the tables
+  that were hard-deleted). Deletes are now an UPDATE that sets `deleted_at` (bumps the server
+  `updated_at` trigger), so the pull cursor carries the tombstone to every device and local
+  reads filter `WHERE deleted_at IS NULL`. No hard `DELETE` on synced tables — otherwise other
+  devices never learn about the deletion. Tables with `active`/`is_active` already soft-delete.
+
 ### Repair safety net (0015)
 - **repair_quarantine**: `id`, `table_name`, `row_id`, `payload` (jsonb), `reason`, `created_at`.
   RLS enabled with `anon/authenticated` all-access. `scripts/repair-halfsaved.mjs` moves

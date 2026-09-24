@@ -267,11 +267,22 @@ use the `atomicWrite` single-op path and need **no** RPC unless they touch 2+ ta
 - `updated_at` is the **server clock** (Postgres `now()` via trigger) — the authoritative pull
   cursor for non-additive tables. Client time is display-only; never drive a cursor from it.
 
-### 1.7.5 Still open (scoped, do NOT patch around) 
-- **Delete/tombstone propagation** and **Realtime push-to-pull** are the next scoped step: a
-  hard delete on one device must remove the row on others (soft-delete/tombstone + pull), and
-  realtime gives near-instant convergence. Ship them as a proper migration (+ MASTER_SCHEMA /
-  SCHEMA.md / localSchema / NEW_CLONE_SETUP update), never as a per-screen workaround.
+### 1.7.5 Deletes propagate via soft-delete tombstones (no hard delete on synced tables)
+- A **hard `DELETE` on a synced table is BANNED** — the pull layer only upserts existing rows,
+  so a hard delete never reaches other devices (they keep the stale row forever).
+- Delete = **soft delete**: set `active`/`is_active = 0` (entities that have it) or `deleted_at`
+  (tombstone: `expenses`, `purchase_records`, `bundle_items`). The server `updated_at` trigger
+  bumps on the update, the pull cursor carries the tombstone to every device, and local reads
+  filter it out (`WHERE deleted_at IS NULL` / `active = 1`). So create, update AND delete all
+  converge everywhere once online.
+- Any NEW deletable synced table ships with a soft-delete column + read filters + a migration
+  (never a client hard delete).
+
+### 1.7.6 Still open (scoped, do NOT patch around)
+- **Realtime push-to-pull** is the next scoped step for near-instant (sub-second) convergence
+  across devices. Until then, convergence is driven by pull on boot / focus / reconnect /
+  interval / manual Sync now (seconds, not instant). Ship realtime as a proper migration
+  (publication) + generic subscription in the same clone-ready manner.
 
 ---
 

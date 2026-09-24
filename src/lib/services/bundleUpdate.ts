@@ -27,11 +27,13 @@ export async function updateBundle(bundleId: string, data: {
   if (Object.keys(patch).length > 0) ops.push({ table: 'bundles', op: 'update', id: bundleId, patch });
 
   if (data.items !== undefined) {
-    // Replace the item set: delete old rows + insert new ones, all inside the SAME bundle
-    // (bundle_items is non-additive, so deletes are allowed — §1.5.3 one write path).
-    const existing = await localQuery<{ id: string }>(`SELECT id FROM bundle_items WHERE bundle_id = ?;`, [bundleId]);
+    // Replace the item set: soft-delete (tombstone) old rows + insert new ones, all inside the
+    // SAME bundle. Soft-delete (not hard delete) so the removal propagates to every device via
+    // pull. Bundle reads hide rows with deleted_at.
+    const existing = await localQuery<{ id: string }>(`SELECT id FROM bundle_items WHERE bundle_id = ? AND deleted_at IS NULL;`, [bundleId]);
+    const stamp = new Date().toISOString();
     for (const row of existing) {
-      ops.push({ table: 'bundle_items', op: 'delete', id: row.id });
+      ops.push({ table: 'bundle_items', op: 'update', id: row.id, patch: { deleted_at: stamp } });
     }
     for (const item of data.items) {
       ops.push({

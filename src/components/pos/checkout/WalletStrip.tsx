@@ -71,7 +71,7 @@ export function WalletStrip({ currency, timezone }: { currency: string, timezone
         [startIso, endIso]
       ).catch(() => []);
       const todayExpenses = await localQuery<any>(
-        `SELECT * FROM expenses WHERE spent_at BETWEEN ? AND ?;`,
+        `SELECT * FROM expenses WHERE spent_at BETWEEN ? AND ? AND deleted_at IS NULL;`,
         [startIso, endIso]
       ).catch(() => []);
 

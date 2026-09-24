@@ -136,7 +136,7 @@ export const LOCAL_SCHEMA_STATEMENTS: string[] = [
   `CREATE TABLE IF NOT EXISTS bundle_items (
     id TEXT PRIMARY KEY, operation_id TEXT NOT NULL UNIQUE,
     bundle_id TEXT NOT NULL, product_id TEXT NOT NULL, quantity REAL NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT
   );`,
   `CREATE INDEX IF NOT EXISTS idx_bundle_items_bundle ON bundle_items(bundle_id);`,
 
@@ -210,7 +210,7 @@ export const LOCAL_SCHEMA_STATEMENTS: string[] = [
   `CREATE TABLE IF NOT EXISTS expenses (
     id TEXT PRIMARY KEY, operation_id TEXT NOT NULL UNIQUE, title TEXT NOT NULL, category TEXT NOT NULL, amount REAL NOT NULL,
     payment_mode TEXT, store_type TEXT DEFAULT 'retail', notes TEXT, user_id TEXT, device_id TEXT, spent_at TEXT NOT NULL,
-    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT
   );`,
 
   // ---- purchase_records (purchase / restock history log) ----
@@ -220,7 +220,7 @@ export const LOCAL_SCHEMA_STATEMENTS: string[] = [
     sku TEXT, variant_id TEXT, variant_label TEXT, quantity REAL NOT NULL DEFAULT 0,
     cost_price REAL NOT NULL DEFAULT 0, retail_price REAL, total_amount REAL NOT NULL DEFAULT 0,
     supplier TEXT, supplier_id TEXT, added_by TEXT, notes TEXT,
-    purchased_at TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    purchased_at TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT
   );`,
   `CREATE INDEX IF NOT EXISTS idx_purchase_records_product ON purchase_records(product_id);`,
 

@@ -29,7 +29,7 @@ function mapBundleRow(row: any, items: any[]): Bundle {
 export async function getAllBundles(_forceRemote: boolean = false): Promise<Bundle[]> {
   try {
     const rows = await localQuery<any>(`SELECT * FROM bundles WHERE active = 1 ORDER BY created_at ASC;`);
-    const itemRows = await localQuery<any>(`SELECT * FROM bundle_items;`);
+    const itemRows = await localQuery<any>(`SELECT * FROM bundle_items WHERE deleted_at IS NULL;`);
     return rows.map((row) => mapBundleRow(row, itemRows));
   } catch (e) {
     console.error('[bundlesService.getAll] fetch error:', e);

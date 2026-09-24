@@ -35,7 +35,7 @@ function mapRow(r: any): PurchaseRecord {
 
 export const purchaseRecordsService = {
   async getAll(): Promise<PurchaseRecord[]> {
-    const rows = await localQuery<any>(`SELECT * FROM purchase_records ORDER BY purchased_at DESC;`);
+    const rows = await localQuery<any>(`SELECT * FROM purchase_records WHERE deleted_at IS NULL ORDER BY purchased_at DESC;`);
     return rows.map(mapRow);
   },
 
@@ -63,7 +63,7 @@ export const purchaseRecordsService = {
   },
 
   async delete(id: string): Promise<void> {
-    const record = await localQueryOne<any>(`SELECT * FROM purchase_records WHERE id = ?;`, [id]);
+    const record = await localQueryOne<any>(`SELECT * FROM purchase_records WHERE id = ? AND deleted_at IS NULL;`, [id]);
 
     // ONE atomic bundle: append the stock reversal (Rule 7) + recompute stock cache +
     // remove the purchase log row. Either all of it lands or none of it (no half-delete).
@@ -94,7 +94,9 @@ export const purchaseRecordsService = {
       ops.push(buildInventoryLedgerOp(ledgerRec));
       ops.push({ table: 'products', op: 'update', id: record.product_id, patch: { stock: existingSum - qty } });
     }
-    ops.push({ table: 'purchase_records', op: 'delete', id });
+    // Soft-delete (tombstone) the purchase row so the deletion propagates to all devices via
+    // pull; a hard DELETE would never reach other devices' local mirrors.
+    ops.push({ table: 'purchase_records', op: 'update', id, patch: { deleted_at: now ? new Date(now).toISOString() : new Date().toISOString() } });
 
     await atomicWrite(ops, { operation_id: newOperationId(), action: 'delete_purchase_record' });
     if (ledgerRec) dispatchInventoryTxEvent(ledgerRec);

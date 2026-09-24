@@ -7,7 +7,7 @@
  * atomic wallet-balance mutation is gone. Expenses are a plain non-additive row here.
  */
 
-import { localQuery, localQueryOne, insertRow, updateRow, atomicWrite, newOperationId } from '../../../data';
+import { localQuery, localQueryOne, insertRow, updateRow } from '../../../data';
 import { Expense } from '../../../types';
 
 export function mapSqliteExpense(row: any): Expense {
@@ -27,18 +27,18 @@ export function mapSqliteExpense(row: any): Expense {
 }
 
 export async function getAllExpenses(): Promise<Expense[]> {
-  const rows = await localQuery<any>(`SELECT * FROM expenses ORDER BY spent_at DESC;`);
+  const rows = await localQuery<any>(`SELECT * FROM expenses WHERE deleted_at IS NULL ORDER BY spent_at DESC;`);
   return rows.map(mapSqliteExpense);
 }
 
 export async function getExpenseById(id: string): Promise<Expense | null> {
-  const row = await localQueryOne<any>(`SELECT * FROM expenses WHERE id = ?;`, [id]);
+  const row = await localQueryOne<any>(`SELECT * FROM expenses WHERE id = ? AND deleted_at IS NULL;`, [id]);
   return row ? mapSqliteExpense(row) : null;
 }
 
 export async function getExpensesByDateRange(startDate: Date, endDate: Date): Promise<Expense[]> {
   const rows = await localQuery<any>(
-    `SELECT * FROM expenses WHERE spent_at >= ? AND spent_at <= ? ORDER BY spent_at DESC;`,
+    `SELECT * FROM expenses WHERE spent_at >= ? AND spent_at <= ? AND deleted_at IS NULL ORDER BY spent_at DESC;`,
     [startDate.toISOString(), endDate.toISOString()]
   );
   return rows.map(mapSqliteExpense);
@@ -84,10 +84,8 @@ export async function updateExpense(
 }
 
 export async function deleteExpense(id: string, _userId = 'system'): Promise<void> {
-  // `expenses` has no soft-delete flag in the cloud-direct schema; remove via the single
-  // atomic write path (local delete + one sync_queue bundle entry) — no raw enqueue leak.
-  await atomicWrite([{ table: 'expenses', op: 'delete', id }], {
-    operation_id: newOperationId(),
-    action: 'delete_expense',
-  });
+  // Soft-delete (tombstone) so the deletion propagates to every device via pull: setting
+  // deleted_at bumps the server updated_at, the pull cursor carries it, and reads hide it.
+  // A hard DELETE would vanish locally but other devices could never learn it was removed.
+  await updateRow('expenses', id, { deleted_at: new Date().toISOString() });
 }

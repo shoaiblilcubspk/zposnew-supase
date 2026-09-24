@@ -77,7 +77,7 @@ export function ReceiptPrint({ sale, onClose }: ReceiptPrintProps) {
       subtitle={`POS • ${paperLabel}`}
       maxWidth={ctx.isA4 ? 'max' : 'xl'}
       footer={
-        <div className="flex flex-row items-center gap-2 sm:gap-3 w-full">
+        <div className="flex flex-row items-center gap-2 sm:gap-3 w-full overflow-hidden">
           <Button
             id="receipt-close-btn"
             variant="soft-emerald"
@@ -106,11 +106,11 @@ export function ReceiptPrint({ sale, onClose }: ReceiptPrintProps) {
             id="receipt-print-btn"
             variant="primary"
             onClick={handlePrint}
-            className="flex-[1.5] !h-10 sm:!h-11 !text-[13.5px] font-semibold"
-            icon={<Printer className="w-4 h-4" />}
-            shortcut="↵ Enter"
+            className="flex-1 sm:flex-[1.5] !h-10 sm:!h-11 !text-[13.5px] font-semibold min-w-0"
+            icon={<Printer className="w-4 h-4 shrink-0" />}
+            shortcut="↵"
           >
-            <span>Print Receipt</span>
+            <span className="truncate">Print</span>
           </Button>
         </div>
       }

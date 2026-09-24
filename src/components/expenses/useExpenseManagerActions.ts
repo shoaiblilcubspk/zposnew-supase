@@ -36,7 +36,7 @@ export function useExpenseManagerActions(opts: UseExpenseManagerActionsOpts) {
         try {
           const { localQueryOne } = await import('../../data');
           const billRow = await localQueryOne<any>(
-            `SELECT id, supplier_id FROM purchase_records WHERE id = ? OR notes = ? LIMIT 1;`,
+            `SELECT id, supplier_id FROM purchase_records WHERE (id = ? OR notes = ?) AND deleted_at IS NULL LIMIT 1;`,
             [editingExpense.id, editingExpense.id]
           );
           const linkedBill = billRow ? { id: billRow.id, supplierId: billRow.supplier_id, note: undefined as any } : null;

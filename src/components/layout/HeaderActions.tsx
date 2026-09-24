@@ -55,13 +55,13 @@ export function HeaderActions({
       {/* Real cloud-sync indicator (pending / failed / synced from the local queue) */}
       <SyncStatusWidget />
       {/* Unified Apple Control Cluster — Compact on Mobile, Spacious on Desktop */}
-      <div className="flex items-center h-8.5 md:h-10 px-1 md:px-1.5 rounded-full bg-neutral-100/80 dark:bg-white/[0.06] border border-neutral-200/80 dark:border-white/[0.1] shadow-xs backdrop-blur-md">
+      <div className="flex items-center gap-0.5 md:gap-0 h-9 md:h-10 px-1.5 md:px-1.5 rounded-full bg-neutral-100/80 dark:bg-white/[0.06] border border-neutral-200/80 dark:border-white/[0.1] shadow-xs backdrop-blur-md">
         {/* Lock Terminal Button */}
         <button
           type="button"
           onClick={onLockTerminal}
           title="Lock Terminal (⌘L)"
-          className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 lg:w-8.5 lg:h-8.5 rounded-full hover:bg-white dark:hover:bg-white/10 active:scale-90 transition-all duration-150 cursor-pointer text-neutral-700 dark:text-neutral-300"
+          className="flex items-center justify-center w-8 h-8 md:w-8 md:h-8 lg:w-8.5 lg:h-8.5 rounded-full hover:bg-white dark:hover:bg-white/10 active:scale-90 transition-all duration-150 cursor-pointer text-neutral-700 dark:text-neutral-300"
         >
           <RealIcon name="lock" size={20} className="w-4.5 h-4.5 md:w-5 md:h-5" />
         </button>
@@ -71,7 +71,7 @@ export function HeaderActions({
           type="button"
           onClick={toggleTheme}
           title={appSettings.theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 lg:w-8.5 lg:h-8.5 rounded-full hover:bg-white dark:hover:bg-white/10 active:scale-90 transition-all duration-150 cursor-pointer text-neutral-700 dark:text-neutral-300"
+          className="flex items-center justify-center w-8 h-8 md:w-8 md:h-8 lg:w-8.5 lg:h-8.5 rounded-full hover:bg-white dark:hover:bg-white/10 active:scale-90 transition-all duration-150 cursor-pointer text-neutral-700 dark:text-neutral-300"
         >
           <RealIcon
             name={appSettings.theme === 'dark' ? 'sun' : 'moon'}
@@ -87,7 +87,7 @@ export function HeaderActions({
           disabled={isRefreshing}
           aria-label="Hard Refresh"
           title="Hard Refresh & Clean Resync"
-          className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 lg:w-8.5 lg:h-8.5 rounded-full hover:bg-white dark:hover:bg-white/10 active:scale-90 transition-all duration-150 cursor-pointer text-neutral-700 dark:text-neutral-300 group"
+          className="flex items-center justify-center w-8 h-8 md:w-8 md:h-8 lg:w-8.5 lg:h-8.5 rounded-full hover:bg-white dark:hover:bg-white/10 active:scale-90 transition-all duration-150 cursor-pointer text-neutral-700 dark:text-neutral-300 group"
         >
           <div className={isRefreshing ? 'animate-spin' : 'transition-transform duration-300 group-hover:rotate-180'}>
             <RealIcon name="refresh" size={20} className="w-4.5 h-4.5 md:w-5 md:h-5" />
@@ -124,7 +124,7 @@ export function HeaderActions({
         </button>
 
         {/* Divider */}
-        <div className="h-4 md:h-5 w-px bg-neutral-200/80 dark:bg-white/10 mx-0.5 md:mx-1 shrink-0" />
+        <div className="h-4 md:h-5 w-px bg-neutral-200/80 dark:bg-white/10 mx-1 md:mx-1 shrink-0" />
 
         {/* Profile Trigger — Compact on Mobile, Spacious & Refined on Desktop */}
         <button
@@ -151,7 +151,11 @@ export function HeaderActions({
 
           {/* User Name & Discrete Status */}
           <div className="flex items-center gap-1.5 leading-none">
-            <span className="text-[11.5px] md:text-[13px] font-semibold text-neutral-800 dark:text-white tracking-tight truncate max-w-[65px] sm:max-w-[120px]">
+            {/* Mobile: 2-char initials only, Desktop: full name */}
+            <span className="md:hidden text-[11.5px] font-semibold text-neutral-800 dark:text-white tracking-tight uppercase">
+              {(appCurrentUser?.name || 'SU').slice(0, 2)}
+            </span>
+            <span className="hidden md:inline text-[13px] font-semibold text-neutral-800 dark:text-white tracking-tight truncate max-w-[120px]">
               {appCurrentUser?.name || 'Shoaib'}
             </span>
 
