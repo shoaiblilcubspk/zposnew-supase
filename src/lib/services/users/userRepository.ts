@@ -1,10 +1,57 @@
 // User Repository — Supabase-only cloud-direct (Phase 10b). Backed by `staff_users`.
 // Login is username + password (hashed). No PIN `users` table, no P2P outbox, no Dexie.
-// Granular per-user permission columns don't exist in staff_users — permissions default by role.
+// Per-user privileges are persisted in the `permissions` JSON column so they sync to every
+// device and drive enforcement; when a flag is absent we fall back to the role default.
 
 import { localQuery, localQueryOne, insertRow, updateRow } from '../../../data';
 import { User } from '../../../types';
 import { hashPin } from '../../auth/pinCrypto';
+
+/** The per-user privilege flags stored in staff_users.permissions (JSON). */
+const PERMISSION_KEYS = [
+  'canEditPrice', 'canEditProduct', 'canGiveDiscount', 'canDeleteSale', 'canViewProfit',
+  'canManageStock', 'canManagePO', 'canViewRecords', 'canEditSale', 'canViewExpiry',
+  'requirePinOnSale',
+] as const;
+type PermissionKey = (typeof PERMISSION_KEYS)[number];
+
+/** Role defaults used only when a user's permissions map has no explicit value for a flag. */
+function roleDefaults(role: User['role']): Record<PermissionKey, boolean> {
+  const isAdmin = role === 'admin';
+  const isManager = role === 'manager' || isAdmin;
+  return {
+    canEditPrice: isManager,
+    canEditProduct: isManager,
+    canGiveDiscount: true,
+    canDeleteSale: isAdmin,
+    canViewProfit: isManager,
+    canManageStock: isManager,
+    canManagePO: isManager,
+    canViewRecords: true,
+    canEditSale: isManager,
+    canViewExpiry: true,
+    requirePinOnSale: false,
+  };
+}
+
+function parsePermissions(raw: any): Partial<Record<PermissionKey, boolean>> {
+  if (!raw) return {};
+  try {
+    const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return obj && typeof obj === 'object' ? obj : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Build the permissions JSON object from a User/CreateUserInput-like source (only set keys). */
+function buildPermissions(src: Record<string, any>): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  for (const k of PERMISSION_KEYS) {
+    if (src[k] !== undefined) out[k] = Boolean(src[k]);
+  }
+  return out;
+}
 
 export interface CreateUserInput {
   name: string;
@@ -28,8 +75,9 @@ export interface CreateUserInput {
 
 export function mapRowToUser(row: any): User {
   const role = (row.role || 'cashier') as User['role'];
-  const isAdmin = role === 'admin';
-  const isManager = role === 'manager' || isAdmin;
+  const defaults = roleDefaults(role);
+  const perms = parsePermissions(row.permissions);
+  const flag = (k: PermissionKey): boolean => (perms[k] !== undefined ? Boolean(perms[k]) : defaults[k]);
   return {
     id: row.id,
     name: row.full_name || row.name || 'Staff Member',
@@ -38,18 +86,20 @@ export function mapRowToUser(row: any): User {
     role,
     active: Boolean(row.is_active ?? row.active ?? 1),
     avatar: row.avatar || undefined,
-    // staff_users has no per-user permission columns → default by role.
-    canEditPrice: isManager,
-    canEditProduct: isManager,
-    canGiveDiscount: true,
-    canDeleteSale: isAdmin,
-    canViewProfit: isManager,
-    canManageStock: isManager,
-    canManagePO: isManager,
-    canViewRecords: true,
-    canEditSale: isManager,
-    canViewExpiry: row.can_view_expiry !== undefined ? Boolean(row.can_view_expiry) : true,
-    requirePinOnSale: row.require_pin_on_sale !== undefined ? Boolean(row.require_pin_on_sale) : false,
+    canEditPrice: flag('canEditPrice'),
+    canEditProduct: flag('canEditProduct'),
+    canGiveDiscount: flag('canGiveDiscount'),
+    canDeleteSale: flag('canDeleteSale'),
+    canViewProfit: flag('canViewProfit'),
+    canManageStock: flag('canManageStock'),
+    canManagePO: flag('canManagePO'),
+    canViewRecords: flag('canViewRecords'),
+    canEditSale: flag('canEditSale'),
+    // Legacy dedicated columns still honoured if the JSON map omits them.
+    canViewExpiry: perms.canViewExpiry !== undefined ? Boolean(perms.canViewExpiry)
+      : (row.can_view_expiry !== undefined ? Boolean(row.can_view_expiry) : defaults.canViewExpiry),
+    requirePinOnSale: perms.requirePinOnSale !== undefined ? Boolean(perms.requirePinOnSale)
+      : (row.require_pin_on_sale !== undefined ? Boolean(row.require_pin_on_sale) : defaults.requirePinOnSale),
     createdAt: row.created_at ? new Date(row.created_at) : new Date(),
     updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(),
   };
@@ -76,6 +126,7 @@ export async function createUser(input: CreateUserInput, _actor = 'system', _dev
     is_active: 1,
     can_view_expiry: input.canViewExpiry === false ? 0 : 1,
     require_pin_on_sale: input.requirePinOnSale ? 1 : 0,
+    permissions: JSON.stringify(buildPermissions(input as Record<string, any>)),
   });
   return mapRowToUser(row);
 }
@@ -91,6 +142,14 @@ export async function updateUser(id: string, updates: Partial<User>, _actor = 's
   if (updates.email !== undefined) patch.email = updates.email || null;
   if (updates.canViewExpiry !== undefined) patch.can_view_expiry = updates.canViewExpiry ? 1 : 0;
   if (updates.requirePinOnSale !== undefined) patch.require_pin_on_sale = updates.requirePinOnSale ? 1 : 0;
+
+  // Merge any changed per-user privilege flags into the permissions JSON (persisted + synced).
+  const incoming = buildPermissions(updates as Record<string, any>);
+  if (Object.keys(incoming).length > 0) {
+    const merged = { ...parsePermissions(existing.permissions), ...incoming };
+    patch.permissions = JSON.stringify(merged);
+  }
+
   if (Object.keys(patch).length > 0) await updateRow('staff_users', id, patch);
   return mapRowToUser({ ...existing, ...patch });
 }

@@ -1514,3 +1514,25 @@ alter table public.bundle_items       add column if not exists deleted_at timest
 create index if not exists idx_expenses_deleted_at         on public.expenses(deleted_at);
 create index if not exists idx_purchase_records_deleted_at on public.purchase_records(deleted_at);
 create index if not exists idx_bundle_items_deleted_at     on public.bundle_items(deleted_at);
+
+-- ####### SOURCE: supabase/migrations/0018_staff_permissions.sql #######
+-- 0018_staff_permissions.sql
+-- Persist per-user privileges. staff_users only had role + can_view_expiry + require_pin_on_sale,
+-- so the "New Staff" privilege toggles (Price Override, Manage Products, Void/Delete, Issue
+-- Discounts, Inventory Adjust, PO, Transaction Records, Edit Completed Sales, View Profit) were
+-- never saved, synced, or enforced. A single `permissions` jsonb holds the full per-user map so
+-- it persists, syncs to every device (staff_users is pulled), and drives enforcement. Additive;
+-- existing users default to '{}' and fall back to role defaults, so nobody is locked out.
+
+alter table public.staff_users add column if not exists permissions jsonb not null default '{}';
+
+-- ####### SOURCE: supabase/migrations/0019_staff_permissions_text.sql #######
+-- 0019_staff_permissions_text.sql
+-- Store staff_users.permissions as TEXT (JSON string), not jsonb. The local SQLite mirror keeps
+-- this column as TEXT, and the write path (updateRow re-selects the row) pushes the JSON as a
+-- string; a jsonb column would double-encode that string. TEXT keeps push + pull symmetric
+-- (the app parses/stringifies the JSON itself). Safe: only '{}' defaults exist so far.
+
+alter table public.staff_users
+  alter column permissions type text using permissions::text,
+  alter column permissions set default '{}';

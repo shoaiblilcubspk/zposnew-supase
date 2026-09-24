@@ -123,6 +123,13 @@
   reads filter `WHERE deleted_at IS NULL`. No hard `DELETE` on synced tables — otherwise other
   devices never learn about the deletion. Tables with `active`/`is_active` already soft-delete.
 
+### Per-user permissions (0018 → 0019)
+- `staff_users.permissions` (TEXT, JSON) holds the per-user privilege map (canEditPrice,
+  canEditProduct, canGiveDiscount, canDeleteSale, canViewProfit, canManageStock, canManagePO,
+  canViewRecords, canEditSale, canViewExpiry, requirePinOnSale). Persisted + synced like any
+  column; when a flag is absent the app falls back to the role default (no lockout). Stored as
+  TEXT (not jsonb) so push/pull stay symmetric with the local SQLite TEXT mirror.
+
 ### Repair safety net (0015)
 - **repair_quarantine**: `id`, `table_name`, `row_id`, `payload` (jsonb), `reason`, `created_at`.
   RLS enabled with `anon/authenticated` all-access. `scripts/repair-halfsaved.mjs` moves

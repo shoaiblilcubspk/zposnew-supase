@@ -305,6 +305,7 @@ export const LOCAL_SCHEMA_STATEMENTS: string[] = [
     id TEXT PRIMARY KEY, operation_id TEXT NOT NULL UNIQUE, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'cashier', full_name TEXT, email TEXT, avatar TEXT, is_active INTEGER NOT NULL DEFAULT 1,
     can_view_expiry INTEGER NOT NULL DEFAULT 1, require_pin_on_sale INTEGER NOT NULL DEFAULT 0,
+    permissions TEXT NOT NULL DEFAULT '{}',
     created_at TEXT NOT NULL, updated_at TEXT NOT NULL
   );`,
   `CREATE INDEX IF NOT EXISTS idx_staff_users_username ON staff_users(username);`,
@@ -347,6 +348,7 @@ export const LOCAL_SCHEMA_MIGRATIONS: string[] = [
   `ALTER TABLE expenses ADD COLUMN deleted_at TEXT`,
   `ALTER TABLE purchase_records ADD COLUMN deleted_at TEXT`,
   `ALTER TABLE bundle_items ADD COLUMN deleted_at TEXT`,
+  `ALTER TABLE staff_users ADD COLUMN permissions TEXT NOT NULL DEFAULT '{}'`,
 ];
 
 /** All synced table names (used by the pull side of the sync engine). */
