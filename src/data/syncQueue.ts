@@ -125,6 +125,14 @@ export async function getFailed(limit = 200): Promise<SyncQueueRow[]> {
   );
 }
 
+/** All not-yet-synced bundles (pending + error + failed), newest first — for the queue view. */
+export async function getActiveQueue(limit = 200): Promise<SyncQueueRow[]> {
+  return localQuery<SyncQueueRow>(
+    `SELECT * FROM sync_queue WHERE status IN ('pending','error','failed') ORDER BY created_at DESC LIMIT ?`,
+    [limit]
+  );
+}
+
 export async function countFailed(): Promise<number> {
   const rows = await localQuery<{ n: number }>(
     `SELECT COUNT(*) AS n FROM sync_queue WHERE status='failed'`
