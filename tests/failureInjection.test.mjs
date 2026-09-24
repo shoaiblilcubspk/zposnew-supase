@@ -15,7 +15,7 @@
 
 import Database from 'better-sqlite3';
 import { setLocalDbForTesting } from '../src/data/localDb.ts';
-import { atomicWrite } from '../src/data/writeThrough.ts';
+import { atomicWrite, insertRow } from '../src/data/writeThrough.ts';
 import { resolveImageRecord } from '../src/lib/media/localImageStore.ts';
 
 function makeTx(db) {
@@ -162,6 +162,48 @@ async function testResolverNeverEmpty() {
   assert(url.value === 'https://example.com/x.png' && url.isHash === false, 'legacy URL -> kept as-is, no product_images row');
 }
 
+async function testConcurrentTransactionsSerialized() {
+  console.log('\n[7] concurrent writes are serialized (no "transaction within a transaction")');
+  const db = new Database(':memory:');
+  db.exec(`
+    CREATE TABLE categories (id TEXT PRIMARY KEY, operation_id TEXT UNIQUE, name TEXT, active INTEGER, created_at TEXT, updated_at TEXT);
+    CREATE TABLE sync_queue (operation_id TEXT PRIMARY KEY, table_name TEXT, operation_type TEXT, payload TEXT, status TEXT, retry_count INTEGER, last_error TEXT, created_at TEXT, updated_at TEXT);
+  `);
+  // Driver that mimics sql.js: a SECOND BEGIN while one is open throws. The transaction fn is
+  // async (await points), so without serialization concurrent calls WOULD collide.
+  let inTx = false;
+  const mkTx = () => ({
+    execute: async (sql, p = []) => { await Promise.resolve(); const i = db.prepare(sql).run(...(p ?? [])); return { rows: [], rowsAffected: i.changes }; },
+    query: async (sql, p = []) => db.prepare(sql).all(...(p ?? [])),
+    queryOne: async (sql, p = []) => db.prepare(sql).get(...(p ?? [])) ?? null,
+  });
+  const driver = {
+    name: 'concurrent-test', platform: 'wasm', isOpen: true,
+    async open() {}, async close() {},
+    async execute(sql, p = []) { const i = db.prepare(sql).run(...(p ?? [])); return { rows: [], rowsAffected: i.changes }; },
+    async query(sql, p = []) { return db.prepare(sql).all(...(p ?? [])); },
+    async queryOne(sql, p = []) { return db.prepare(sql).get(...(p ?? [])) ?? null; },
+    async transaction(fn) {
+      if (inTx) throw new Error('cannot start a transaction within a transaction');
+      inTx = true;
+      db.exec('BEGIN');
+      try { const r = await fn(mkTx()); db.exec('COMMIT'); return r; }
+      catch (e) { try { db.exec('ROLLBACK'); } catch {} throw e; }
+      finally { inTx = false; }
+    },
+  };
+  setLocalDbForTesting(driver);
+
+  // Fire 6 writes concurrently. Serialized via runExclusiveTransaction -> all succeed.
+  const results = await Promise.allSettled(
+    Array.from({ length: 6 }, (_, i) => insertRow('categories', { name: `C${i}`, active: 1 }))
+  );
+  const failures = results.filter((r) => r.status === 'rejected');
+  assert(failures.length === 0, 'all 6 concurrent writes succeeded (none hit a nested-transaction error)');
+  assert(db.prepare('SELECT COUNT(*) AS n FROM categories').get().n === 6, 'all 6 rows committed');
+  assert(db.prepare('SELECT COUNT(*) AS n FROM sync_queue').get().n === 6, 'all 6 bundles queued');
+}
+
 async function main() {
   console.log('PHASE 7 — failure-injection suite');
   await testRowWriteFailure();
@@ -170,6 +212,7 @@ async function main() {
   await testIdempotentRetrySameOpId();
   await testProductImageBundleAllOrNothing();
   await testResolverNeverEmpty();
+  await testConcurrentTransactionsSerialized();
   console.log(`\nAll ${passed} assertions passed.`);
 }
 

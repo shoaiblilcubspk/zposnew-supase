@@ -18,11 +18,11 @@ export {
 } from './syncQueue';
 export type { SyncQueueRow, SyncOperationType, EnqueueInput, BundleRow, BundlePayload } from './syncQueue';
 export { startSyncWorker, stopSyncWorker, flushQueue } from './syncWorker';
-export { pullAll, needsBootstrap } from './pullSync';
+export { pullAll, needsBootstrap, forceFullResync } from './pullSync';
 export { insertRow, updateRow, softDeleteRow, enqueueRpc, atomicWrite, newOperationId } from './writeThrough';
 export type { AtomicOp, AtomicInsert, AtomicUpdate, AtomicDelete, AtomicWriteOptions, AtomicWriteResult } from './writeThrough';
-export { initDataLayer, stopDataLayer, isDataLayerStarted } from './dataLayer';
-export type { InitResult } from './dataLayer';
+export { initDataLayer, stopDataLayer, isDataLayerStarted, getPullStatus, pullNow, fullResync } from './dataLayer';
+export type { InitResult, PullStatus } from './dataLayer';
 export {
   login, logout, getSession, listStaff, getStaffByUsername, verifyStaffPassword,
   createStaff, changePassword, updateStaff, deactivateStaff, isDefaultAdminOnly,

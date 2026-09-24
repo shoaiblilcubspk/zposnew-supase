@@ -7,33 +7,74 @@
  *     3. start the background push worker
  *     4. do an initial pull so the mirror is warm
  *
- * Realtime table subscriptions are intentionally absent (Rule 2.10 §3). Pull runs on an
- * interval + on reconnect; push is event-driven via the queue worker.
+ * Pull runs on an interval + on reconnect + on window focus/visibility so a second device
+ * converges quickly; push is event-driven via the queue worker. Pull status (last success +
+ * in-flight) is tracked so the UI can show the TRUTH (not just the push queue).
  */
 
 import { initLocalDb } from './localDb';
 import { startSyncWorker, flushQueue } from './syncWorker';
-import { pullAll, needsBootstrap } from './pullSync';
+import { pullAll, needsBootstrap, forceFullResync } from './pullSync';
 
 const PULL_INTERVAL_MS = 15_000;
 
 let pullTimer: ReturnType<typeof setInterval> | null = null;
 let started = false;
+let isPulling = false;
+let lastPullAt: number | null = null;
+let lastPullOk = true;
 
 export interface InitResult {
   bootstrapped: boolean;
   pulled: Record<string, number>;
 }
 
+export interface PullStatus {
+  isPulling: boolean;
+  lastPullAt: number | null;
+  lastPullOk: boolean;
+}
+
+export function getPullStatus(): PullStatus {
+  return { isPulling, lastPullAt, lastPullOk };
+}
+
+/** Run a pull, tracking status. Concurrency-guarded so overlapping triggers don't stack. */
+async function runPull(fn: () => Promise<Record<string, number>> = pullAll): Promise<void> {
+  if (isPulling) return;
+  isPulling = true;
+  try {
+    await fn();
+    lastPullAt = Date.now();
+    lastPullOk = true;
+  } catch {
+    lastPullOk = false;
+  } finally {
+    isPulling = false;
+  }
+}
+
+/** Manual pull (e.g. Cloud Sync "Sync now" / pull-on-focus). */
+export async function pullNow(): Promise<void> {
+  await runPull();
+}
+
+/** Drop cursors and re-pull everything (recovery); unsynced local bundles are preserved. */
+export async function fullResync(): Promise<void> {
+  await runPull(forceFullResync);
+}
+
 export async function initDataLayer(): Promise<InitResult> {
   await initLocalDb();
 
   const bootstrapped = await needsBootstrap();
-  // First pull (bootstrap or warm) — safe to run even offline (it just no-ops on error).
   let pulled: Record<string, number> = {};
   try {
     pulled = await pullAll();
+    lastPullAt = Date.now();
+    lastPullOk = true;
   } catch (e) {
+    lastPullOk = false;
     console.warn('[dataLayer] initial pull skipped (likely offline):', (e as Error).message);
   }
 
@@ -44,25 +85,34 @@ export async function initDataLayer(): Promise<InitResult> {
   return { bootstrapped, pulled };
 }
 
+function onVisible(): void {
+  if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+  void runPull();
+}
+
 function startPullLoop(): void {
   if (pullTimer) return;
-  pullTimer = setInterval(() => {
-    pullAll().catch(() => { /* offline / transient — retried next tick */ });
-  }, PULL_INTERVAL_MS);
+  pullTimer = setInterval(() => { void runPull(); }, PULL_INTERVAL_MS);
 
   if (typeof window !== 'undefined') {
     window.addEventListener('online', onReconnect);
+    window.addEventListener('focus', onVisible);
+    document.addEventListener('visibilitychange', onVisible);
   }
 }
 
 function onReconnect(): void {
   // On reconnect: push local changes first, then pull server changes.
-  flushQueue().then(() => pullAll()).catch(() => {});
+  flushQueue().then(() => runPull()).catch(() => {});
 }
 
 export function stopDataLayer(): void {
   if (pullTimer) { clearInterval(pullTimer); pullTimer = null; }
-  if (typeof window !== 'undefined') window.removeEventListener('online', onReconnect);
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('online', onReconnect);
+    window.removeEventListener('focus', onVisible);
+    document.removeEventListener('visibilitychange', onVisible);
+  }
   started = false;
 }
 

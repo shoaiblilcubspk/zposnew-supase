@@ -231,6 +231,50 @@ use the `atomicWrite` single-op path and need **no** RPC unless they touch 2+ ta
 
 ---
 
+## 1.7 SINGLE-CONNECTION SAFETY + TWO-WAY SYNC (PERMANENT — NO PATCH)
+
+> Two permanent invariants learned from real bugs (bill crash "cannot start a transaction
+> within a transaction"; a second device stuck showing stale data). Every future change keeps
+> them true so any clone works out of the box.
+
+### 1.7.1 One local connection → serialize every transaction
+- The local SQLite mirror is a **single connection** (sql.js/wasm has one; `BEGIN IMMEDIATE`).
+  Two overlapping transactions throw *"cannot start a transaction within a transaction"*.
+- **ALL** transactional work MUST go through `runExclusiveTransaction` (a global promise-chain
+  mutex in `src/data/localDb.ts`). `atomicWrite`, `enqueueRpc`, and pull-apply already do.
+  **Never call `driver.transaction()` / `db.transaction()` directly** and never open a second
+  transaction inside another. `try/finally` always releases the lock — a failed transaction
+  never leaves the connection stuck.
+- A write and the background pull can fire at the same moment; the mutex makes that safe.
+
+### 1.7.2 Sync is TWO-WAY — push AND pull, for every table
+- Cloud-direct sync has two halves and BOTH must work for every synced table:
+  **push** (local `sync_queue` → `apply_bundle`) and **pull** (`pullSync` server → local mirror).
+- Every table in `SYNCED_TABLES` is pulled by the generic `pullAll()` (server-timestamp cursor;
+  append-only pulled by `created_at` with a small overlap so cross-device clock skew never
+  permanently skips a row — dedup-safe via INSERT OR IGNORE). Adding a table = it is pulled and
+  pushed automatically; if it ever needs special handling, add it in the same task, never patch
+  one screen.
+- Pull runs on **boot, interval, window focus/visibility, reconnect, and manual Sync now**, plus
+  a **Force full re-sync** (drops cursors, re-pulls; keeps unsynced local bundles).
+
+### 1.7.3 Sync status must tell the TRUTH
+- The "Synced" indicator reflects **both** sides: push queue empty AND a recent successful pull.
+  Never show "Synced" using only the push queue. Show pending / failed / pulling / last-pull and
+  offer Retry / Discard / Force full re-sync in Settings → Cloud Sync.
+
+### 1.7.4 Timestamps
+- `updated_at` is the **server clock** (Postgres `now()` via trigger) — the authoritative pull
+  cursor for non-additive tables. Client time is display-only; never drive a cursor from it.
+
+### 1.7.5 Still open (scoped, do NOT patch around) 
+- **Delete/tombstone propagation** and **Realtime push-to-pull** are the next scoped step: a
+  hard delete on one device must remove the row on others (soft-delete/tombstone + pull), and
+  realtime gives near-instant convergence. Ship them as a proper migration (+ MASTER_SCHEMA /
+  SCHEMA.md / localSchema / NEW_CLONE_SETUP update), never as a per-screen workaround.
+
+---
+
 ## 2. Fundamental Architectural Rules (Non-Negotiable)
 
 ### 2.1 Supabase Single Authoritative Source of Truth

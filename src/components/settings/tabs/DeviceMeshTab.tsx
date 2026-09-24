@@ -7,7 +7,8 @@
  */
 import React from 'react';
 import {
-  countPending, countFailed, getActiveQueue, retryFailed, discardFailed, flushQueue, type SyncQueueRow,
+  countPending, countFailed, getActiveQueue, retryFailed, discardFailed, flushQueue,
+  getPullStatus, pullNow, fullResync, type SyncQueueRow,
 } from '../../../data';
 
 const ACTION_LABELS: Record<string, string> = {
@@ -64,10 +65,12 @@ export function DeviceMeshTab() {
   const [items, setItems] = React.useState<SyncQueueRow[]>([]);
   const [online, setOnline] = React.useState<boolean>(typeof navigator === 'undefined' ? true : navigator.onLine);
   const [busy, setBusy] = React.useState(false);
+  const [pull, setPull] = React.useState(getPullStatus());
 
   const refresh = React.useCallback(async () => {
     const [p, f, list] = await Promise.all([countPending(), countFailed(), getActiveQueue()]);
     setPending(p); setFailed(f); setItems(list);
+    setPull(getPullStatus());
     setOnline(typeof navigator === 'undefined' ? true : navigator.onLine);
   }, []);
 
@@ -84,7 +87,11 @@ export function DeviceMeshTab() {
 
   const syncNow = async () => {
     setBusy(true);
-    try { await flushQueue(); await refresh(); } finally { setBusy(false); }
+    try { await flushQueue(); await pullNow(); await refresh(); } finally { setBusy(false); }
+  };
+  const doFullResync = async () => {
+    setBusy(true);
+    try { await fullResync(); await refresh(); } finally { setBusy(false); }
   };
   const retry = async (operationId: string) => {
     await retryFailed(operationId); await flushQueue(); await refresh();
@@ -93,27 +100,47 @@ export function DeviceMeshTab() {
     await discardFailed(operationId); await refresh();
   };
 
+  const lastPull = pull.lastPullAt
+    ? `${Math.max(0, Math.floor((Date.now() - pull.lastPullAt) / 1000))}s ago`
+    : 'never';
+
   return (
     <div className="p-4 text-neutral-800 dark:text-neutral-200">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-[15px] font-semibold tracking-tight">Cloud Sync</h3>
-        <button
-          type="button"
-          onClick={syncNow}
-          disabled={busy}
-          className="rounded border border-white/[0.08] px-2.5 py-1 text-[12px] hover:bg-white/[0.04] disabled:opacity-50"
-        >
-          {busy ? 'Syncing…' : 'Sync now'}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={syncNow}
+            disabled={busy}
+            className="rounded border border-white/[0.08] px-2.5 py-1 text-[12px] hover:bg-white/[0.04] disabled:opacity-50"
+          >
+            {busy ? 'Syncing…' : 'Sync now'}
+          </button>
+          <button
+            type="button"
+            onClick={doFullResync}
+            disabled={busy}
+            className="rounded border border-white/[0.08] px-2.5 py-1 text-[12px] text-neutral-500 hover:bg-white/[0.04] disabled:opacity-50"
+            title="Drop pull cursors and re-pull everything from the cloud (unsynced local changes are kept)"
+          >
+            Force full re-sync
+          </button>
+        </div>
       </div>
 
-      <div className="mt-2 flex items-center gap-3 text-[12px] text-neutral-500 dark:text-neutral-400">
-        <span className={`inline-flex items-center gap-1.5`}>
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-neutral-500 dark:text-neutral-400">
+        <span className="inline-flex items-center gap-1.5">
           <span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-neutral-400'}`} />
           {online ? 'Online — auto-syncing' : 'Offline — queued, will auto-sync when back online'}
         </span>
         <span>Queued: <span className="text-neutral-700 dark:text-neutral-200">{pending}</span></span>
         <span>Failed: <span className={failed ? 'text-red-500' : 'text-neutral-700 dark:text-neutral-200'}>{failed}</span></span>
+        <span>
+          Last pull: <span className={pull.lastPullOk ? 'text-neutral-700 dark:text-neutral-200' : 'text-red-500'}>
+            {pull.isPulling ? 'pulling…' : lastPull}{!pull.lastPullOk && ' (failed)'}
+          </span>
+        </span>
       </div>
 
       <p className="mt-2 max-w-prose text-[12px] text-neutral-500">
