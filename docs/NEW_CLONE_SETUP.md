@@ -139,6 +139,14 @@ worker. The header sync indicator shows real pending/failed/synced state from th
 - Apply fixes + quarantine (never silent delete): `node scripts/repair-halfsaved.mjs --apply`
 - Failed cloud pushes are shown in **Settings → Cloud Sync** with a **Retry** button.
 
+## 9b. Backup & Restore (Settings → Backup)
+- **Backup** = encrypted `.zpos` export of the live cloud-mirror (AES-256-GCM; staff password
+  hashes excluded), domain-driven via `src/lib/backup/domainRegistry.ts`.
+- **Import never replaces the database.** It verifies + previews, then writes rows through the
+  bundle system (`atomicWrite → apply_bundle → sync`), so it reaches Supabase and every device.
+  Idempotent (no duplicates on re-import); append-only rows are never edited/deleted (Rule 7).
+- The **primary backup is Supabase itself** (source of truth); `.zpos` is for offline/portable copies.
+
 ---
 
 ## 10. Golden rules for every shop (AGENTS.md §1.6)
