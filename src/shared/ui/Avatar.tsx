@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
+import { useProductImage } from '../../hooks/useProductImage';
 
 /**
  * Avatar — the single standardized thumbnail/avatar for all non-POS routes.
@@ -42,6 +43,12 @@ const gradients = [
 
 export function Avatar({ src, name, size = 'md', shape = 'circle', className }: AvatarProps) {
   const [imageFailed, setImageFailed] = React.useState(false);
+  // Resolve content-addressed hashes (local blob / Supabase bucket) the same way product
+  // images do; base64 / http URLs pass through unchanged. So avatars set from the Media
+  // library (a hash) render everywhere, not just fresh base64 uploads.
+  const resolved = useProductImage(src);
+
+  React.useEffect(() => { setImageFailed(false); }, [resolved]);
 
   const initials = name
     .split(' ')
@@ -54,7 +61,7 @@ export function Avatar({ src, name, size = 'md', shape = 'circle', className }: 
   const hash = name.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
   const gradient = gradients[hash % gradients.length];
 
-  const showImage = src && !imageFailed;
+  const showImage = resolved && !imageFailed;
 
   return (
     <span
@@ -68,7 +75,7 @@ export function Avatar({ src, name, size = 'md', shape = 'circle', className }: 
     >
       {showImage ? (
         <img
-          src={src}
+          src={resolved}
           alt={name}
           className="h-full w-full object-cover"
           onError={() => setImageFailed(true)}

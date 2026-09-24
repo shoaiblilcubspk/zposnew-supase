@@ -6,6 +6,7 @@ import { useUsersStore } from '../../../stores';
 import { sonner } from '../../../lib/sonner';
 import { MediaLibrary } from '../../../shared/MediaLibrary';
 import { updateUser } from '../../../lib/services/users/userRepository';
+import { resolveImageRecord } from '../../../lib/media/localImageStore';
 
 export function LocalPinChangeSection() {
   const currentUser = useUsersStore((s) => s.currentUser);
@@ -19,7 +20,10 @@ export function LocalPinChangeSection() {
   const handleSelectAvatar = async (url: string) => {
     if (!currentUser?.id) return;
     try {
-      const updated = await updateUser(currentUser.id, { avatar: url });
+      // Content-address the image (base64 -> upload -> hash) so the avatar is light, synced,
+      // and reusable — exactly like product images. Hash/URL values pass through unchanged.
+      const img = await resolveImageRecord(url);
+      const updated = await updateUser(currentUser.id, { avatar: img.value ?? url });
       useUsersStore.getState().setCurrentUser(updated);
       sonner.success('Profile avatar updated successfully!');
     } catch (err: any) {

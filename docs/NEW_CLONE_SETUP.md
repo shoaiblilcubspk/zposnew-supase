@@ -89,6 +89,11 @@ node scripts/supabase-migrate.mjs --status
 - **Atomic Action Bundles**: `bundle_operations` (idempotency ledger) + `apply_bundle(text,text,jsonb)`
   RPC — the ONLY cloud write path for multi-table actions (AGENTS.md §1.5).
 - **Storage**: private `product-images` bucket + scoped storage policies (migration 0009).
+- **Images & avatars**: all images (product, bundle, staff avatar) are content-addressed —
+  uploaded once to the `product-images` bucket, stored as a SHA-256 hash on the row
+  (`products.image_hash`, `product_images`, `staff_users.avatar`), resolved for display via one
+  shared path (bucket download + local cache, placeholder while loading), reused everywhere.
+  (Store logo stays inline base64 for print receipts.)
 - **Generic seeds** (every shop needs these — never shop-specific data):
   - Roles: `admin`, `manager`, `cashier`, `salesman`.
   - Payment modes: `cash`, `card`, `bank`, `udhar`.

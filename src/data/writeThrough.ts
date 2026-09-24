@@ -16,7 +16,7 @@
  * snake_case rows in, snake_case rows out (Rule 3). No camelCase conversion layer.
  */
 
-import { getLocalDb } from './localDb';
+import { runExclusiveTransaction } from './localDb';
 import { enqueueInTx, type BundleRow } from './syncQueue';
 import { APPEND_ONLY_TABLES, type SyncedTable } from './localSchema';
 import type { ISqliteTransaction } from '../lib/db/types';
@@ -134,8 +134,7 @@ export async function atomicWrite(ops: AtomicOp[], opts: AtomicWriteOptions): Pr
   const operation_id = opts.operation_id ?? safeRandomUUID();
   const action = opts.action;
 
-  const db = await getLocalDb();
-  const rows: BundleRow[] = await db.transaction(async (tx) => {
+  const rows: BundleRow[] = await runExclusiveTransaction(async (tx) => {
     const written: BundleRow[] = [];
     for (const op of ops) {
       if (op.op === 'insert') written.push(await execInsert(tx, op.table, op.row));
@@ -197,8 +196,7 @@ export async function softDeleteRow(
 /** Enqueue an idempotent RPC call (e.g. create_sale_atomic) — no local table write here. */
 export async function enqueueRpc(fn: string, args: Record<string, unknown>, operation_id?: string): Promise<string> {
   const opId = operation_id ?? safeRandomUUID();
-  const db = await getLocalDb();
-  await db.transaction(async (tx) => {
+  await runExclusiveTransaction(async (tx) => {
     await enqueueInTx(tx, { operation_id: opId, table_name: 'rpc', operation_type: 'rpc', payload: { fn, args } });
   });
   return opId;

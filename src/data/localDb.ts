@@ -60,9 +60,27 @@ export async function localQueryOne<T = Record<string, any>>(sql: string, params
   return db.queryOne<T>(sql, params);
 }
 
+/**
+ * Serialize ALL transactions on the single local connection. sql.js (wasm) has ONE connection
+ * and `BEGIN IMMEDIATE`, so two overlapping `db.transaction()` calls (e.g. a bill's atomicWrite
+ * racing the periodic pull) throw "cannot start a transaction within a transaction". A promise
+ * chain guarantees one transaction runs at a time; try/finally always releases the lock so a
+ * failed transaction never leaves the connection stuck.
+ */
+let txChain: Promise<unknown> = Promise.resolve();
+
+export async function runExclusiveTransaction<T>(fn: (tx: ISqliteTransaction) => Promise<T>): Promise<T> {
+  const run = txChain.then(async () => {
+    const db = await getLocalDb();
+    return db.transaction<T>(fn);
+  });
+  // Keep the chain alive regardless of this call's success/failure.
+  txChain = run.then(() => undefined, () => undefined);
+  return run;
+}
+
 export async function localTransaction<T>(fn: (tx: ISqliteTransaction) => Promise<T>): Promise<T> {
-  const db = await getLocalDb();
-  return db.transaction<T>(fn);
+  return runExclusiveTransaction(fn);
 }
 
 /** For tests: forget the cached handle so init re-runs. */

@@ -4,6 +4,7 @@ import { SearchableSelect } from '../../shared/ui/SearchableSelect';
 import { User as UserType } from '../../types';
 import { Modal } from '../../shared/ui/Modal';
 import { MediaLibrary } from '../../shared/MediaLibrary';
+import { ProductThumb } from '../../shared/ui/ProductThumb';
 import { Button, ToggleSwitch } from '../../shared/ui';
 import { useUserModalData } from './useUserModalData';
 import { UserPermissionsGrid } from './UserPermissionsGrid';
@@ -75,7 +76,7 @@ export function UserModal({ isOpen, onClose, user, currentUser: propCurrentUser,
               className="h-14 w-14 bg-white dark:bg-black/40 rounded-md flex items-center justify-center overflow-hidden border border-gray-200 dark:border-white/[0.08] cursor-pointer hover:border-primary/50 transition-colors"
             >
               {formData.avatar ? (
-                <img src={formData.avatar} alt="Avatar" className="h-full w-full object-cover" />
+                <ProductThumb image={formData.avatar} alt="Avatar" fallback={<User className="h-6 w-6 text-gray-400" />} />
               ) : (
                 <User className="h-6 w-6 text-gray-400" />
               )}
@@ -261,7 +262,11 @@ export function UserModal({ isOpen, onClose, user, currentUser: propCurrentUser,
         <MediaLibrary
           isOpen={showMediaLibrary}
           onClose={() => setShowMediaLibrary(false)}
-          onSelect={(url) => setFormData((prev: any) => ({ ...prev, avatar: url }))}
+          onSelect={async (url) => {
+            const { resolveImageRecord } = await import('../../lib/media/localImageStore');
+            const img = await resolveImageRecord(url);
+            setFormData((prev: any) => ({ ...prev, avatar: img.value ?? url }));
+          }}
         />
       )}
     </Modal>

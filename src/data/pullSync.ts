@@ -11,10 +11,13 @@
  */
 
 import { getSupabase } from './supabaseClient';
-import { getLocalDb, localExecute, localQueryOne } from './localDb';
+import { localExecute, localQueryOne, runExclusiveTransaction } from './localDb';
 import { SYNCED_TABLES, APPEND_ONLY_TABLES, type SyncedTable } from './localSchema';
 
 const PAGE = 1000;
+/** Re-pull a small window before the cursor so modest cross-device clock skew never permanently
+ *  skips an append-only row (INSERT OR IGNORE dedupes, so overlap is harmless). */
+const APPEND_ONLY_OVERLAP_MS = 5 * 60_000;
 
 async function ensureCursorTable(): Promise<void> {
   await localExecute(`CREATE TABLE IF NOT EXISTS sync_pull_cursor (
@@ -82,16 +85,22 @@ async function pullTable(table: SyncedTable): Promise<number> {
   let from = 0;
   let maxTs = cursor;
 
+  // Query watermark: append-only re-pulls a small overlap (clock-skew safe, dedup-ignored).
+  let queryCursor = cursor;
+  if (cursor && appendOnly) {
+    const t = new Date(cursor).getTime() - APPEND_ONLY_OVERLAP_MS;
+    if (Number.isFinite(t)) queryCursor = new Date(t).toISOString();
+  }
+
   for (;;) {
     let q = supabase.from(table).select('*').order(col, { ascending: true }).range(from, from + PAGE - 1);
-    if (cursor) q = q.gt(col, cursor);
+    if (queryCursor) q = q.gt(col, queryCursor);
 
     const { data, error } = await q;
     if (error) throw new Error(`pull ${table}: ${error.message}`);
     if (!data || data.length === 0) break;
 
-    const db = await getLocalDb();
-    await db.transaction(async (tx) => {
+    await runExclusiveTransaction(async (tx) => {
       for (const row of data) {
         const { sql, params } = buildUpsert(table, row as Record<string, any>, appendOnly);
         await tx.execute(sql, params);
@@ -126,4 +135,12 @@ export async function needsBootstrap(): Promise<boolean> {
   await ensureCursorTable();
   const row = await localQueryOne<{ n: number }>(`SELECT COUNT(*) AS n FROM sync_pull_cursor`);
   return (row?.n ?? 0) === 0;
+}
+
+/** Drop all pull cursors and re-pull every table from scratch (recovery from drift). Local
+ *  unsynced bundles in sync_queue are untouched, so nothing pending is lost. */
+export async function forceFullResync(): Promise<Record<string, number>> {
+  await ensureCursorTable();
+  await localExecute(`DELETE FROM sync_pull_cursor`);
+  return pullAll();
 }

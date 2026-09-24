@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { can } from '../../lib/permissions';
-import { RealIcon } from '../../shared/ui';
+import { RealIcon, Avatar } from '../../shared/ui';
 import { useSyncStatusStore } from '../../lib/sync/syncStatusStore';
 import { SyncStatusWidget } from './SyncStatusWidget';
 import { executeHardRefresh } from '../../lib/utils/hardRefresh';
@@ -135,17 +135,12 @@ export function HeaderActions({
         >
           {/* Avatar with cleanly positioned external status dot */}
           <div className="relative shrink-0 flex items-center justify-center w-6 h-6 md:w-7.5 md:h-7.5 lg:w-8 lg:h-8 rounded-full ring-1 md:ring-1.5 ring-neutral-200 dark:ring-white/15 overflow-visible bg-neutral-200 dark:bg-white/10">
-            {appCurrentUser?.avatar ? (
-              <img
-                src={appCurrentUser.avatar}
-                alt={appCurrentUser?.name || 'User'}
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full rounded-full bg-gradient-to-tr from-primary to-emerald-400 text-white font-bold text-[10px] md:text-[11px] flex items-center justify-center">
-                {(appCurrentUser?.name || 'S').charAt(0).toUpperCase()}
-              </div>
-            )}
+            <Avatar
+              src={appCurrentUser?.avatar || undefined}
+              name={appCurrentUser?.name || 'S'}
+              size="sm"
+              className="!w-full !h-full text-[10px] md:text-[11px]"
+            />
             {/* Embedded Status indicator — positioned outside the avatar to prevent clipping */}
             <span
               className={`absolute -bottom-0.5 -right-0.5 w-2 md:w-2.5 h-2 md:h-2.5 rounded-full ring-1.5 md:ring-2 ring-white dark:ring-[#121214] ${
