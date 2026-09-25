@@ -320,6 +320,16 @@ export const LOCAL_SCHEMA_STATEMENTS: string[] = [
     key_value TEXT, metadata TEXT, updated_by TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
   );`,
 
+  // ---- media_assets (reusable Media Library: uploads + Pexels picks; synced) ----
+  `CREATE TABLE IF NOT EXISTS media_assets (
+    id TEXT PRIMARY KEY, operation_id TEXT NOT NULL UNIQUE, source TEXT NOT NULL DEFAULT 'upload',
+    image_hash TEXT, pexels_id TEXT, photographer TEXT, photographer_url TEXT, page_url TEXT,
+    alt TEXT, avg_color TEXT, width INTEGER, height INTEGER,
+    src_original TEXT, src_large2x TEXT, src_large TEXT, src_medium TEXT, src_portrait TEXT, src_tiny TEXT,
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT
+  );`,
+  `CREATE INDEX IF NOT EXISTS idx_media_assets_pexels ON media_assets(pexels_id);`,
+
   // ---- sync_queue (local-only; never synced) ----
   `CREATE TABLE IF NOT EXISTS sync_queue (
     operation_id TEXT PRIMARY KEY,
@@ -367,6 +377,7 @@ export const SYNCED_TABLES = [
   'stock_history', 'variant_stock_history', 'price_history', 'sale_audit_log',
   'toppings', 'product_addons', 'salesmen', 'purchase_orders', 'purchase_order_items',
   'integration_settings',
+  'media_assets',
 ] as const;
 
 export type SyncedTable = (typeof SYNCED_TABLES)[number];

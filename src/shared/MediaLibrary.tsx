@@ -1,5 +1,5 @@
 import { useAppStore, useProductsStore, useSettingsStore } from '../stores';
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Image as ImageIcon, MousePointer2, Trash2, Plus } from 'lucide-react';
 import { productsService } from '../lib/services';
 import { sonner } from '../lib/sonner';
@@ -8,6 +8,7 @@ import { cn } from '../lib/utils';
 import { compressImage } from './imageCompression';
 import { Button, EmptyState } from './ui';
 import { ProductThumb } from './ui/ProductThumb';
+import { PexelsSearchTab } from './PexelsSearchTab';
 
 interface MediaLibraryProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export function MediaLibrary({ isOpen, onClose, onSelect, standalone }: MediaLib
   const appBundles = useAppStore((s: any) => s.bundles);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [tab, setTab] = useState<'library' | 'search'>('library');
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -149,6 +151,22 @@ export function MediaLibrary({ isOpen, onClose, onSelect, standalone }: MediaLib
         </div>
       )}
 
+      <div className="flex items-center gap-1 px-4 pt-3">
+        <button type="button" onClick={() => setTab('library')}
+          className={cn('px-3 h-8 rounded-full text-[12px] font-medium border', tab === 'library' ? 'bg-primary text-white border-primary' : 'border-neutral-200 dark:border-white/[0.08] text-neutral-600 dark:text-neutral-300')}>
+          Library
+        </button>
+        <button type="button" onClick={() => setTab('search')}
+          className={cn('px-3 h-8 rounded-full text-[12px] font-medium border', tab === 'search' ? 'bg-primary text-white border-primary' : 'border-neutral-200 dark:border-white/[0.08] text-neutral-600 dark:text-neutral-300')}>
+          Search Pexels
+        </button>
+      </div>
+
+      {tab === 'search' ? (
+        <div className="p-4">
+          <PexelsSearchTab onPick={(hash) => { onSelect(hash); if (!standalone) onClose(); }} />
+        </div>
+      ) : (
       <div className={cn("p-4", !standalone && "min-h-[400px]")}>
         {productAssets.length > 0 || !standalone ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
@@ -224,6 +242,7 @@ export function MediaLibrary({ isOpen, onClose, onSelect, standalone }: MediaLib
           />
         )}
       </div>
+      )}
     </div>
   );
 

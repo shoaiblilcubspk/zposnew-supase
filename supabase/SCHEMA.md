@@ -139,6 +139,12 @@
   _migrations, sync_pull_cursor, sync_queue). A new synced table works through bundles with no
   RPC change (AGENTS.md §1.5.12). Append-only classification stays explicit.
 
+### Media library assets (0023)
+- **media_assets** (soft-delete `deleted_at`): reusable images (uploads + Pexels picks). Columns:
+  source, image_hash, pexels_id, photographer(+url), page_url, alt, avg_color, width/height, and
+  src_* URLs. The link + credit are permanent; the local blob is a disposable cache. Synced;
+  deduped by pexels_id. Used by the Media picker's "Search Pexels" tab.
+
 ### Repair safety net (0015)
 - **repair_quarantine**: `id`, `table_name`, `row_id`, `payload` (jsonb), `reason`, `created_at`.
   RLS enabled with `anon/authenticated` all-access. `scripts/repair-halfsaved.mjs` moves
