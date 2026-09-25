@@ -163,10 +163,10 @@ export function CartItemListBody({
                 </div>
               </div>
               {/* Qty stepper */}
-              <div className="flex items-center bg-white dark:bg-surface rounded border border-neutral-200 dark:border-white/[0.08] shrink-0 overflow-hidden">
+              <div className="flex items-center bg-white dark:bg-surface rounded border border-neutral-200 dark:border-white/[0.08] shrink-0 overflow-hidden transition-all">
                 <button
                   onClick={() => onUpdateBundleQuantity(b.bundleId, b.bundleQty - 1)}
-                  className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-rose-500 hover:bg-neutral-100 dark:hover:bg-surface-hover transition-colors"
+                  className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-rose-500 hover:bg-neutral-100 dark:hover:bg-surface-hover transition-colors shrink-0"
                 >
                   <Minus className="h-2.5 w-2.5" />
                 </button>
@@ -179,12 +179,13 @@ export function CartItemListBody({
                     onUpdateBundleQuantity(b.bundleId, isNaN(val) ? 0 : val);
                   }}
                   onKeyDown={(e) => e.stopPropagation()}
-                  className={`w-6 bg-transparent text-center text-[11px] font-mono font-medium focus:outline-none border-0 p-0 no-spinners select-all ${b.bundleQty < 0 ? 'text-rose-500' : 'text-neutral-900 dark:text-white'
+                  style={{ width: `${Math.max(3, String(b.bundleQty || '').length + 1.2)}ch` }}
+                  className={`min-w-[24px] px-1 bg-transparent text-center text-[11px] font-mono font-medium focus:outline-none border-0 p-0 no-spinners select-all transition-all ${b.bundleQty < 0 ? 'text-rose-500' : 'text-neutral-900 dark:text-white'
                     }`}
                 />
                 <button
                   onClick={() => onUpdateBundleQuantity(b.bundleId, b.bundleQty + 1)}
-                  className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-emerald-600 hover:bg-neutral-100 dark:hover:bg-surface-hover transition-colors"
+                  className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-emerald-600 hover:bg-neutral-100 dark:hover:bg-surface-hover transition-colors shrink-0"
                 >
                   <Plus className="h-2.5 w-2.5" />
                 </button>

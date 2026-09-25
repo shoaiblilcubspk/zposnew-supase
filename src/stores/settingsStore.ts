@@ -21,7 +21,7 @@ interface SettingsState {
 }
 
 function getInitialTheme(): 'dark' | 'light' {
-  if (typeof window === 'undefined') return 'dark';
+  if (typeof window === 'undefined') return 'light';
   try {
     const direct = localStorage.getItem('theme');
     if (direct === 'light' || direct === 'dark') return direct;
@@ -31,7 +31,7 @@ function getInitialTheme(): 'dark' | 'light' {
       if (parsed.theme === 'light' || parsed.theme === 'dark') return parsed.theme;
     }
   } catch {}
-  return 'dark';
+  return 'light';
 }
 
 function getInitialIconStyle(): '3d' | 'system' {

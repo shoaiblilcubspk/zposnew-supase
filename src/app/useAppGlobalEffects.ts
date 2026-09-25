@@ -92,7 +92,7 @@ export function useAppGlobalEffects() {
     const directTheme = localStorage.getItem('theme');
     const localPrefs = JSON.parse(localStorage.getItem('pos_local_prefs') || '{}');
     const fallbackTheme = directTheme || localPrefs.theme;
-    const theme = appSettings?.theme || fallbackTheme || 'dark';
+    const theme = appSettings?.theme || fallbackTheme || 'light';
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
     const applyTheme = () => {

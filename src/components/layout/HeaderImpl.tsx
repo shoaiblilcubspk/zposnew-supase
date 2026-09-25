@@ -62,7 +62,7 @@ export function Header({
   });
 
   const toggleTheme = async () => {
-    const current = appSettings.theme || 'dark';
+    const current = appSettings.theme || 'light';
     const newTheme = current === 'dark' ? 'light' : 'dark';
     useSettingsStore.getState().setSettings({ theme: newTheme });
     localStorage.setItem('theme', newTheme);

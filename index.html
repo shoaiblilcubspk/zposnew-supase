@@ -43,7 +43,7 @@
       var _settingsStr = localStorage.getItem('pos_settings');
       try { if (_settingsStr) _theme = JSON.parse(_settingsStr).theme; } catch (e) {}
     }
-    if (!_theme) _theme = 'dark';
+    if (!_theme) _theme = 'light';
     var _isDark = _theme === 'dark' || (_theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
     // ─── Apply background color IMMEDIATELY (before CSS loads) ───
