@@ -104,6 +104,7 @@
   "build": {
     "appId": "com.zaynahs.pos",
     "productName": "Zaynahs POS",
+    "artifactName": "Zaynahs-POS-v${version}-${arch}.${ext}",
     "directories": {
       "output": "dist-electron"
     },
@@ -173,7 +174,8 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "artifactName": "Zaynahs-POS-v${version}-Setup.${ext}"
     }
   },
   "allowScripts": {

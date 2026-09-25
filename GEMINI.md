@@ -16,7 +16,7 @@
 
 ### Target Stack
 - **Frontend:** React + Vite + TypeScript + Tailwind CSS
-- **Desktop:** Electron / Tauri (Native SQLite + OS Filesystem)
+- **Desktop:** Electron (Native SQLite + OS Filesystem)
 - **Mobile:** Capacitor (Native SQLite Plugin)
 - **Local Database:** SQLite mirror cache (`zaynahs_cloud.sqlite`)
 - **Cloud Database:** Supabase PostgreSQL (Single source of truth, RLS enabled on all tables)

@@ -123,10 +123,10 @@ export async function sendRawToPrinter(bytes: Uint8Array, config: PrinterConfig)
   // 2. Network Printing (TCP/IP socket or HTTP raw endpoint)
   if (config.transport === 'network' && config.address) {
     try {
-      if (typeof window !== 'undefined' && (window as any).__TAURI__) {
-        // Tauri TCP socket transport via invoke
-        const { invoke } = await import('@tauri-apps/api/core');
-        await invoke('print_raw_tcp', { address: config.address, data: Array.from(bytes) });
+      // Raw TCP printing needs a native bridge. On Electron this is exposed via the
+      // preload API when available; otherwise it falls through to the fallback below.
+      if (typeof window !== 'undefined' && (window as any).electronAPI?.print?.printRawTcp) {
+        await (window as any).electronAPI.print.printRawTcp(config.address, Array.from(bytes));
         return true;
       }
     } catch (err) {

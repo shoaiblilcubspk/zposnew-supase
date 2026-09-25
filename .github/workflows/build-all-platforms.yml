@@ -1,8 +1,9 @@
-name: Build All Platforms (DMG, EXE, APK, IPA)
+name: Build All Platforms (DMG, EXE, AppImage, APK, IPA)
 
+# Manual only — native installers are built on demand (with signing credentials) via the
+# "Run workflow" button. Web/PWA ships continuously via Vercel on push; this workflow does
+# NOT run on push so day-to-day web updates never trigger native builds.
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -10,7 +11,7 @@ permissions:
 
 jobs:
   # ========================================================
-  # 1. macOS Desktop Installer (.dmg)
+  # 1. macOS Desktop Installer (.dmg) — Electron
   # ========================================================
   build-macos-dmg:
     name: Build macOS DMG
@@ -25,29 +26,27 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-apple-darwin, aarch64-apple-darwin
-
-      - name: Cache Rust dependencies
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: './src-tauri -> target'
-
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Build macOS Tauri DMG (Universal: Intel x86_64 + Apple Silicon aarch64)
-        run: npx tauri build --target universal-apple-darwin
+      - name: Build web assets + Electron main
+        run: |
+          npm run build
+          npm run electron:compile
+
+      - name: Build macOS DMG (Electron, x64 + arm64)
+        run: npx electron-builder --mac dmg --publish never
 
       - name: Prepare macOS DMG with Version
         run: |
           VERSION=$(node -p "require('./package.json').version")
           mkdir -p release-output
-          DMG_FILE=$(find src-tauri/target -name "*.dmg" -type f | head -n 1)
-          echo "Found DMG file: $DMG_FILE"
-          cp "$DMG_FILE" "release-output/Zaynahs-POS-v${VERSION}.dmg"
+          i=0
+          for f in $(find dist-electron -name "*.dmg" -type f); do
+            if [ "$i" -eq 0 ]; then cp "$f" "release-output/Zaynahs-POS-v${VERSION}.dmg";
+            else cp "$f" "release-output/Zaynahs-POS-v${VERSION}-$i.dmg"; fi
+            i=$((i+1))
+          done
           ls -lh release-output/
 
       - name: Upload macOS DMG Artifact
@@ -58,7 +57,7 @@ jobs:
           retention-days: 30
 
   # ========================================================
-  # 2. Windows Desktop Installer (.exe)
+  # 2. Windows Desktop Installer (.exe) — Electron
   # ========================================================
   build-windows-exe:
     name: Build Windows EXE
@@ -73,42 +72,82 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust dependencies
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: './src-tauri -> target'
-
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Build Windows Tauri EXE
-        run: npx tauri build
+      - name: Build web assets + Electron main
+        shell: bash
+        run: |
+          npm run build
+          npm run electron:compile
+
+      - name: Build Windows installer (Electron NSIS + portable)
+        run: npx electron-builder --win nsis portable --publish never
 
       - name: Prepare Windows Installers with Version
         shell: bash
         run: |
           VERSION=$(node -p "require('./package.json').version")
           mkdir -p release-output
-          EXE_FILE=$(find src-tauri/target -name "*.exe" -type f | grep -i "setup" | head -n 1)
-          MSI_FILE=$(find src-tauri/target -name "*.msi" -type f | head -n 1)
-          if [ -n "$EXE_FILE" ]; then cp "$EXE_FILE" "release-output/Zaynahs-POS-v${VERSION}-Setup.exe"; fi
-          if [ -n "$MSI_FILE" ]; then cp "$MSI_FILE" "release-output/Zaynahs-POS-v${VERSION}.msi"; fi
+          SETUP_FILE=$(find dist-electron -maxdepth 1 -name "*.exe" -type f | grep -i "setup" | head -n 1 || true)
+          PORTABLE_FILE=$(find dist-electron -maxdepth 1 -name "*.exe" -type f | grep -iv "setup" | head -n 1 || true)
+          [ -n "$SETUP_FILE" ] && cp "$SETUP_FILE" "release-output/Zaynahs-POS-v${VERSION}-Setup.exe"
+          [ -n "$PORTABLE_FILE" ] && cp "$PORTABLE_FILE" "release-output/Zaynahs-POS-v${VERSION}-Portable.exe"
           ls -lh release-output/
 
       - name: Upload Windows EXE Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Zaynahs-POS-Windows-EXE
-          path: |
-            release-output/*.exe
-            release-output/*.msi
+          path: release-output/*.exe
           retention-days: 30
 
   # ========================================================
-  # 3. Android Mobile App (.apk)
+  # 3. Linux Desktop Installer (.AppImage + .deb) — Electron
+  # ========================================================
+  build-linux-appimage:
+    name: Build Linux AppImage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build web assets + Electron main
+        run: |
+          npm run build
+          npm run electron:compile
+
+      - name: Build Linux installers (Electron AppImage + deb)
+        run: npx electron-builder --linux AppImage deb --publish never
+
+      - name: Prepare Linux installers with Version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          mkdir -p release-output
+          APPIMAGE=$(find dist-electron -maxdepth 1 -name "*.AppImage" -type f | head -n 1 || true)
+          DEB=$(find dist-electron -maxdepth 1 -name "*.deb" -type f | head -n 1 || true)
+          [ -n "$APPIMAGE" ] && cp "$APPIMAGE" "release-output/Zaynahs-POS-v${VERSION}.AppImage"
+          [ -n "$DEB" ] && cp "$DEB" "release-output/Zaynahs-POS-v${VERSION}.deb"
+          ls -lh release-output/
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zaynahs-POS-Linux
+          path: release-output/*
+          retention-days: 30
+
+  # ========================================================
+  # 4. Android Mobile App (.apk) — Capacitor
   # ========================================================
   build-android-apk:
     name: Build Android APK
@@ -162,7 +201,7 @@ jobs:
           retention-days: 30
 
   # ========================================================
-  # 4. iOS Mobile App (.ipa)
+  # 5. iOS Mobile App (.ipa) — Capacitor
   # ========================================================
   build-ios-ipa:
     name: Build iOS IPA
@@ -247,11 +286,11 @@ jobs:
           retention-days: 30
 
   # ========================================================
-  # 5. Automated Universal GitHub Release Publishing
+  # 6. Automated Universal GitHub Release Publishing
   # ========================================================
   publish-release:
     name: Publish GitHub Release
-    needs: [build-macos-dmg, build-windows-exe, build-android-apk, build-ios-ipa]
+    needs: [build-macos-dmg, build-windows-exe, build-linux-appimage, build-android-apk, build-ios-ipa]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -268,7 +307,7 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           mkdir -p release-files
-          find all-artifacts -type f \( -name "*.apk" -o -name "*.ipa" -o -name "*.dmg" -o -name "*.exe" -o -name "*.msi" \) -exec cp {} release-files/ \;
+          find all-artifacts -type f \( -name "*.apk" -o -name "*.ipa" -o -name "*.dmg" -o -name "*.exe" -o -name "*.AppImage" -o -name "*.deb" \) -exec cp {} release-files/ \;
           ls -lh release-files/
 
       - name: Publish GitHub Release with Direct Download Links
@@ -278,7 +317,7 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           gh release create "v${VERSION}" release-files/* \
             --title "Zaynahs POS v${VERSION} (Universal All-Platform)" \
-            --notes "Universal Multi-Platform Release v${VERSION} — Compatible with Intel + Apple Silicon macOS, Android phones/tablets, iOS devices, and Windows PCs." \
+            --notes "Universal Multi-Platform Release v${VERSION} — macOS (Intel + Apple Silicon), Windows, Linux (AppImage/deb), Android, and iOS." \
             --draft=false \
             --prerelease=false || \
           gh release upload "v${VERSION}" release-files/* --clobber

@@ -8,7 +8,7 @@ export const MASTER_LICENSE_SALT = 'ZAYNAHS_POS_SECURE_RETAIL_OFFLINE_SALT_V1_20
 
 /**
  * Deterministic fast 64-bit hybrid hash function that works in all runtimes
- * without requiring external node crypto packages in browser/tauri environments.
+ * without requiring external node crypto packages in browser/electron environments.
  */
 function computeSignature(payload: string, salt: string): string {
   let hash1 = 0x811c9dc5;

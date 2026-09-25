@@ -338,7 +338,7 @@ use the `atomicWrite` single-op path and need **no** RPC unless they touch 2+ ta
 
 ### 2.10 100% Zero-Refresh Reactivity Mandate (0ms Screen Updates)
 - All POS operations (Sales, Deletions, Restock, Adjustments, Wallets, Badges, Expenses, Ledger) must be 100% reactive — reflecting in 0ms on screen without manual page reload.
-- Native desktop (Electron/Tauri) and mobile apps (Capacitor) have no concept of browser refresh.
+- Native desktop (Electron) and mobile apps (Capacitor) have no concept of browser refresh.
 - Local SQLite commit immediately updates authoritative local data and triggers Zustand store updates.
 
 ### 2.11 Cross-Platform Parity (Windows EXE, macOS DMG, Android APK, iOS IPA)
@@ -373,7 +373,7 @@ use the `atomicWrite` single-op path and need **no** RPC unless they touch 2+ ta
 ### 2.15 Mandatory Next Version Bump & Universal Build Naming Rule (Zero Stale Versions)
 - **Mandatory Version Bump Across All Files:** Har update, feature change, bug fix, ya rebuild se pehle version number ko semver standard ke mutabiq bump karna (`1.0.0` → `1.0.1` / `1.1.0`) strictly compulsory hai across **ALL** files simultaneously:
   1. `package.json` (`"version": "x.y.z"`) & `package-lock.json`.
-  2. `src-tauri/tauri.conf.json` (`"version": "x.y.z"`).
+  2. `package.json` `build` config drives the desktop installer (Electron / electron-builder); versioned artifact names `Zaynahs-POS-v<version>...`.
   3. `android/app/build.gradle` (`versionCode` incremented, `versionName "x.y.z"`).
   4. `ios/App/App.xcodeproj/project.pbxproj` (`MARKETING_VERSION = x.y.z`, `CURRENT_PROJECT_VERSION` incremented).
 - **Mandatory Version in ALL Binary & Package Filenames:**
@@ -390,15 +390,15 @@ use the `atomicWrite` single-op path and need **no** RPC unless they touch 2+ ta
 
 ## 3. Development vs Build Workflow (Flexible & Lightweight)
 
-During development, use either standard browser dev mode (`npm run dev`) or Tauri dev mode (`npm run tauri dev`) based on convenience and the task at hand. Both environments share 100% of the business logic, storage abstraction, and state management.
+During development, use standard browser dev mode (`npm run dev`) or Electron dev mode (`npm run electron:dev`) based on convenience and the task at hand. Both environments share 100% of the business logic, storage abstraction, and state management.
 
-Full production installer packaging (EXE/DMG/APK/IPA) is reserved strictly for release/deployment milestones, not required after routine feature edits.
+Full production installer packaging (EXE/DMG/AppImage/APK/IPA) is reserved strictly for release/deployment milestones, not required after routine feature edits.
 
 ### 3.1 Local Storage & Execution Hierarchy
 ```text
 React UI (Shared Business Logic)
    ↓
-Storage Abstraction Layer (Tauri Native SQLite / Browser Wasm SQLite)
+Storage Abstraction Layer (Electron Native SQLite / Capacitor Native SQLite / Browser Wasm SQLite)
    ↓
 Local OS / Browser Storage
    ├── database.sqlite       (Authoritative local source of truth)
@@ -410,9 +410,9 @@ Local OS / Browser Storage
 ```
 
 ### 3.2 Flexible Testing & Platform Uniformity
-- **Single Source of Business Logic:** Browser dev mode and Tauri dev mode share 100% identical business logic, stores, schema, and calculations. Storage driver dynamically switches (`TauriSqliteDriver` on desktop, `WasmSqliteDriver` in browser fallback).
-- **Flexible Testing:** Developers may validate features using either `npm run dev` or `npm run tauri dev`. Both are valid for testing logic, synchronization, and UI flows.
-- **Production Packaging:** Full installer builds (Windows EXE/MSI, macOS DMG, Linux AppImage, Android APK, iOS IPA) are executed at release time without blocking daily development.
+- **Single Source of Business Logic:** Browser dev mode and Electron dev mode share 100% identical business logic, stores, schema, and calculations. Storage driver dynamically switches (`ElectronSqliteDriver` on desktop, `CapacitorSqliteDriver` on mobile, `WasmSqliteDriver` in browser fallback).
+- **Flexible Testing:** Developers may validate features using either `npm run dev` or `npm run electron:dev`. Both are valid for testing logic, synchronization, and UI flows.
+- **Production Packaging:** Full installer builds (Windows EXE, macOS DMG, Linux AppImage/deb, Android APK, iOS IPA) are executed at release time (via the manual "Build All Platforms" workflow) without blocking daily development.
 
 ---
 

@@ -112,7 +112,7 @@ export async function verifyPin(pin: string, storedHashOrFull: string, optionalS
     }
   }
 
-  // 2. If crypto.subtle is available (PC, Desktop Tauri, HTTPS, Capacitor), check PBKDF2 via WebCrypto
+  // 2. If crypto.subtle is available (PC, Desktop Electron, HTTPS, Capacitor), check PBKDF2 via WebCrypto
   if (hasCryptoSubtle()) {
     try {
       const enc = new TextEncoder();

@@ -11,8 +11,6 @@ import { CapacitorSqliteDriver } from './drivers/capacitorDriver';
 
 declare global {
   interface Window {
-    __TAURI__?: any;
-    __TAURI_INTERNALS__?: any;
     Capacitor?: {
       isNativePlatform?: () => boolean;
     };
