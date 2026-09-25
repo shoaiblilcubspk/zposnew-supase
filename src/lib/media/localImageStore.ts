@@ -159,6 +159,16 @@ export async function getImageUrl(hash: string): Promise<string | null> {
       putStoredBlob(hash, fetched.data, fetched.mimeType).catch(() => {});
     }
   }
+  // Still missing — recover from a saved Pexels source URL (link is permanent, cache disposable).
+  // images.pexels.com URLs are public: no API key / request needed.
+  if (!cached) {
+    const recovered = await recoverFromMediaSource(hash);
+    if (recovered) {
+      cached = recovered;
+      memoryImageCache.set(hash, recovered);
+      putStoredBlob(hash, recovered.data, recovered.mimeType).catch(() => {});
+    }
+  }
   if (cached) {
     if (!cached.url && typeof URL !== 'undefined' && typeof Blob !== 'undefined') {
       const blob = new Blob([cached.data as any], { type: cached.mimeType });
@@ -187,6 +197,39 @@ async function uploadImageToBucket(hash: string, data: Uint8Array, mimeType: str
   } catch {
     /* offline / transient — the blob is safe locally and can re-upload later */
   }
+}
+
+const recoverInFlight = new Map<string, Promise<{ data: Uint8Array; mimeType: string } | null>>();
+
+/**
+ * Recover an image from a saved Media source URL (Pexels) when both the local cache and the
+ * bucket are missing it. images.pexels.com URLs are public, so NO API key/request is needed.
+ * In-flight downloads are de-duplicated. Returns null if offline or no source URL is known.
+ */
+async function recoverFromMediaSource(hash: string): Promise<{ data: Uint8Array; mimeType: string } | null> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
+  if (recoverInFlight.has(hash)) return recoverInFlight.get(hash)!;
+  const p = (async () => {
+    try {
+      const { localQueryOne } = await import('../../data');
+      const row = await localQueryOne<{ src_medium: string | null; src_large: string | null; src_large2x: string | null }>(
+        `SELECT src_medium, src_large, src_large2x FROM media_assets WHERE image_hash = ? AND deleted_at IS NULL LIMIT 1;`,
+        [hash]
+      ).catch(() => null);
+      const url = row?.src_large || row?.src_medium || row?.src_large2x;
+      if (!url) return null;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const buf = new Uint8Array(await (await res.blob()).arrayBuffer());
+      return { data: buf, mimeType: 'image/jpeg' };
+    } catch {
+      return null;
+    } finally {
+      recoverInFlight.delete(hash);
+    }
+  })();
+  recoverInFlight.set(hash, p);
+  return p;
 }
 
 /** Download a content-addressed image blob from Supabase Storage. */
@@ -328,6 +371,28 @@ function decodeDataUri(value: string): { bytes: Uint8Array; mimeType: string } |
 /** True if the value is a 64-char lowercase hex SHA-256 hash. */
 export function isImageHash(value: string): boolean {
   return /^[0-9a-f]{64}$/.test(value);
+}
+
+/**
+ * Clear the disposable local image cache (memory + IndexedDB blobs). Rows, links and credit are
+ * untouched — images lazily re-download from the bucket or the saved Pexels URL on next view.
+ */
+export async function clearImageCache(): Promise<number> {
+  let cleared = memoryImageCache.size;
+  for (const [, v] of memoryImageCache) {
+    if (v.url && typeof URL !== 'undefined' && URL.revokeObjectURL) { try { URL.revokeObjectURL(v.url); } catch {} }
+  }
+  memoryImageCache.clear();
+  try {
+    const db = await openImageIdb();
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(IMAGE_STORE_NAME, 'readwrite');
+      const req = tx.objectStore(IMAGE_STORE_NAME).clear();
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+    });
+  } catch { /* ignore */ }
+  return cleared;
 }
 
 /**

@@ -59,6 +59,15 @@ export function IntegrationsCard() {
     } finally { setBusy(false); }
   };
 
+  const onClearCache = async () => {
+    setBusy(true);
+    try {
+      const { clearImageCache } = await import('../../../lib/media/localImageStore');
+      const n = await clearImageCache();
+      sonner.success(`Image cache cleared (${n} cached). Images will re-download when viewed.`);
+    } finally { setBusy(false); }
+  };
+
   return (
     <Card className="p-5 border border-neutral-200 dark:border-white/[0.08] bg-white dark:bg-surface shadow-none rounded-md">
       <div className="flex items-center gap-2 mb-1">
@@ -103,6 +112,16 @@ export function IntegrationsCard() {
               <Trash2 className="w-3.5 h-3.5 mr-1" /> Remove
             </Button>
           )}
+        </div>
+      </div>
+
+      <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-white/[0.06]">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[12px] text-neutral-500 dark:text-neutral-400 max-w-prose">
+            Clear the local image cache to free space. Images, links and credit are kept — they
+            re-download automatically from the cloud or the saved photo URL when next viewed.
+          </p>
+          <Button size="sm" variant="secondary" disabled={busy} onClick={onClearCache}>Clear image cache</Button>
         </div>
       </div>
     </Card>
