@@ -8,9 +8,10 @@ import { saveFromPexels } from '../lib/services/mediaService';
  * Pexels search grid — used inside the Media picker. Search (debounced) or curated photos,
  * infinite "Load more", required credit on every card + a "Photos provided by Pexels" line.
  * "Use this image" downloads, compresses, saves to the Media library (bundle) and returns the
- * content hash to the caller. Needs an API key (Settings → Integrations) and internet.
+ * content hash (or the permanent Pexels link) to the caller. Needs an API key
+ * (Settings → Integrations) and internet.
  */
-export function PexelsSearchTab({ onPick }: { onPick: (imageHash: string) => void }) {
+export function PexelsSearchTab({ onPick }: { onPick: (imageValue: string) => void }) {
   const [query, setQuery] = React.useState('');
   const [photos, setPhotos] = React.useState<PexelsPhoto[]>([]);
   const [page, setPage] = React.useState(1);
@@ -48,7 +49,9 @@ export function PexelsSearchTab({ onPick }: { onPick: (imageHash: string) => voi
     setUsingId(photo.id);
     try {
       const asset = await saveFromPexels(photo);
-      if (asset.imageHash) { onPick(asset.imageHash); sonner.success('Image added to your library.'); }
+      const value = asset.imageHash || asset.srcUrls.large || asset.srcUrls.large2x || asset.srcUrls.medium;
+      if (value) { onPick(value); sonner.success('Image added to your library.'); }
+      else sonner.error('Could not save this image.');
     } catch (e: any) {
       sonner.error(e?.message || 'Failed to use image');
     } finally {
