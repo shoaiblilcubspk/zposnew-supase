@@ -107,8 +107,7 @@ export function TransactionFilters({
                 { id: 'last7', label: "Last 7 Days" },
                 { id: 'thisMonth', label: "This Month" },
                 { id: 'lastMonth', label: "Previous Month" },
-                { id: 'custom', label: "Custom Range" },
-                { id: 'all', label: "All Time" }
+                { id: 'custom', label: "Custom Range" }
               ]}
               onPresetChange={val => { setDateFilter(val); setCurrentPage(1); }}
               startDate={startDateInput}

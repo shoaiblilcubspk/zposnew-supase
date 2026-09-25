@@ -24,7 +24,7 @@ export function useSupplierManagerLogic() {
   const canManage = isAdmin || !!profile?.canManagePO;
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('thisMonth');
   const [startDateInput, setStartDateInput] = useState('');
   const [endDateInput, setEndDateInput] = useState('');
   const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);

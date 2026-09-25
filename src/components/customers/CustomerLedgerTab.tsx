@@ -26,7 +26,7 @@ export function CustomerLedgerTab({ customer }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   // Filters
-  const [preset, setPreset] = useState('all');
+  const [preset, setPreset] = useState('thisMonth');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');

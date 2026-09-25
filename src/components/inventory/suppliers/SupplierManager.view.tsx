@@ -115,7 +115,6 @@ export function SupplierManager() {
             <DateRangePicker
               preset={dateFilter}
               presets={[
-                { id: 'all', label: "ALL TIME" },
                 { id: 'today', label: "TODAY" },
                 { id: 'yesterday', label: "YESTERDAY" },
                 { id: 'last7', label: "LAST 7 DAYS" },

@@ -104,8 +104,7 @@ export function PurchaseHistory() {
                 { id: 'last30', label: "LAST 30 DAYS" },
                 { id: 'thisMonth', label: "THIS MONTH" },
                 { id: 'lastMonth', label: "PREVIOUS MONTH" },
-                { id: 'custom', label: "CUSTOM RANGE" },
-                { id: 'all', label: "ALL TIME" }
+                { id: 'custom', label: "CUSTOM RANGE" }
               ]}
               onPresetChange={(val) => { setDateRange(val); setCurrentPage(1); }}
               startDate={startDateInput}

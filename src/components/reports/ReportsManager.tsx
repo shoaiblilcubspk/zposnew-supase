@@ -89,8 +89,7 @@ export function ReportsManager() {
                 { id: 'last7', label: "LAST 7 DAYS" },
                 { id: 'thisMonth', label: "THIS MONTH" },
                 { id: 'lastMonth', label: "PREVIOUS MONTH" },
-                { id: 'custom', label: "CUSTOM RANGE" },
-                { id: 'all', label: "ALL TIME" }
+                { id: 'custom', label: "CUSTOM RANGE" }
               ]}
               onPresetChange={setDateRange}
               startDate={startDateInput}

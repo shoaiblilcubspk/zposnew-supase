@@ -30,7 +30,7 @@ export function CustomerManager() {
   const appSales = useSalesStore(s => s.sales);
   const canManageCustomers = can(appCurrentUser?.role, 'manage_customers');
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('thisMonth');
   const [startDateInput, setStartDateInput] = useState('');
   const [endDateInput, setEndDateInput] = useState('');
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -191,7 +191,6 @@ export function CustomerManager() {
             <SearchableSelect
               label={"RANGE"}
               options={[
-                { id: 'all', label: "ALL TIME" },
                 { id: 'today', label: "TODAY" },
                 { id: 'yesterday', label: "YESTERDAY" },
                 { id: 'last7', label: "LAST 7 DAYS" },

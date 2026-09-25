@@ -166,7 +166,6 @@ export const LEDGER_TYPE_LABELS: Record<string, { label: string; color: string }
 };
 
 export const LEDGER_DATE_PRESETS = [
-  { id: 'all', label: 'All Time' },
   { id: 'today', label: 'Today' },
   { id: 'yesterday', label: 'Yesterday' },
   { id: 'last7', label: 'Last 7 Days' },
