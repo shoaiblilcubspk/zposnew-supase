@@ -373,6 +373,58 @@ export function isImageHash(value: string): boolean {
   return /^[0-9a-f]{64}$/.test(value);
 }
 
+/** Encode raw bytes into a base64 data URI (works in browser and Node). */
+function bytesToDataUri(data: Uint8Array, mimeType: string): string {
+  let base64 = '';
+  if (typeof Buffer !== 'undefined') {
+    base64 = Buffer.from(data).toString('base64');
+  } else {
+    let binary = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < data.length; i += chunk) {
+      binary += String.fromCharCode.apply(null, Array.from(data.subarray(i, i + chunk)) as any);
+    }
+    base64 = btoa(binary);
+  }
+  return `data:${mimeType || 'image/webp'};base64,${base64}`;
+}
+
+/**
+ * Resolve any image value into a value that a plain <img src> can render directly and that
+ * PERSISTS + SYNCS as a string (used for the Store Logo, which is embedded raw in the header
+ * and in print/PNG receipts where an async resolver / object URL is not available).
+ *  - empty            -> undefined
+ *  - data: / http(s)  -> returned unchanged (already renderable)
+ *  - content hash     -> local/bucket bytes -> base64 data URI; else the saved Pexels src URL
+ * Returns the original value as a last resort so selection never silently drops the pick.
+ */
+export async function resolveToRenderable(value: string | undefined | null): Promise<string | undefined> {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  if (isImageHash(trimmed)) {
+    // Local cache or Supabase bucket bytes -> inline data URI (renders everywhere, incl. print).
+    const bytes = await getImageBytesForExport(trimmed).catch(() => null);
+    if (bytes) return bytesToDataUri(bytes.data, bytes.mimeType);
+    // Fall back to the saved Pexels source URL (public, renders raw) if bytes aren't available.
+    try {
+      const { localQueryOne } = await import('../../data');
+      const row = await localQueryOne<{ src_large: string | null; src_medium: string | null; src_large2x: string | null }>(
+        `SELECT src_large, src_medium, src_large2x FROM media_assets WHERE image_hash = ? AND deleted_at IS NULL LIMIT 1;`,
+        [trimmed]
+      ).catch(() => null);
+      const url = row?.src_large || row?.src_medium || row?.src_large2x;
+      if (url) return url;
+    } catch { /* ignore */ }
+    return trimmed;
+  }
+  return trimmed;
+}
+
+
 /**
  * Clear the disposable local image cache (memory + IndexedDB blobs). Rows, links and credit are
  * untouched — images lazily re-download from the bucket or the saved Pexels URL on next view.

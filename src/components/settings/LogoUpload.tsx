@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { X, Image as ImageIcon } from 'lucide-react';
 import { MediaLibrary } from '../../shared/MediaLibrary';
-import { Button } from '../../shared/ui';
+import { resolveToRenderable } from '../../lib/media/localImageStore';
+import { sonner } from '../../lib/sonner';
 
 interface LogoUploadProps {
   currentLogo?: string;
@@ -11,10 +12,20 @@ interface LogoUploadProps {
 
 export function LogoUpload({ currentLogo, onLogoChange, disabled = false }: LogoUploadProps) {
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+  const [brokenLogo, setBrokenLogo] = useState(false);
 
   const removeLogo = () => {
     if (disabled) return;
     onLogoChange(undefined);
+  };
+
+  // The logo is rendered raw (header + print/PNG receipts), so store a directly-renderable
+  // value: a content-hash pick is resolved to a data URI / src URL before saving.
+  const handleSelect = async (value: string) => {
+    setBrokenLogo(false);
+    const renderable = await resolveToRenderable(value);
+    if (!renderable) { sonner.error('Could not load that image.'); return; }
+    onLogoChange(renderable);
   };
 
   return (
@@ -23,11 +34,12 @@ export function LogoUpload({ currentLogo, onLogoChange, disabled = false }: Logo
         Store Logo
       </label>
 
-      {currentLogo ? (
+      {currentLogo && !brokenLogo ? (
         <div className="relative inline-block">
           <img
             src={currentLogo}
             alt="Store Logo"
+            onError={() => setBrokenLogo(true)}
             className="h-20 w-20 object-contain border border-neutral-200 dark:border-white/[0.08] rounded-md bg-white dark:bg-surface p-2 shadow-none"
           />
           <button
@@ -72,7 +84,7 @@ export function LogoUpload({ currentLogo, onLogoChange, disabled = false }: Logo
         <MediaLibrary
           isOpen={showMediaLibrary}
           onClose={() => setShowMediaLibrary(false)}
-          onSelect={onLogoChange}
+          onSelect={handleSelect}
         />
       )}
     </div>

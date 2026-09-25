@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -9,10 +8,6 @@ export default defineConfig(({ mode }) => {
     assetsInclude: ['**/*.wasm'],
     plugins: [
       react(),
-      VitePWA({
-        selfDestroying: true,
-        manifest: false,
-      }),
     ],
     server: {
       port: 5173,

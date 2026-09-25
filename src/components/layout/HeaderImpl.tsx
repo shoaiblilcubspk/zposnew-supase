@@ -95,7 +95,7 @@ export function Header({
         <div className="flex items-center gap-2.5 lg:gap-3 flex-shrink-0">
           <div className="rounded-lg border border-neutral-200 dark:border-white/[0.12] bg-white dark:bg-black/40 overflow-hidden flex items-center justify-center h-10 w-10 sm:h-11 sm:w-11 p-0.5 shrink-0 shadow-sm">
             {appSettings.storeLogo ? (
-              <img src={appSettings.storeLogo} alt="Logo" className="h-full w-full object-contain" />
+              <img src={appSettings.storeLogo} alt="Logo" onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/zaynahs-logo.svg'; }} className="h-full w-full object-contain" />
             ) : (
               <img src="/zaynahs-logo.svg" alt="POS" className="h-full w-full object-contain p-0.5" />
             )}

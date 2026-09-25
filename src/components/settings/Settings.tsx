@@ -7,7 +7,6 @@ import {
   Database,
   ChevronLeft,
   Cloud,
-  Smartphone,
   Lock,
   Mail,
   BookOpen
@@ -171,20 +170,6 @@ export function Settings() {
       )}
 
       <div className="mt-12 pb-32 text-center space-y-4">
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8">
-          {formData.storeWebsite?.trim() && (
-            <Button variant="ghost" onClick={() => window.open(formData.storeWebsite, '_blank')} className="!min-h-0 !p-0 !rounded-none !gap-2 !text-primary hover:!text-emerald-700 !font-bold underline underline-offset-4 decoration-2 decoration-emerald-100 !shadow-none !hover:bg-transparent dark:!hover:bg-transparent">
-              <Globe className="w-4 h-4" />
-              <span className="text-xs uppercase tracking-widest whitespace-nowrap">{formData.storeWebsite}</span>
-            </Button>
-          )}
-          {formData.storeEmail?.trim() && (
-            <Button variant="ghost" onClick={() => window.location.href = `mailto:${formData.storeEmail}`} className="!min-h-0 !p-0 !rounded-none !gap-2 !text-blue-600 hover:!text-blue-700 !font-bold underline underline-offset-4 decoration-2 decoration-blue-100 !shadow-none !hover:bg-transparent dark:!hover:bg-transparent">
-              <Smartphone className="w-4 h-4" />
-              <span className="text-xs uppercase tracking-widest whitespace-nowrap">{formData.storeEmail}</span>
-            </Button>
-          )}
-        </div>
         <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-6">
           <Button variant="ghost" onClick={() => openExternalLink('https://www.zaynahspos.com')} className="!min-h-0 !p-0 !rounded-none !gap-2 !text-primary hover:!text-emerald-700 !font-bold underline underline-offset-4 decoration-2 decoration-emerald-100 !shadow-none !hover:bg-transparent dark:!hover:bg-transparent">
             <Globe className="w-4 h-4" />

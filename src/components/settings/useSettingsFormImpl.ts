@@ -3,6 +3,7 @@ import { useSettingsStore } from '../../stores';
 import { useAuth } from '../../context/AuthContext';
 import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import { sonner } from '../../lib/sonner';
+import { isValidStoreEmail } from '../../lib/validation';
 import { AppSettings } from '../../types';
 import { buildInitialFormData, syncFormDataFromSettings } from './settingsFormData';
 
@@ -139,6 +140,10 @@ export function useSettingsForm() {
     e.preventDefault();
     if (!canEditSettings) {
       sonner.error('You do not have permission to change settings.');
+      return;
+    }
+    if (!isValidStoreEmail(formData.storeEmail)) {
+      sonner.error('Store Email must be a valid email address (or left empty).');
       return;
     }
     setIsSaving(true);

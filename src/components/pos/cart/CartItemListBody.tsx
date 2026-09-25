@@ -1,4 +1,4 @@
-import { Gift, Package, ShoppingCart, Trash2, Minus, Plus, Info } from 'lucide-react';
+import { Gift, Package, ShoppingCart, Trash2, Minus, Plus } from 'lucide-react';
 import { sonner } from '../../../lib/sonner';
 import { CartItem, Bundle } from '../../../types';
 import { formatCurrency } from '../../../lib/currencies';
@@ -239,15 +239,6 @@ export function CartItemListBody({
 
         return (
           <>
-            {/* No Active Promotions Banner */}
-            {cartItems.length > 0 && activePromotions.length === 0 && (
-              <div className="px-3 py-1.5 flex items-center gap-2 bg-amber-500/10 border-b border-amber-500/20">
-                <Info className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
-                  No Active Promotions
-                </span>
-              </div>
-            )}
             {renderedBundlesHeader}
             {renderedBundleSummaries}
             {renderedStandalonesHeader}

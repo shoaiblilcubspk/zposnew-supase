@@ -52,7 +52,7 @@ async function main() {
   assert(raw && raw.deleted_at, 'row still present with a tombstone (not hard-deleted)');
 
   // Bundle for the soft-delete carries the tombstone (so the cloud + other devices get it).
-  const q = db.prepare(`SELECT payload FROM sync_queue ORDER BY created_at DESC LIMIT 1`).get();
+  const q = db.prepare(`SELECT payload FROM sync_queue ORDER BY rowid DESC LIMIT 1`).get();
   const payload = JSON.parse(q.payload);
   assert(payload.rows[0].payload.deleted_at, 'sync bundle carries deleted_at to the cloud');
 
