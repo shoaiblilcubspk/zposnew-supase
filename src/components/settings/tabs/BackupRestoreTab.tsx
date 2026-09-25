@@ -4,9 +4,10 @@ import { Button } from '../../../shared/ui/Button';
 import { Card } from '../../../shared/ui/Card';
 import { CapsLockIndicator } from '../../../shared/ui/CapsLockIndicator';
 import {
-  exportEncrypted, readBackupFile, previewBackup, importBackup,
+  exportEncrypted, exportExcel, readBackupFile, previewBackup, importBackup,
+  previewSpreadsheet, importSpreadsheet,
 } from '../../../lib/backup/backupService';
-import type { ImportPreview } from '../../../lib/backup/importEngine';
+import type { ImportPreviewRow } from '../../../lib/backup/importEngine';
 import { sonner } from '../../../lib/sonner';
 
 export function BackupRestoreTab() {
@@ -15,8 +16,11 @@ export function BackupRestoreTab() {
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [previewRows, setPreviewRows] = useState<ImportPreviewRow[] | null>(null);
   const [files, setFiles] = useState<Record<string, string> | null>(null);
+  const [sheetBuffer, setSheetBuffer] = useState<ArrayBuffer | null>(null);
+
+  const isSpreadsheet = (name: string) => /\.(xlsx|xls|csv)$/i.test(name);
 
   const handleCreateBackup = async () => {
     if (!backupPassword || backupPassword.length < 4) {
@@ -27,17 +31,9 @@ export function BackupRestoreTab() {
     try {
       sonner.loading('Creating encrypted backup...');
       const zpos = await exportEncrypted(backupPassword);
-      const blob = new Blob([zpos], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `zaynahs-backup-${new Date().toISOString().slice(0, 10)}.zpos`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(new Blob([zpos], { type: 'application/json' }), `zaynahs-backup-${new Date().toISOString().slice(0, 10)}.zpos`);
       sonner.dismissAll();
-      sonner.success(`Backup saved: ${(blob.size / 1024).toFixed(1)} KB`);
+      sonner.success('Encrypted backup (.zpos) saved.');
       setBackupPassword('');
     } catch (err: any) {
       sonner.dismissAll();
@@ -47,9 +43,32 @@ export function BackupRestoreTab() {
     }
   };
 
+  const handleExportExcel = async () => {
+    setIsBackingUp(true);
+    try {
+      sonner.loading('Building Excel workbook...');
+      const blob = await exportExcel();
+      downloadBlob(blob, `zaynahs-export-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      sonner.dismissAll();
+      sonner.success('Excel workbook saved (sensitive data excluded).');
+    } catch (err: any) {
+      sonner.dismissAll();
+      sonner.error(err.message || 'Failed to export Excel');
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  function downloadBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPreview(null);
-    setFiles(null);
+    setPreviewRows(null); setFiles(null); setSheetBuffer(null);
     setRestoreFile(e.target.files?.[0] || null);
   };
 
@@ -57,14 +76,21 @@ export function BackupRestoreTab() {
     if (!restoreFile) { sonner.error('Please select a backup file first'); return; }
     setIsImporting(true);
     try {
-      sonner.loading('Reading & verifying backup...');
-      const text = await restoreFile.text();
-      const parsed = await readBackupFile(text, restorePassword || undefined);
-      const pv = await previewBackup(parsed);
-      setFiles(parsed);
-      setPreview(pv);
+      sonner.loading('Reading & verifying...');
+      if (isSpreadsheet(restoreFile.name)) {
+        const buf = await restoreFile.arrayBuffer();
+        const rows = await previewSpreadsheet(buf);
+        setSheetBuffer(buf);
+        setPreviewRows(rows);
+      } else {
+        const text = await restoreFile.text();
+        const parsed = await readBackupFile(text, restorePassword || undefined);
+        const pv = await previewBackup(parsed);
+        setFiles(parsed);
+        setPreviewRows(pv.rows);
+      }
       sonner.dismissAll();
-      sonner.success('Backup verified. Review the changes below, then Import.');
+      sonner.success('Verified. Review the changes below, then Import.');
     } catch (err: any) {
       sonner.dismissAll();
       sonner.error(err.message || 'Failed to read backup');
@@ -74,16 +100,17 @@ export function BackupRestoreTab() {
   };
 
   const handleImport = async () => {
-    if (!files) return;
     setIsImporting(true);
     try {
       sonner.loading('Importing (syncing to cloud & all devices)...');
-      const report = await importBackup(files, 'update');
+      const report = files
+        ? await importBackup(files, 'update')
+        : sheetBuffer ? await importSpreadsheet(sheetBuffer, 'update') : [];
       const inserted = report.reduce((a, r) => a + r.inserted, 0);
       const updated = report.reduce((a, r) => a + r.updated, 0);
       sonner.dismissAll();
       sonner.success(`Import complete: ${inserted} added, ${updated} updated. Syncing to all devices.`);
-      setPreview(null); setFiles(null); setRestoreFile(null); setRestorePassword('');
+      setPreviewRows(null); setFiles(null); setSheetBuffer(null); setRestoreFile(null); setRestorePassword('');
     } catch (err: any) {
       sonner.dismissAll();
       sonner.error(err.message || 'Import failed — nothing was half-saved.');
@@ -121,6 +148,10 @@ export function BackupRestoreTab() {
             <Download className="w-4 h-4" />
             {isBackingUp ? 'Encrypting...' : 'Export Encrypted Backup (.zpos)'}
           </Button>
+          <Button size="md" variant="secondary" disabled={isBackingUp} onClick={handleExportExcel} className="flex items-center justify-center gap-2 w-full sm:w-auto">
+            <Download className="w-4 h-4" />
+            Export as Excel (.xlsx)
+          </Button>
         </div>
       </Card>
 
@@ -138,7 +169,7 @@ export function BackupRestoreTab() {
         <div className="max-w-md space-y-3">
           <div>
             <label className="block text-[12px] font-medium text-neutral-700 dark:text-neutral-300 mb-1">Select Backup (.zpos)</label>
-            <input type="file" accept=".zpos,.json" onChange={handleFileChange}
+            <input type="file" accept=".zpos,.json,.xlsx,.xls,.csv" onChange={handleFileChange}
               className="block w-full text-[12px] text-neutral-500 dark:text-neutral-400 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-[12px] file:bg-neutral-100 dark:file:bg-white/[0.08] file:text-neutral-900 dark:file:text-white" />
           </div>
           {restoreFile && (
@@ -153,7 +184,7 @@ export function BackupRestoreTab() {
             </div>
           )}
 
-          {!preview ? (
+          {!previewRows ? (
             <Button size="md" variant="secondary" disabled={isImporting || !restoreFile} onClick={handlePreview} className="flex items-center justify-center gap-2 w-full sm:w-auto">
               <ListChecks className="w-4 h-4" />
               {isImporting ? 'Reading...' : 'Preview Changes'}
@@ -161,7 +192,7 @@ export function BackupRestoreTab() {
           ) : (
             <>
               <div className="rounded border border-neutral-200 dark:border-white/[0.08] divide-y divide-neutral-100 dark:divide-white/[0.06] max-h-56 overflow-auto">
-                {preview.rows.filter((r) => r.total > 0).map((r) => (
+                {previewRows.filter((r) => r.total > 0).map((r) => (
                   <div key={r.table} className="flex items-center justify-between px-3 py-1.5 text-[12px]">
                     <span className="text-neutral-700 dark:text-neutral-200">{r.table}</span>
                     <span className="text-neutral-500">

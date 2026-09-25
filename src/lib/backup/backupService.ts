@@ -4,9 +4,9 @@
  */
 
 import { ALL_DOMAIN_KEYS } from './domainRegistry';
-import { buildExport, exportToZipBlob, type ExportOptions } from './exportEngineV2';
+import { buildExport, exportToZipBlob, exportToExcelBlob, parseSpreadsheet, type ExportOptions } from './exportEngineV2';
 import { encryptArchive, decryptArchive, isZposEnvelope } from './zposArchive';
-import { buildImportPreview, applyImport, type ImportPreview, type ImportReport, type ConflictMode } from './importEngine';
+import { buildImportPreview, applyImport, previewRows, applyRows, type ImportPreview, type ImportPreviewRow, type ImportReport, type ConflictMode } from './importEngine';
 
 function appVersion(): string {
   try { return (import.meta as any).env?.VITE_APP_VERSION || '1.0.0'; } catch { return '1.0.0'; }
@@ -42,6 +42,28 @@ export async function previewBackup(files: Record<string, string>): Promise<Impo
 
 export async function importBackup(files: Record<string, string>, conflictMode: ConflictMode = 'update'): Promise<ImportReport[]> {
   return applyImport(files, { conflictMode });
+}
+
+/** Export selected domains as a human-readable Excel workbook (one sheet per table). */
+export async function exportExcel(domainKeys: string[] = ALL_DOMAIN_KEYS, opts: ExportOptions = {}): Promise<Blob> {
+  const result = await buildExport(domainKeys, { ...opts, includeSensitive: false, appVersion: appVersion() });
+  return exportToExcelBlob(result);
+}
+
+/** Preview a human-edited spreadsheet (.xlsx/.csv) import (no manifest/checksum). */
+export async function previewSpreadsheet(buffer: ArrayBuffer): Promise<ImportPreviewRow[]> {
+  return previewRows(await parseSpreadsheet(buffer));
+}
+
+/** Import a human-edited spreadsheet via the same bundle pipeline as archives. */
+export async function importSpreadsheet(buffer: ArrayBuffer, conflictMode: ConflictMode = 'update'): Promise<ImportReport[]> {
+  const rowsByTable = await parseSpreadsheet(buffer);
+  const importId = await (async () => {
+    const text = JSON.stringify(Object.keys(rowsByTable).sort()) + Date.now();
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  })();
+  return applyRows(rowsByTable, { conflictMode, importId });
 }
 
 export { ALL_DOMAIN_KEYS };

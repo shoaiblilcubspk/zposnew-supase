@@ -163,4 +163,30 @@ export async function exportToZipBlob(result: ExportResult): Promise<Blob> {
   return zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
 }
 
+/** Package an ExportResult into a human-readable Excel workbook (one sheet per table). */
+export async function exportToExcelBlob(result: ExportResult): Promise<Blob> {
+  const XLSX = await import('xlsx');
+  const wb = XLSX.utils.book_new();
+  for (const [name, content] of Object.entries(result.files)) {
+    const m = /^data\/(.+)\.json$/.exec(name);
+    if (!m) continue;
+    const rows = JSON.parse(content) as Record<string, any>[];
+    const sheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{}]);
+    XLSX.utils.book_append_sheet(wb, sheet, m[1].slice(0, 31)); // Excel sheet name <= 31 chars
+  }
+  const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+
+/** Parse an uploaded .xlsx/.csv into a table->rows map (sheet name = table name). */
+export async function parseSpreadsheet(buffer: ArrayBuffer): Promise<Record<string, any[]>> {
+  const XLSX = await import('xlsx');
+  const wb = XLSX.read(buffer, { type: 'array' });
+  const out: Record<string, any[]> = {};
+  for (const sheetName of wb.SheetNames) {
+    out[sheetName] = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: null }) as any[];
+  }
+  return out;
+}
+
 export { DOMAIN_REGISTRY };

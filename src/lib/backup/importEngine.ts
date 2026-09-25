@@ -62,54 +62,52 @@ export async function verifyArchive(files: Record<string, string>): Promise<Impo
   return m;
 }
 
-/** Dry-run preview: how many rows are new vs already present, per table. No writes. */
-export async function buildImportPreview(files: Record<string, string>): Promise<ImportPreview> {
-  const manifest = await verifyArchive(files);
-  const rows: ImportPreviewRow[] = [];
-  for (const f of manifest.files) {
-    const data = JSON.parse(files[f.file] || '[]') as Record<string, any>[];
-    let existing = 0;
-    if (data.length) {
-      const ids = data.map((r) => r.id).filter(Boolean);
-      const present = new Set(
-        (await localQuery<{ id: string }>(
-          `SELECT id FROM ${f.table} WHERE id IN (${ids.map(() => '?').join(',')});`, ids
-        ).catch(() => [])).map((r) => r.id)
-      );
-      existing = data.filter((r) => present.has(r.id)).length;
-    }
-    rows.push({ table: f.table, total: data.length, newRows: data.length - existing, existing, appendOnly: f.appendOnly });
-  }
-  return { manifest, rows };
-}
-
 function stableOpId(importId: string, table: string, chunk: number): string {
   return `import-${importId.slice(0, 12)}-${table}-${chunk}`;
 }
 
-/** Apply the archive via bundles. Idempotent + chunked; returns a per-table report. */
-export async function applyImport(files: Record<string, string>, opts: { conflictMode?: ConflictMode } = {}): Promise<ImportReport[]> {
-  const manifest = await verifyArchive(files);
-  const conflictMode: ConflictMode = opts.conflictMode ?? 'update';
-  const importId = await sha256Hex(files['manifest.json']);
-  const report: ImportReport[] = [];
-
-  // Apply domains in registry (dependency) order so parents land before children.
-  const orderedTables: Array<{ table: string; appendOnly: boolean }> = [];
+/** Order the tables present in `rowsByTable` by registry (dependency) order + append-only flag. */
+function orderTables(rowsByTable: Record<string, any[]>): Array<{ table: string; appendOnly: boolean }> {
+  const out: Array<{ table: string; appendOnly: boolean }> = [];
   for (const def of DOMAIN_REGISTRY) {
-    if (!manifest.domains.includes(def.key)) continue;
     for (const t of def.tables) {
-      const mf = manifest.files.find((f) => f.table === t.name);
-      if (mf) orderedTables.push({ table: t.name, appendOnly: mf.appendOnly });
+      if (rowsByTable[t.name] && !out.some((o) => o.table === t.name)) {
+        out.push({ table: t.name, appendOnly: Boolean(t.appendOnly) });
+      }
     }
   }
+  return out;
+}
 
-  for (const { table, appendOnly } of orderedTables) {
-    const mf = manifest.files.find((f) => f.table === table)!;
-    const data = JSON.parse(files[mf.file] || '[]') as Record<string, any>[];
+/** Preview (no writes) from a table->rows map. Works for archives AND spreadsheet/JSON imports. */
+export async function previewRows(rowsByTable: Record<string, any[]>): Promise<ImportPreviewRow[]> {
+  const rows: ImportPreviewRow[] = [];
+  for (const { table, appendOnly } of orderTables(rowsByTable)) {
+    const data = rowsByTable[table] || [];
+    let existing = 0;
+    const ids = data.map((r) => r.id).filter(Boolean);
+    if (ids.length) {
+      const present = new Set(
+        (await localQuery<{ id: string }>(
+          `SELECT id FROM ${table} WHERE id IN (${ids.map(() => '?').join(',')});`, ids
+        ).catch(() => [])).map((r) => r.id)
+      );
+      existing = data.filter((r) => r.id && present.has(r.id)).length;
+    }
+    rows.push({ table, total: data.length, newRows: data.length - existing, existing, appendOnly });
+  }
+  return rows;
+}
+
+/** Core apply: partition new/existing, chunk into idempotent bundles, per registry order. */
+export async function applyRows(rowsByTable: Record<string, any[]>, opts: { conflictMode?: ConflictMode; importId: string }): Promise<ImportReport[]> {
+  const conflictMode: ConflictMode = opts.conflictMode ?? 'update';
+  const report: ImportReport[] = [];
+
+  for (const { table, appendOnly } of orderTables(rowsByTable)) {
+    const data = rowsByTable[table] || [];
     let inserted = 0, updated = 0, skipped = 0;
 
-    // Partition into new vs existing (single lookup).
     const ids = data.map((r) => r.id).filter(Boolean);
     const present = new Set<string>();
     for (let i = 0; i < ids.length; i += 500) {
@@ -131,16 +129,34 @@ export async function applyImport(files: Record<string, string>, opts: { conflic
       } else { skipped++; }
     }
 
-    // Chunk the ops into idempotent bundles.
     for (let i = 0; i < ops.length; i += CHUNK) {
-      const chunk = ops.slice(i, i + CHUNK);
-      await atomicWrite(chunk, { operation_id: stableOpId(importId, table, i / CHUNK), action: `import_${table}` });
+      await atomicWrite(ops.slice(i, i + CHUNK), { operation_id: stableOpId(opts.importId, table, i / CHUNK), action: `import_${table}` });
     }
     report.push({ table, inserted, updated, skipped });
   }
+  return report;
+}
 
-  // Upload any bundled image files into THIS project's bucket (content-addressed; no old-project
-  // URL is ever stored — rows reference the hash, resolved against the current bucket).
+/** Parse a verified archive's data files into a table->rows map. */
+function archiveToRows(manifest: ImportManifest, files: Record<string, string>): Record<string, any[]> {
+  const out: Record<string, any[]> = {};
+  for (const f of manifest.files) out[f.table] = JSON.parse(files[f.file] || '[]');
+  return out;
+}
+
+/** Dry-run preview for a verified archive. */
+export async function buildImportPreview(files: Record<string, string>): Promise<ImportPreview> {
+  const manifest = await verifyArchive(files);
+  return { manifest, rows: await previewRows(archiveToRows(manifest, files)) };
+}
+
+/** Apply a verified archive via bundles (idempotent), then upload any bundled image files. */
+export async function applyImport(files: Record<string, string>, opts: { conflictMode?: ConflictMode } = {}): Promise<ImportReport[]> {
+  const manifest = await verifyArchive(files);
+  const importId = await sha256Hex(files['manifest.json']);
+  const report = await applyRows(archiveToRows(manifest, files), { conflictMode: opts.conflictMode, importId });
+
+  // Upload bundled image files into THIS project's bucket (content-addressed; no old URL stored).
   const b64ToU8 = (s: string): Uint8Array => {
     if (typeof Buffer !== 'undefined') return new Uint8Array(Buffer.from(s, 'base64'));
     const bin = atob(s); const o = new Uint8Array(bin.length);
@@ -150,9 +166,8 @@ export async function applyImport(files: Record<string, string>, opts: { conflic
   for (const [name, content] of Object.entries(files)) {
     const m = /^images\/([0-9a-f]{64})\.webp$/.exec(name);
     if (!m) continue;
-    try { await saveImportedImage(m[1], b64ToU8(content), 'image/webp'); } catch { /* image best-effort */ }
+    try { await saveImportedImage(m[1], b64ToU8(content), 'image/webp'); } catch { /* best-effort */ }
   }
-
   return report;
 }
 
