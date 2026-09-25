@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { User } from '../types';
 import { sonner } from '../lib/sonner';
 import { initDb } from '../lib/db';
-import { initDataLayer } from '../data';
+import { initDataLayer, pullNow } from '../data';
 import {
   isFirstLaunch as checkFirstLaunch,
   loginWithPin,
@@ -57,14 +57,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function initAuth() {
       try {
         await initDb();
-        // Bring up the Supabase-only data layer (mirror + pull + push worker) and WAIT for the
-        // initial pull so staff_users is populated before the first-launch check below.
+        // Bring up the Supabase-only data layer (mirror + push/pull workers). The initial pull
+        // is time-boxed so boot never hangs offline.
         try {
           await initDataLayer();
         } catch (e) {
           console.warn('[dataLayer] init skipped:', (e as Error).message);
         }
-        const firstLaunch = await checkFirstLaunch();
+        let firstLaunch = await checkFirstLaunch();
+
+        // Guard against the "setup screen flashes on first load, gone after refresh" race:
+        // a fresh device's local mirror is empty until the first pull lands staff_users. If we
+        // look "first launch" but we're ONLINE, poll for a real pull (up to ~12s) before deciding
+        // — only a genuinely empty cloud (or a truly offline fresh device) shows First-Time Setup.
+        if (firstLaunch && typeof navigator !== 'undefined' && navigator.onLine) {
+          const deadline = Date.now() + 12000;
+          while (mounted && Date.now() < deadline) {
+            try { await pullNow(); } catch { /* keep polling */ }
+            firstLaunch = await checkFirstLaunch();
+            if (!firstLaunch) break;
+            await new Promise((r) => setTimeout(r, 700));
+          }
+        }
         if (!mounted) return;
 
         if (firstLaunch) {
