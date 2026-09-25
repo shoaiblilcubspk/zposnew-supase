@@ -9,6 +9,7 @@
  */
 
 import { localQuery } from '../../data';
+import { getImageBytesForExport, isImageHash } from '../media/localImageStore';
 import { DOMAIN_REGISTRY, getDomain, withDependencies, type DomainDef } from './domainRegistry';
 
 export const EXPORT_FORMAT_VERSION = 2;
@@ -42,6 +43,34 @@ export interface ExportOptions {
   includeSensitive?: boolean;
   autoIncludeDeps?: boolean;
   appVersion?: string;
+  /** Bundle the actual image files into the archive (images/{hash}.webp, base64). */
+  includeImages?: boolean;
+}
+
+function u8ToB64(b: Uint8Array): string {
+  if (typeof Buffer !== 'undefined') return Buffer.from(b).toString('base64');
+  let s = ''; for (const x of b) s += String.fromCharCode(x); return btoa(s);
+}
+
+/** Collect content-addressed image hashes referenced by the exported rows. */
+function collectImageHashes(files: Record<string, string>): Set<string> {
+  const hashes = new Set<string>();
+  const scan = (table: string, cols: string[]) => {
+    const raw = files[`data/${table}.json`];
+    if (!raw) return;
+    try {
+      for (const row of JSON.parse(raw) as Record<string, any>[]) {
+        for (const c of cols) {
+          const v = row[c];
+          if (typeof v === 'string' && isImageHash(v)) hashes.add(v);
+        }
+      }
+    } catch { /* ignore */ }
+  };
+  scan('products', ['image_hash']);
+  scan('product_images', ['image_hash']);
+  scan('bundles', ['image']);
+  return hashes;
 }
 
 async function sha256Hex(text: string): Promise<string> {
@@ -105,6 +134,21 @@ export async function buildExport(domainKeys: string[], opts: ExportOptions = {}
     files: manifestFiles,
     totalRows,
   };
+
+  // Optionally bundle the actual image files (content-addressed) so a cross-project import can
+  // re-upload them to the new bucket. Missing images are recorded, not fatal.
+  const images: string[] = [];
+  const missingImages: string[] = [];
+  if (opts.includeImages) {
+    for (const hash of collectImageHashes(files)) {
+      const got = await getImageBytesForExport(hash);
+      if (got) { files[`images/${hash}.webp`] = u8ToB64(got.data); images.push(hash); }
+      else missingImages.push(hash);
+    }
+    (manifest as any).images = images;
+    (manifest as any).missingImages = missingImages;
+  }
+
   files['manifest.json'] = JSON.stringify(manifest, null, 2);
 
   return { manifest, files };

@@ -16,6 +16,7 @@
  */
 
 import { localQuery, atomicWrite, type AtomicOp } from '../../data';
+import { saveImportedImage } from '../media/localImageStore';
 import { DOMAIN_REGISTRY, getDomain } from './domainRegistry';
 
 const CHUNK = 200;
@@ -136,6 +137,20 @@ export async function applyImport(files: Record<string, string>, opts: { conflic
       await atomicWrite(chunk, { operation_id: stableOpId(importId, table, i / CHUNK), action: `import_${table}` });
     }
     report.push({ table, inserted, updated, skipped });
+  }
+
+  // Upload any bundled image files into THIS project's bucket (content-addressed; no old-project
+  // URL is ever stored — rows reference the hash, resolved against the current bucket).
+  const b64ToU8 = (s: string): Uint8Array => {
+    if (typeof Buffer !== 'undefined') return new Uint8Array(Buffer.from(s, 'base64'));
+    const bin = atob(s); const o = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) o[i] = bin.charCodeAt(i);
+    return o;
+  };
+  for (const [name, content] of Object.entries(files)) {
+    const m = /^images\/([0-9a-f]{64})\.webp$/.exec(name);
+    if (!m) continue;
+    try { await saveImportedImage(m[1], b64ToU8(content), 'image/webp'); } catch { /* image best-effort */ }
   }
 
   return report;

@@ -113,6 +113,34 @@ export async function getImageData(hash: string): Promise<Uint8Array | null> {
   return null;
 }
 
+/**
+ * Backup export: get an image's raw bytes — local cache/IndexedDB first, then the Supabase
+ * bucket. Returns null if the image cannot be found anywhere (listed as "missing" in the report).
+ */
+export async function getImageBytesForExport(hash: string): Promise<{ data: Uint8Array; mimeType: string } | null> {
+  const local = await getImageData(hash);
+  if (local) return { data: local, mimeType: memoryImageCache.get(hash)?.mimeType || 'image/webp' };
+  const fetched = await downloadImageFromBucket(hash);
+  if (fetched) {
+    memoryImageCache.set(hash, fetched);
+    return fetched;
+  }
+  return null;
+}
+
+/**
+ * Backup import: store an image that came from an archive into THIS project — cache it locally
+ * and upload it to this project's Supabase bucket. Content-addressed, so importing the same
+ * image twice is a no-op. No old-project URL is stored anywhere (images are keyed by hash).
+ */
+export async function saveImportedImage(hash: string, data: Uint8Array, mimeType = 'image/webp'): Promise<void> {
+  if (!hash) return;
+  memoryImageCache.set(hash, { data, mimeType });
+  await putStoredBlob(hash, data, mimeType);
+  notifyImageSaved(hash);
+  await uploadImageToBucket(hash, data, mimeType);
+}
+
 export async function getImageUrl(hash: string): Promise<string | null> {
   let cached = memoryImageCache.get(hash);
   if (!cached) {
