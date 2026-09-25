@@ -230,6 +230,7 @@ export function RealIcon({
         className
       )}
       loading="eager"
+      decoding="async"
       draggable={false}
       {...props}
     />
