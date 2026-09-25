@@ -70,7 +70,7 @@ export const TouchKeyboard = React.memo(function TouchKeyboard(props: TouchKeybo
     >
       <div 
         ref={innerRef}
-        className="relative bg-neutral-50 dark:bg-neutral-950 rounded-t-lg shadow-xl border border-neutral-200 dark:border-white/[0.08] overflow-hidden flex flex-col"
+        className="relative bg-neutral-100 dark:bg-neutral-950 rounded-t-lg shadow-2xl border border-neutral-300 dark:border-white/[0.08] overflow-hidden flex flex-col"
         style={{
           transformOrigin: 'bottom center',
           transform: `scale(${scale})`,

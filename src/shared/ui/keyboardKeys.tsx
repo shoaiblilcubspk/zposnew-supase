@@ -13,30 +13,32 @@ export function KeyboardKey({
   onPointerUp: (e: React.PointerEvent) => void;
 }) {
   let content: React.ReactNode = k;
-  let extraClasses = "text-sm sm:text-base font-medium flex-1 h-10 sm:h-12";
+  // High-contrast, solid keys (readable in BOTH light and dark). Letters get an explicit text
+  // colour so they never inherit a faint/invisible colour from the tray.
+  let extraClasses = "text-sm sm:text-base font-semibold flex-1 h-10 sm:h-12 text-neutral-900 dark:text-white";
 
   if (k === 'BKSP') {
     content = <Delete className="w-5 h-5" />;
-    extraClasses += " bg-gray-200/50 dark:bg-white/5 text-red-500 max-w-[60px] sm:max-w-[70px]";
+    extraClasses += " bg-rose-500/10 text-rose-600 dark:text-rose-400 max-w-[60px] sm:max-w-[70px]";
   } else if (k === 'ENTER') {
     content = <CornerDownLeft className="w-5 h-5" />;
-    extraClasses += " bg-primary/10 text-primary max-w-[60px] sm:max-w-[70px]";
+    extraClasses += " bg-primary/15 text-primary max-w-[60px] sm:max-w-[70px]";
   } else if (k === 'SHIFT') {
     content = <Type className="w-4 h-4" />;
-    extraClasses += ` max-w-[50px] sm:max-w-[60px] ${isCaps ? 'bg-primary/20 text-primary ring-2 ring-primary/50' : 'bg-gray-200/50 dark:bg-white/5'}`;
+    extraClasses += ` max-w-[50px] sm:max-w-[60px] ${isCaps ? 'bg-primary/20 text-primary ring-2 ring-primary/50' : 'bg-neutral-200 dark:bg-white/10 text-neutral-700 dark:text-neutral-200'}`;
   } else if (k === 'SPACE') {
     content = <Space className="w-6 h-6" />;
-    extraClasses += " w-full max-w-[200px] sm:max-w-[300px]";
+    extraClasses += " w-full max-w-[200px] sm:max-w-[300px] bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200";
   } else if (['?123', 'ABC', '=\\<'].includes(k)) {
-    extraClasses += " bg-gray-200/50 dark:bg-white/5 max-w-[60px] sm:max-w-[70px] text-xs font-bold";
+    extraClasses += " bg-neutral-200 dark:bg-white/10 text-neutral-800 dark:text-neutral-100 max-w-[60px] sm:max-w-[70px] text-xs font-bold";
   } else if (k === 'HIDE') {
     content = <KeyboardIcon className="w-5 h-5" />;
-    extraClasses += " bg-gray-200/50 dark:bg-white/5 max-w-[50px] sm:max-w-[60px]";
+    extraClasses += " bg-neutral-200 dark:bg-white/10 text-neutral-700 dark:text-neutral-200 max-w-[50px] sm:max-w-[60px]";
   } else if (k === 'CALC') {
     content = <Hash className="w-5 h-5" />;
-    extraClasses += " bg-amber-500/10 text-amber-500 max-w-[60px] sm:max-w-[70px]";
+    extraClasses += " bg-amber-500/10 text-amber-600 dark:text-amber-400 max-w-[60px] sm:max-w-[70px]";
   } else {
-    extraClasses += " bg-white/50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 active:scale-95";
+    extraClasses += " bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 active:scale-95 shadow-sm";
   }
 
   if (k === 'SPACE' || ['?123', 'ABC', '=\\<'].includes(k)) {
@@ -46,7 +48,7 @@ export function KeyboardKey({
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        className={`flex items-center justify-center rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none transition-colors select-none touch-none ${extraClasses}`}
+        className={`flex items-center justify-center rounded-md border border-neutral-300 dark:border-white/[0.12] shadow-sm transition-colors select-none touch-none ${extraClasses}`}
       >
         {content}
       </button>
@@ -59,7 +61,7 @@ export function KeyboardKey({
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      className={`flex items-center justify-center rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none transition-colors select-none touch-none active:bg-neutral-200 dark:active:bg-white/20 ${extraClasses}`}
+      className={`flex items-center justify-center rounded-md border border-neutral-300 dark:border-white/[0.12] shadow-sm transition-all select-none touch-none active:bg-neutral-200 dark:active:bg-white/20 ${extraClasses}`}
     >
       {isCaps && k.length === 1 ? k.toUpperCase() : k}
     </button>
