@@ -148,15 +148,16 @@ export const buildExportRows = (
     const cashierName = sale.cashier || 'System';
     const cashierAt = cashierUser?.username ? `@${cashierUser.username}` : '';
 
-    const itemsList = sale.items.map(item => {
+    const saleItems = sale.items || [];
+    const itemsList = saleItems.map(item => {
       const sku = item.product?.sku ? ` [${item.product.sku}]` : '';
       return `${item.product?.name || 'Item'}${sku} x ${item.quantity} @ ${formatNumberWithPrecision(item.price || 0)}`;
     }).join('; ');
 
-    const totalItemsQty = sale.items.reduce((sum, item) => sum + item.quantity, 0);
+    const totalItemsQty = saleItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
     const dateObj = new Date(sale.timestamp);
 
-    const totalCostLocal = sale.items.reduce((sum, item) => {
+    const totalCostLocal = saleItems.reduce((sum, item) => {
       return sum + (item.purchaseCost ?? (item.product?.cost || 0) * item.quantity);
     }, 0);
 
