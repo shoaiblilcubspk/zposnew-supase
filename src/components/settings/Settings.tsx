@@ -9,6 +9,7 @@ import {
   Cloud,
   Smartphone,
   Lock,
+  Mail,
   BookOpen
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -16,6 +17,7 @@ import { ReceiptPrint } from '../pos/ReceiptPrint';
 import { Button, RealIcon, ScrollableTabBar, type RealIconName } from '../../shared/ui';
 import { SETTINGS_TABS } from '../../shared/navigation/tabRegistry';
 import { StickyFormFooter } from '../../shared/ui/StickyFormFooter';
+import { openExternalLink, openMail } from '../../lib/urlHelper';
 
 import { GeneralSettings } from './tabs/GeneralSettings';
 import { ReceiptSettings } from './tabs/ReceiptSettings';
@@ -183,7 +185,17 @@ export function Settings() {
             </Button>
           )}
         </div>
-        <p className="text-[10px] text-gray-600 font-bold uppercase tracking-[0.2em]">Crafted for peak performance & enterprise reliability</p>
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-6">
+          <Button variant="ghost" onClick={() => openExternalLink('https://www.zaynahspos.com')} className="!min-h-0 !p-0 !rounded-none !gap-2 !text-primary hover:!text-emerald-700 !font-bold underline underline-offset-4 decoration-2 decoration-emerald-100 !shadow-none !hover:bg-transparent dark:!hover:bg-transparent">
+            <Globe className="w-4 h-4" />
+            <span className="text-xs uppercase tracking-widest whitespace-nowrap">Zaynahspos.com</span>
+          </Button>
+          <Button variant="ghost" onClick={() => openMail('zaynahspos@gmail.com')} className="!min-h-0 !p-0 !rounded-none !gap-2 !text-blue-600 hover:!text-blue-700 !font-bold underline underline-offset-4 decoration-2 decoration-blue-100 !shadow-none !hover:bg-transparent dark:!hover:bg-transparent">
+            <Mail className="w-4 h-4" />
+            <span className="text-xs uppercase tracking-widest whitespace-nowrap">zaynahspos@gmail.com</span>
+          </Button>
+        </div>
+        <button type="button" onClick={() => openExternalLink('https://www.zaynahspos.com')} className="text-[10px] text-gray-600 font-bold uppercase tracking-[0.2em] hover:text-primary transition-colors cursor-pointer">Crafted for peak performance &amp; enterprise reliability</button>
       </div>
       {showReceipt && completedSale && (
         <ReceiptPrint sale={completedSale} onClose={() => setShowReceipt(false)} />
