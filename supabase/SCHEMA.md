@@ -130,6 +130,15 @@
   column; when a flag is absent the app falls back to the role default (no lockout). Stored as
   TEXT (not jsonb) so push/pull stay symmetric with the local SQLite TEXT mirror.
 
+### Integration settings + future-proof apply_bundle (0020 → 0022)
+- **integration_settings** (generic key/value): `id`, `operation_id`, `key_name` (unique),
+  `key_value`, `metadata`, `updated_by`, `created_at`, `updated_at`. Holds third-party keys
+  (e.g. Pexels `key_name='pexels_api_key'`), synced to all devices; single-shop anon policy.
+- **apply_bundle (0021)** is now future-proof: instead of a hardcoded table allowlist it accepts
+  any EXISTING `public` table except an infra deny-list (bundle_operations, repair_quarantine,
+  _migrations, sync_pull_cursor, sync_queue). A new synced table works through bundles with no
+  RPC change (AGENTS.md §1.5.12). Append-only classification stays explicit.
+
 ### Repair safety net (0015)
 - **repair_quarantine**: `id`, `table_name`, `row_id`, `payload` (jsonb), `reason`, `created_at`.
   RLS enabled with `anon/authenticated` all-access. `scripts/repair-halfsaved.mjs` moves

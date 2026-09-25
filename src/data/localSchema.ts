@@ -314,6 +314,12 @@ export const LOCAL_SCHEMA_STATEMENTS: string[] = [
     entity_type TEXT, entity_id TEXT, details TEXT, created_at TEXT NOT NULL
   );`,
 
+  // ---- integration_settings (third-party API keys, e.g. Pexels; generic KV, synced) ----
+  `CREATE TABLE IF NOT EXISTS integration_settings (
+    id TEXT PRIMARY KEY, operation_id TEXT NOT NULL UNIQUE, key_name TEXT NOT NULL UNIQUE,
+    key_value TEXT, metadata TEXT, updated_by TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+  );`,
+
   // ---- sync_queue (local-only; never synced) ----
   `CREATE TABLE IF NOT EXISTS sync_queue (
     operation_id TEXT PRIMARY KEY,
@@ -360,6 +366,7 @@ export const SYNCED_TABLES = [
   'expense_categories', 'expenses', 'purchase_records', 'roles', 'staff_users', 'audit_logs',
   'stock_history', 'variant_stock_history', 'price_history', 'sale_audit_log',
   'toppings', 'product_addons', 'salesmen', 'purchase_orders', 'purchase_order_items',
+  'integration_settings',
 ] as const;
 
 export type SyncedTable = (typeof SYNCED_TABLES)[number];

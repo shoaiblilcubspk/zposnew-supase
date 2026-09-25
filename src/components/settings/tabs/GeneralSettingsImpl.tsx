@@ -1,6 +1,7 @@
 import { Sliders } from 'lucide-react';
 import { GeneralModules } from './GeneralModules';
 import { GeneralStoreIdentity, GeneralLocalization } from './generalCards';
+import { IntegrationsCard } from './IntegrationsCard';
 import type { SettingsTabProps } from './types';
 
 export function GeneralSettings(props: SettingsTabProps) {
@@ -24,6 +25,8 @@ export function GeneralSettings(props: SettingsTabProps) {
             handleChange={handleChange}
             handleInstantUpdate={handleInstantUpdate}
           />
+
+          <IntegrationsCard />
         </div>
 
         <GeneralModules {...props} />
