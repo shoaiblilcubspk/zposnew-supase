@@ -26,7 +26,10 @@ async function initSqlJsEngine(): Promise<SqlJsStatic> {
 
   if (!isNode && typeof fetch !== 'undefined') {
     try {
-      const res = await fetch('/sql-wasm.wasm?v=pos12', { cache: 'no-cache' });
+      // Same-origin, precached by the service worker (globPatterns includes **/*.wasm) so this
+      // resolves instantly and works fully offline. No `?v=` query / no-cache so the precache
+      // entry matches (a query param would bypass the precache and fail offline).
+      const res = await fetch('/sql-wasm.wasm');
       if (res.ok) {
         const buf = await res.arrayBuffer();
         const h = new Uint8Array(buf.slice(0, 4));

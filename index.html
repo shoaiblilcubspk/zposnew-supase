@@ -156,17 +156,22 @@
         document.head.appendChild(_newLink);
       }
 
-      // ── Service Worker: NONE (ZERO-CACHE mandate) ──
-      // This app uses no service worker (VitePWA removed). A stale self-destroying SW from an
-      // older build used to call clients.navigate() on activate, forcing an EXTRA reload on
-      // every load (slow reloads). We now unregister any legacy SW ASAP on ALL environments so
-      // it can never do that again. /sw.js is a no-navigate kill-switch for the same reason.
+      // ── Service Worker ──
+      // Registration is handled by VitePWA (injectRegister:'auto' → registerSW.js) which installs
+      // a precache SW so the app shell loads instantly and works offline. Do NOT unregister it
+      // here. autoUpdate ships a fresh revisioned precache each deploy (no stale cache, no reload
+      // loop). Only strip a legacy SW on localhost/dev so stale dev builds never get served.
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function (registrations) {
-          for (var i = 0; i < registrations.length; i++) {
-            registrations[i].unregister();
-          }
-        }).catch(function () {});
+        var _isLocalDev = (
+          location.hostname === 'localhost' ||
+          location.hostname === '127.0.0.1' ||
+          location.port === '5173'
+        );
+        if (_isLocalDev) {
+          navigator.serviceWorker.getRegistrations().then(function (registrations) {
+            for (var i = 0; i < registrations.length; i++) { registrations[i].unregister(); }
+          }).catch(function () {});
+        }
       }
     })();
   </script>

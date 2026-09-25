@@ -70,12 +70,21 @@ export async function initDataLayer(): Promise<InitResult> {
   const bootstrapped = await needsBootstrap();
   let pulled: Record<string, number> = {};
   try {
-    pulled = await pullAll();
+    // Time-box the initial pull so a slow/half-connected network can NEVER hang boot (local-first:
+    // first paint must not wait on the cloud). If it times out, the background pull loop + the
+    // 'online'/focus handlers below converge as soon as the network is usable.
+    const INITIAL_PULL_TIMEOUT_MS = 4000;
+    pulled = await Promise.race([
+      pullAll(),
+      new Promise<Record<string, number>>((_, reject) =>
+        setTimeout(() => reject(new Error('initial pull timed out')), INITIAL_PULL_TIMEOUT_MS)
+      ),
+    ]);
     lastPullAt = Date.now();
     lastPullOk = true;
   } catch (e) {
     lastPullOk = false;
-    console.warn('[dataLayer] initial pull skipped (likely offline):', (e as Error).message);
+    console.warn('[dataLayer] initial pull skipped (offline/slow):', (e as Error).message);
   }
 
   startSyncWorker();

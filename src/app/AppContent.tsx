@@ -29,6 +29,15 @@ export function AppContent() {
   const [isTerminalLocked, setIsTerminalLocked] = useState(() => {
     return localStorage.getItem('pos_terminal_locked') === 'true';
   });
+  const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
+
+  useEffect(() => {
+    const on = () => setIsOffline(false);
+    const off = () => setIsOffline(true);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
 
   const handleLockTerminal = () => {
     localStorage.setItem('pos_terminal_locked', 'true');
@@ -71,7 +80,14 @@ export function AppContent() {
         }}
         style={{ zIndex: 999999 }}
       />
-      
+
+      {isOffline && (
+        <div className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+72px)] md:bottom-3 left-1/2 -translate-x-1/2 z-[999998] flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900/90 dark:bg-[#1a1a1e]/95 backdrop-blur-xl border border-white/10 shadow-2xl">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+          <span className="text-[11px] font-medium text-white tracking-tight">Offline — saved locally, will sync when back online</span>
+        </div>
+      )}
+
       {loading || (user && !appCurrentUser && appLoading) ? (
         <SkeletonLoader type="list" count={8} />
       ) : (
