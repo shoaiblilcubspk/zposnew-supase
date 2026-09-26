@@ -109,8 +109,8 @@ export function BulkEditModal({ isOpen, onClose, selectedIds, categories, suppli
         isOpen={isOpen}
         onClose={onClose}
         title="Batch Edit Products"
-        description="Fields left unchanged or blank will remain as they currently are on each target product."
-        size="lg"
+        subtitle="Fields left unchanged or blank will remain as they currently are on each target product."
+        maxWidth="lg"
         footer={footer}
       >
         <div className="space-y-6">

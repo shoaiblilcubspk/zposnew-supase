@@ -118,7 +118,7 @@ export function FastLockModal({ isOpen, onUnlock }: FastLockModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] animate-in fade-in duration-150">
       <div className="w-full max-w-sm bg-surface border border-gray-200 dark:border-white/[0.08] rounded-md shadow-2xl p-6 flex flex-col items-center">
         {/* Terminal Header */}
         <div className="flex items-center gap-2 mb-4">

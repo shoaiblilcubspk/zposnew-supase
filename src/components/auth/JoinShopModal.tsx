@@ -13,7 +13,7 @@ interface Props {
 export function JoinShopModal({ open, onClose }: Props) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom)+var(--bottom-nav-clearance))] md:pb-4" onClick={onClose}>
       <div
         className="w-[min(420px,92vw)] rounded-xl border border-white/[0.08] bg-neutral-900 p-5 text-neutral-200"
         onClick={(e) => e.stopPropagation()}

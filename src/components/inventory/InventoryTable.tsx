@@ -208,11 +208,12 @@ export function InventoryTable({
                 onClick={() => handleEditProduct(product)}
                 className={`relative flex flex-col p-2.5 sm:p-4 rounded-md bg-white dark:bg-surface border border-neutral-200 dark:border-white/[0.08] shadow-none transition-colors group ${selectedProductIds.includes(product.id) ? 'border-primary bg-primary/5' : ''}`}
               >
-                {/* Selection Toggle */}
+                {/* Selection Toggle — pinned top-LEFT to match desktop's leftmost checkbox column
+                    (consistent corner across breakpoints; never centered). */}
                 <Button
                   variant="ghost"
                   onClick={(e) => { e.stopPropagation(); handleSelectProduct(product.id); }}
-                  className="absolute top-1.5 right-1.5 z-20 !h-auto !min-h-0 !p-0 !bg-transparent"
+                  className="absolute top-1.5 left-1.5 z-20 !h-auto !min-h-0 !p-0 !bg-transparent"
                 >
                   {selectedProductIds.includes(product.id) ? (
                     <div className="bg-primary rounded p-1">
