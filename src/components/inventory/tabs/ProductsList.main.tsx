@@ -162,7 +162,7 @@ export function ProductsList({
   if (showBarcodeGenerator) {
     return (
       <div className="fixed inset-0 z-[450] bg-white dark:bg-surface animate-in fade-in zoom-in-95 duration-300 flex flex-col">
-        <div className="flex-shrink-0 flex items-center gap-4 px-4 py-2.5 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-app">
+        <div className="flex-shrink-0 flex items-center gap-4 px-4 py-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] border-b border-gray-200 dark:border-white/10 bg-white dark:bg-app">
           <Button variant="ghost" onClick={() => {
             setShowBarcodeGenerator(false);
             setBarcodeProducts([]);

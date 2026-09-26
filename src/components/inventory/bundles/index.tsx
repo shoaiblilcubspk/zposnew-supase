@@ -191,7 +191,7 @@ export function BundleManager() {
 
       {/* ─── BUNDLE BARCODE PRINT (shared Barcode Print Engine) ─── */}
       {printBundle && (
-        <div className="fixed inset-0 z-[200] bg-black/40 flex items-center justify-center p-2 sm:p-6">
+        <div className="fixed inset-0 z-[200] bg-black/40 flex items-center justify-center p-2 sm:p-6 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-[calc(0.5rem+env(safe-area-inset-bottom)+var(--bottom-nav-clearance))] md:pb-6">
           <div className="relative w-full max-w-6xl h-[90vh] bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-200 dark:border-white/[0.08]">
               <h3 className="text-sm font-semibold text-neutral-900 dark:text-white truncate">

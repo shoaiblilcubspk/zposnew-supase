@@ -278,6 +278,33 @@ Every dialog in the application must strictly adhere to desktop-grade engineerin
 * ❌ **NO CENTERING CONTENT RANDOMLY:** Form labels left-aligned, numbers right-aligned, actions right-aligned.
 * ❌ **NO WASTED WHITESPACE:** Keep padding tight (`p-4` to `p-6` max). A desktop POS operator should never have to scroll excessively to fill out a 4-field form.
 
+### 17.5 Mobile Safe-Area & Bottom-Nav Clearance (MANDATORY — fix once, applies everywhere)
+Every popup/modal/sheet MUST keep a consistent gap from the device edges on mobile (PWA +
+installed app) — never flush against the status bar/notch at the top or the floating bottom
+navigation / home indicator at the bottom. This is enforced ONCE in the shared components, not
+per-screen:
+
+* **Single source of truth:** `src/shared/ui/Modal.tsx` (and `BottomSheet.tsx`, which wraps it)
+  and the global `src/shared/ui/DialogProvider.tsx`. Any new dialog MUST use these — no
+  hand-rolled `fixed inset-0` overlay with its own (missing) insets.
+* **Top gap:** `pt-[calc(0.75rem + env(safe-area-inset-top))]` — clears the notch/status bar plus
+  a small fixed nudge, on all screen sizes.
+* **Bottom gap:** `pb-[calc(0.75rem + env(safe-area-inset-bottom) + var(--bottom-nav-clearance))]`
+  with a `md:` override that drops the nav reserve on desktop. It clears BOTH the home indicator
+  (`env(safe-area-inset-bottom)`) AND the floating bottom nav.
+* **Bottom-nav token (single source):** `--bottom-nav-height`, `--bottom-nav-gap`, and the derived
+  `--bottom-nav-clearance` live in `src/styles/base.css`. `MobileBottomNav.tsx` consumes
+  `--bottom-nav-height` / `--bottom-nav-gap` so the pill height is defined in exactly one place;
+  modals reserve `--bottom-nav-clearance`. The token collapses to `0` at `≥768px` (nav is
+  `md:hidden`), so desktop modals are unaffected.
+* **Panel height tracks the insets:** the dialog `max-h` subtracts the same top + bottom insets +
+  nav clearance so a tall modal stays fully on-screen and internally scrollable — the header
+  (title + ✕) and sticky footer (actions) always remain visible/reachable.
+* **`viewport-fit=cover`** must stay set in `index.html` so `env(safe-area-inset-*)` resolves on
+  notched devices.
+* **Never** add a mobile-only centering/full-bleed rule that removes these insets, and never
+  hard-code the nav height (`58px`) anywhere but the token.
+
 ---
 
 ## 18. DELETIONS, VOIDS & TOMBSTONES

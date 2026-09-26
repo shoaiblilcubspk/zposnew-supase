@@ -149,6 +149,46 @@ export async function retryFailed(operationId: string): Promise<void> {
   );
 }
 
+/**
+ * Is this a Postgres UNIQUE-constraint (duplicate key) collision? SQLSTATE 23505 / the
+ * "duplicate key value violates unique constraint" message. Used to auto-recover the
+ * cross-device auto-number collision case (AGENTS.md §1.7.7): the server `apply_bundle`
+ * renumbers a registered sequence column on collision, so re-pushing the bundle succeeds.
+ */
+export function isDuplicateKeyError(error: string | null | undefined): boolean {
+  if (!error) return false;
+  const e = error.toLowerCase();
+  return e.includes('duplicate key value') || e.includes('unique constraint') || e.includes('23505');
+}
+
+/** Max auto-recovery attempts for a duplicate-key collision before a bundle stays parked for
+ *  manual review (prevents an infinite loop on a genuine, non-sequence duplicate). */
+export const MAX_RECOVERABLE_RETRIES = 6;
+
+/**
+ * Auto-requeue bundles that were parked as `failed` ONLY because of a duplicate-key /
+ * auto-number collision (§1.7.7). The server-side renumber in `apply_bundle` now re-allocates
+ * a free number on the next push, so these self-heal with ZERO user action (no Retry/Discard).
+ * Bounded by MAX_RECOVERABLE_RETRIES so a genuine non-sequence duplicate eventually stays
+ * parked instead of looping. Returns the number of bundles re-armed.
+ */
+export async function requeueRecoverable(): Promise<number> {
+  const failed = await getFailed();
+  const recoverable = failed.filter(
+    (r) => isDuplicateKeyError(r.last_error) && r.retry_count < MAX_RECOVERABLE_RETRIES
+  );
+  if (recoverable.length === 0) return 0;
+  const now = new Date().toISOString();
+  for (const r of recoverable) {
+    // Keep retry_count climbing (don't reset) so a truly unrecoverable dupe hits the cap.
+    await localExecute(
+      `UPDATE sync_queue SET status='pending', updated_at=? WHERE operation_id=? AND status='failed'`,
+      [now, r.operation_id]
+    );
+  }
+  return recoverable.length;
+}
+
 /** Permanently drop a failed bundle from the queue (user chose Discard). Local-only cleanup;
  *  nothing was written to the cloud for a failed bundle, so there is nothing to undo there. */
 export async function discardFailed(operationId: string): Promise<void> {

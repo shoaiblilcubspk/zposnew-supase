@@ -1204,3 +1204,35 @@ authoritative, collision-proof number is assigned by `apply_bundle` at commit ti
 - [ ] After sync, all devices show the SAME final number for that record.
 - [ ] A new auto-numbered domain is added ONLY via a `sequence_registry` row (guard:
       `tests/sequenceRenumber.test.mjs`), never a device-local-only numbering scheme.
+
+### Auto-Recovery of a Parked Collision (ZERO manual Retry/Discard)
+
+> Learned from a real incident: after the server renumber shipped in code, two sales stayed
+> stuck as **Failed** in Cloud Sync with `duplicate key value violates unique constraint`
+> because migration **0025 had not been applied to that project's database** — the deployed
+> `apply_bundle` was still the old, non-renumbering version. A committed migration is NOT a
+> deployed migration.
+
+Rules (permanent, generic — never per-record):
+- **Deploy is part of the fix.** Any sequence/RPC change is only "done" once
+  `node scripts/supabase-migrate.mjs` has applied it to the target project (verify with
+  `--status`). A clone stays ready-to-use because the runner is idempotent and ledgered
+  (`public._migrations`).
+- **A duplicate-key (23505) sync error is RETRYABLE, not permanent.** `toSyncError` classifies
+  it as transient so the SAME bundle (same `operation_id`) is re-pushed; the server renumber
+  then assigns a free number and it completes. It must never be parked as permanent on the
+  first collision.
+- **Already-parked collisions self-heal.** `requeueRecoverable()` runs on every sync flush and
+  re-arms any `failed` bundle whose error is a duplicate-key collision, so records stuck before
+  the fix was deployed drain automatically with **zero** user action (no Retry, no Discard, no
+  data loss). The final server-assigned number is patched back into the local row + store.
+- **Bounded, so a genuine (non-sequence) duplicate can't loop.** Auto-recovery is capped at
+  `MAX_RECOVERABLE_RETRIES`; after the budget is exhausted the bundle parks as `failed` for
+  manual review. This keeps the auto-heal safe for the collision case without masking a real,
+  unresolvable conflict.
+- **Never repair the specific record by hand or in code (§1.6).** Fix the mechanism; let it
+  resolve every stuck record across all auto-numbered domains.
+
+Guard: `tests/sequenceRenumber.test.mjs` covers (a) a `failed` duplicate-key bundle auto-requeuing
+and syncing with the server-assigned number, and (b) a non-recoverable duplicate parking at the
+cap instead of looping.

@@ -25,9 +25,9 @@ export function MobileBottomNav({ onShowMenu }: MobileBottomNavProps) {
   return (
     <nav
       aria-label="Mobile Navigation"
-      className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom,0px)+8px)] left-3 right-3 max-w-md mx-auto z-50 select-none"
+      className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom,0px)+var(--bottom-nav-gap))] left-3 right-3 max-w-md mx-auto z-50 select-none"
     >
-      <div className="relative flex items-center justify-between h-[58px] px-1.5 rounded-[24px] bg-white/80 dark:bg-[#121214]/85 backdrop-blur-2xl backdrop-saturate-[180%] border border-black/[0.07] dark:border-white/[0.12] shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.85)] dark:shadow-[0_16px_40px_-6px_rgba(0,0,0,0.65),0_4px_16px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.12)]">
+      <div className="relative flex items-center justify-between h-[var(--bottom-nav-height)] px-1.5 rounded-[24px] bg-white/80 dark:bg-[#121214]/85 backdrop-blur-2xl backdrop-saturate-[180%] border border-black/[0.07] dark:border-white/[0.12] shadow-[0_12px_36px_-4px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.85)] dark:shadow-[0_16px_40px_-6px_rgba(0,0,0,0.65),0_4px_16px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.12)]">
         {visibleItems.map((item) => {
           const active = location.pathname === '/' + item.id || location.pathname.startsWith('/' + item.id + '/');
           return (

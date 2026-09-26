@@ -14,7 +14,8 @@
 
 import { getSupabase } from './supabaseClient';
 import {
-  getPending, markSynced, markError, markFailed, pruneSynced, countPending, type SyncQueueRow,
+  getPending, markSynced, markError, markFailed, pruneSynced, countPending,
+  requeueRecoverable, isDuplicateKeyError, MAX_RECOVERABLE_RETRIES, type SyncQueueRow,
 } from './syncQueue';
 import { APPEND_ONLY_TABLES, type SyncedTable } from './localSchema';
 import { runExclusiveTransaction } from './localDb';
@@ -73,11 +74,19 @@ class SyncError extends Error {
  * Classify a Supabase/PostgREST error. Permanent errors never succeed on retry (constraint
  * violations, bad payload, undefined function/column). Transient ones (no code = network,
  * or SQLSTATE classes 08/40/53/57/58) are worth retrying with backoff.
+ *
+ * EXCEPTION — duplicate-key / auto-number collisions (SQLSTATE 23505): these are treated as
+ * RETRYABLE, not permanent (AGENTS.md §1.7.7). The server `apply_bundle` renumbers a registered
+ * sequence column on collision, so re-pushing the SAME bundle (same operation_id) now succeeds
+ * with a fresh number — no user action, no permanent Failed. A retry cap in flushQueue stops a
+ * genuine, non-sequence duplicate from looping forever.
  */
 function toSyncError(err: unknown): SyncError {
   const e = err as { message?: string; code?: string } | null;
   const message = e?.message ?? String(err);
   const code = typeof e?.code === 'string' ? e.code : '';
+  // Auto-number collision -> recoverable via server-side renumber on the next push.
+  if (code === '23505' || isDuplicateKeyError(message)) return new SyncError(message, false);
   if (!code) return new SyncError(message, false); // no SQLSTATE -> treat as network/transient
   const cls = code.slice(0, 2);
   const retryableClasses = ['08', '40', '53', '57', '58'];
@@ -153,6 +162,11 @@ export async function flushQueue(): Promise<{ synced: number; failed: number; pe
   let permanent = 0;
 
   try {
+    // Self-heal: re-arm any bundle parked as `failed` only because of an auto-number
+    // collision (§1.7.7). The server now renumbers on the next push, so these drain with
+    // zero user action (no manual Retry/Discard). Bounded by MAX_RECOVERABLE_RETRIES.
+    await requeueRecoverable();
+
     const pending = await getPending();
     for (const row of pending) {
       // Respect per-row backoff window based on retry_count.
@@ -168,8 +182,14 @@ export async function flushQueue(): Promise<{ synced: number; failed: number; pe
         synced++;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
+        const isRecoverableDupe = isDuplicateKeyError(msg);
         if (err instanceof SyncError && err.permanent) {
           // Whole bundle rolled back server-side; park it for the user, never retry blindly.
+          await markFailed(row.operation_id, msg);
+          permanent++;
+        } else if (isRecoverableDupe && row.retry_count + 1 >= MAX_RECOVERABLE_RETRIES) {
+          // A duplicate-key that the server could not auto-renumber (e.g. a genuine, non-sequence
+          // conflict) has exhausted its auto-recovery budget — park it for manual review.
           await markFailed(row.operation_id, msg);
           permanent++;
         } else {

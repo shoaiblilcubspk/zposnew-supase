@@ -77,13 +77,27 @@ async function testSuccess() {
 }
 
 async function testPermanent() {
-  console.log('\n[2] RPC permanent error (23505) -> failed');
+  console.log('\n[2] RPC permanent error (non-recoverable constraint) -> failed');
   const db = freshDb(); setOnline(true);
-  setSupabaseForTesting(fakeSupabase(() => ({ data: null, error: { code: '23505', message: 'duplicate key' } })));
+  // A genuine permanent constraint (e.g. NOT NULL 23502) can never succeed on retry -> parked.
+  setSupabaseForTesting(fakeSupabase(() => ({ data: null, error: { code: '23502', message: 'null value in column violates not-null constraint' } })));
   await seedBundle('op-perm');
   const r = await flushQueue();
   assert(r.permanent === 1, 'flushQueue reports 1 permanent');
   assert(statusOf(db, 'op-perm').status === 'failed', 'bundle parked as failed (shown in Cloud Sync)');
+}
+
+async function testDuplicateKeyRecoverable() {
+  console.log('\n[2b] duplicate-key (23505 auto-number collision) -> retryable, NOT permanent');
+  const db = freshDb(); setOnline(true);
+  // §1.7.7: the server renumbers a registered sequence on the next push, so a duplicate-key
+  // collision must be retried (same operation_id), never parked as permanent on first hit.
+  setSupabaseForTesting(fakeSupabase(() => ({ data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint "sales_invoice_number_key"' } })));
+  await seedBundle('op-dupe-key');
+  const r = await flushQueue();
+  assert(r.permanent === 0, 'a duplicate-key collision is NOT reported permanent on first attempt');
+  const row = statusOf(db, 'op-dupe-key');
+  assert(row.status === 'error' && row.retry_count === 1, 'stays error/retryable so the server renumber can resolve it');
 }
 
 async function testRetryable() {
@@ -147,6 +161,7 @@ async function main() {
   console.log('PHASE 7 — sync worker failure-injection');
   await testSuccess();
   await testPermanent();
+  await testDuplicateKeyRecoverable();
   await testRetryable();
   await testNetworkThrow();
   await testOffline();

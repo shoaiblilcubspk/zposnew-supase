@@ -148,7 +148,7 @@ export function POSTerminal() {
           <div 
             data-modal="true"
             onClick={() => setIsMobileCartOpen(false)}
-            className="md:hidden fixed inset-0 z-[1000] bg-black/70 transition-opacity flex items-center justify-center p-3 sm:p-6 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+            className="md:hidden fixed inset-0 z-[1000] bg-black/70 transition-opacity flex items-center justify-center p-3 sm:p-6 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(0.75rem+env(safe-area-inset-bottom)+var(--bottom-nav-clearance))]"
           >
             <div 
               onClick={(e) => e.stopPropagation()}

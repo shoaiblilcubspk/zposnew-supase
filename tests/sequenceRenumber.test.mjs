@@ -88,6 +88,46 @@ async function testNoRenumberNoChange() {
   assert(row.invoice_number === 'INV-2000', 'untouched when server assigned no new number');
 }
 
+async function testFailedCollisionAutoRecovers() {
+  console.log('\n[2b] a FAILED duplicate-key bundle auto-requeues + syncs (no manual Retry/Discard)');
+  const db = freshDb(); setOnline(true);
+  db.prepare('INSERT INTO sales (id, invoice_number, total_amount) VALUES (?,?,?)').run('C1', 'INV-1016', 500);
+  // Simulate the exact stuck state from the screenshot: parked `failed` on a duplicate-key error.
+  const now = new Date().toISOString();
+  db.prepare(`INSERT INTO sync_queue (operation_id, table_name, operation_type, payload, status, retry_count, last_error, created_at, updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?)`).run(
+      'op-stuck', 'bundle', 'bundle', JSON.stringify({ action: 'create_sale', rows: [] }),
+      'failed', 1, 'duplicate key value violates unique constraint "sales_invoice_number_key"', now, now);
+  // Server now renumbers (migration 0025 deployed) and returns the server-assigned number.
+  setSupabaseForTesting(fakeSupabase(() => ({
+    data: { ok: true, action: 'create_sale', rows_applied: 1,
+      renumbered: [{ table: 'sales', id: 'C1', column: 'invoice_number', old: 'INV-1016', new: 'INV-1017' }] },
+    error: null,
+  })));
+  const r = await flushQueue();
+  assert(r.synced === 1, 'previously-failed collision bundle synced automatically');
+  const q = db.prepare('SELECT status FROM sync_queue WHERE operation_id = ?').get('op-stuck');
+  assert(q.status === 'synced', 'stuck bundle left the failed state with zero user action');
+  const row = db.prepare('SELECT invoice_number FROM sales WHERE id = ?').get('C1');
+  assert(row.invoice_number === 'INV-1017', 'local sale converged to the server-assigned number');
+}
+
+async function testGenuineDupeStopsAtCap() {
+  console.log('\n[2c] a non-recoverable duplicate eventually parks (bounded auto-recovery)');
+  const db = freshDb(); setOnline(true);
+  const now = new Date().toISOString();
+  // retry_count already at the cap-1: one more failed attempt must park it, not loop forever.
+  db.prepare(`INSERT INTO sync_queue (operation_id, table_name, operation_type, payload, status, retry_count, last_error, created_at, updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?)`).run(
+      'op-genuine', 'bundle', 'bundle', JSON.stringify({ action: 'create_sale', rows: [] }),
+      'failed', 5, 'duplicate key value violates unique constraint "some_other_key"', now, now);
+  setSupabaseForTesting(fakeSupabase(() => ({ data: null, error: { message: 'duplicate key value violates unique constraint "some_other_key"', code: '23505' } })));
+  const r = await flushQueue();
+  const q = db.prepare('SELECT status, retry_count FROM sync_queue WHERE operation_id = ?').get('op-genuine');
+  assert(q.status === 'failed', 'stays parked once the auto-recovery budget is exhausted');
+  assert(r.permanent === 1, 'reported as permanently failed (no infinite loop)');
+}
+
 function testMigrationGuard() {
   console.log('\n[3] GUARD: apply_bundle keeps the server-side sequence mechanism');
   const dir = path.resolve(process.cwd(), 'supabase/migrations');
@@ -105,6 +145,8 @@ async function main() {
   console.log('CROSS-DEVICE SEQUENCE RENUMBER — client apply + guard');
   await testRenumberApplied();
   await testNoRenumberNoChange();
+  await testFailedCollisionAutoRecovers();
+  await testGenuineDupeStopsAtCap();
   testMigrationGuard();
   console.log(`\nAll ${passed} assertions passed.`);
 }

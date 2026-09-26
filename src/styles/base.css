@@ -137,6 +137,17 @@
     --safe-area-inset-left: env(safe-area-inset-left, 0px);
     --safe-area-inset-right: env(safe-area-inset-right, 0px);
 
+    /* Mobile bottom-navigation footprint — SINGLE SOURCE OF TRUTH.
+       MobileBottomNav is a floating pill of height --bottom-nav-height that sits
+       --bottom-nav-gap above the home indicator. --bottom-nav-clearance is the
+       total space any full-height overlay / modal must reserve at the bottom so
+       it never touches or hides behind the nav (pill height + float gap + a small
+       breathing nudge). On >=768px the nav is hidden (md:hidden), so consumers
+       drop this reserve via the Tailwind `md:` variant — desktop is unaffected. */
+    --bottom-nav-height: 58px;
+    --bottom-nav-gap: 8px;
+    --bottom-nav-clearance: calc(var(--bottom-nav-height) + var(--bottom-nav-gap) + 8px);
+
     --color-primary-rgb: 16 185 129;
     --color-primary-hover-rgb: 5 150 105;
     --color-danger-rgb: 239 68 68;
