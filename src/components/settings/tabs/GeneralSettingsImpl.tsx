@@ -1,4 +1,3 @@
-import { Sliders } from 'lucide-react';
 import { GeneralModules } from './GeneralModules';
 import { GeneralStoreIdentity, GeneralLocalization } from './generalCards';
 import { IntegrationsCard } from './IntegrationsCard';

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Save, RefreshCw } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { Supplier } from '../../../types';
 import { Modal } from '../../../shared/ui/Modal';
-import { Button, Select } from '../../../shared/ui';
+import { Select } from '../../../shared/ui';
 import { useActionGuard } from '../../../hooks/useActionGuard';
 
 interface SupplierModalProps {

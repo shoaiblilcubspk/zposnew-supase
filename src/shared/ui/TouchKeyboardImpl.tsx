@@ -10,6 +10,7 @@ interface TouchKeyboardProps {
   onInput: (char: string) => void;
   onBackspace: () => void;
   onEnter: () => void;
+  onClear: () => void;
   inputElement: HTMLInputElement | HTMLTextAreaElement | null;
 }
 
@@ -177,13 +178,26 @@ export const TouchKeyboard = React.memo(function TouchKeyboard(props: TouchKeybo
           )}
         </div>
 
-        <div 
-          className="absolute -top-3 -left-3 w-8 h-8 cursor-nwse-resize z-50 bg-primary/20 rounded-full opacity-0 hover:opacity-100"
-          onPointerDown={(e) => handlePointerDown(e, 'resize')}
+        {/* Four-corner resize handles — drag any corner outward to grow, inward to shrink */}
+        <div
+          className="absolute -top-2.5 -left-2.5 w-6 h-6 cursor-nwse-resize z-50 bg-primary/20 hover:bg-primary/40 rounded-full opacity-0 hover:opacity-100 transition-opacity"
+          title="Resize"
+          onPointerDown={(e) => handlePointerDown(e, 'resize', 'tl')}
         />
-        <div 
-          className="absolute -top-3 -right-3 w-8 h-8 cursor-nesw-resize z-50 bg-primary/20 rounded-full opacity-0 hover:opacity-100"
-          onPointerDown={(e) => handlePointerDown(e, 'resize')}
+        <div
+          className="absolute -top-2.5 -right-2.5 w-6 h-6 cursor-nesw-resize z-50 bg-primary/20 hover:bg-primary/40 rounded-full opacity-0 hover:opacity-100 transition-opacity"
+          title="Resize"
+          onPointerDown={(e) => handlePointerDown(e, 'resize', 'tr')}
+        />
+        <div
+          className="absolute -bottom-2.5 -left-2.5 w-6 h-6 cursor-nesw-resize z-50 bg-primary/20 hover:bg-primary/40 rounded-full opacity-0 hover:opacity-100 transition-opacity"
+          title="Resize"
+          onPointerDown={(e) => handlePointerDown(e, 'resize', 'bl')}
+        />
+        <div
+          className="absolute -bottom-2.5 -right-2.5 w-6 h-6 cursor-nwse-resize z-50 bg-primary/20 hover:bg-primary/40 rounded-full opacity-0 hover:opacity-100 transition-opacity"
+          title="Resize"
+          onPointerDown={(e) => handlePointerDown(e, 'resize', 'br')}
         />
         
         {layout !== 'calculator' && (

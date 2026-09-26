@@ -45,7 +45,7 @@ export function IntegrationsCard() {
     try {
       const res = await testPexelsKey(key);
       setStatus(res.ok ? `Valid${res.remaining ? ` · ${res.remaining} requests left this month` : ''}` : res.message);
-      res.ok ? sonner.success('Key is valid.') : sonner.error(res.message);
+      if (res.ok) sonner.success('Key is valid.'); else sonner.error(res.message);
     } finally { setBusy(false); }
   };
 

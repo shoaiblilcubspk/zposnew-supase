@@ -1,7 +1,6 @@
 import React from 'react';
-import { Store, Globe, Printer, ClipboardList, LayoutGrid } from 'lucide-react';
+import { Store, Globe, Printer, LayoutGrid } from 'lucide-react';
 import { SearchableSelect } from '../../../shared/ui/SearchableSelect';
-import { Button } from '../../../shared/ui';
 import { LogoUpload } from '../LogoUpload';
 import { CURRENCIES } from '../../../lib/currencies';
 
@@ -24,13 +23,7 @@ interface LocalizationProps {
   handleInstantUpdate: InstantUpdater;
 }
 
-interface InvoicingProps {
-  formData: any;
-  handleChange: ChangeHandler;
-  handleRepairCounter: () => Promise<void>;
-}
-
-export function GeneralStoreIdentity({ formData, setFormData, handleChange, handleInstantUpdate}: StoreIdentityProps) {
+export function GeneralStoreIdentity({ formData, setFormData, handleChange }: StoreIdentityProps) {
   return (
     <div className="p-4 sm:p-5 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none space-y-4">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-3 border-b border-neutral-200 dark:border-white/[0.08]">
@@ -114,7 +107,7 @@ export function GeneralStoreIdentity({ formData, setFormData, handleChange, hand
   );
 }
 
-export function GeneralLocalization({ formData, setFormData, setFormDataDirect, handleChange, handleInstantUpdate}: LocalizationProps) {
+export function GeneralLocalization({ formData, setFormDataDirect, handleChange, handleInstantUpdate}: LocalizationProps) {
   return (
     <div className="p-4 sm:p-5 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none space-y-4">
       <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-200 dark:border-white/[0.08]">

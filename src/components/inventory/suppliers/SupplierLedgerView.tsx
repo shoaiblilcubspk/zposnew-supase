@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, Wallet, TrendingUp, TrendingDown, Clock, Plus, Check, FileText, Phone } from 'lucide-react';
+import { ChevronLeft, Wallet, TrendingUp, TrendingDown, Clock, Plus, FileText } from 'lucide-react';
 import { formatCurrency } from '../../../lib/currencies';
 import { SharedSearchBar } from '../../../shared/modules/search-and-list';
 import { Button } from '../../../shared/ui';

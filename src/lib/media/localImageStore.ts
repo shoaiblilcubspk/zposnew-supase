@@ -430,7 +430,7 @@ export async function resolveToRenderable(value: string | undefined | null): Pro
  * untouched — images lazily re-download from the bucket or the saved Pexels URL on next view.
  */
 export async function clearImageCache(): Promise<number> {
-  let cleared = memoryImageCache.size;
+  const cleared = memoryImageCache.size;
   for (const [, v] of memoryImageCache) {
     if (v.url && typeof URL !== 'undefined' && URL.revokeObjectURL) { try { URL.revokeObjectURL(v.url); } catch {} }
   }

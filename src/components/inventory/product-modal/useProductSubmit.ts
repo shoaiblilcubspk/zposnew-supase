@@ -31,7 +31,6 @@ export function useProductSubmit({
   modifiers,
   productAddons,
   appCurrentUser,
-  appSuppliers,
   setFormData,
   setVariants,
   setVariantData,

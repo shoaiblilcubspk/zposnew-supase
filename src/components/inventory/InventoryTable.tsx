@@ -57,7 +57,6 @@ export function InventoryTable({
   onPageSizeChange,
   isAdmin,
   profile,
-  canManageStock,
   canEditProduct,
   canViewExpiry,
 }: InventoryTableProps) {

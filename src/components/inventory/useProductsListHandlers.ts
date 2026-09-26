@@ -14,7 +14,6 @@ interface UseProductsListHandlersArgs {
 }
 
 export function useProductsListHandlers({
-  appProducts,
   selectedProductIds,
   setSelectedProductIds,
   filteredProducts,

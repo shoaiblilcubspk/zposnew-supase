@@ -145,6 +145,29 @@ export function TouchKeyboardProvider({ children }: { children: React.ReactNode 
     activeElement.focus();
   }, [activeElement]);
 
+  const handleClear = useCallback(() => {
+    if (!activeElement) return;
+
+    const prototype = activeElement instanceof HTMLTextAreaElement
+      ? window.HTMLTextAreaElement.prototype
+      : window.HTMLInputElement.prototype;
+
+    const nativeSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
+    if (nativeSetter) {
+      nativeSetter.call(activeElement, '');
+    } else {
+      activeElement.value = '';
+    }
+
+    if (activeElement.type !== 'number') {
+      try { activeElement.setSelectionRange(0, 0); } catch (_) { /* ignore */ }
+    }
+
+    activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+    activeElement.dispatchEvent(new Event('change', { bubbles: true }));
+    activeElement.focus();
+  }, [activeElement]);
+
   const handleEnter = useCallback(() => {
     if (!activeElement) return;
 
@@ -176,6 +199,13 @@ export function TouchKeyboardProvider({ children }: { children: React.ReactNode 
 
     const onFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
+
+      // The keyboard's OWN inputs (e.g. the calculator display) live inside
+      // `.touch-keyboard-container`. They must NEVER become the active target,
+      // otherwise actions like calculator "Insert" write into the keyboard's own
+      // box instead of the real field the user was editing.
+      if (target.closest('.touch-keyboard-container')) return;
+
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
       
       if (isInput) {
@@ -214,6 +244,10 @@ export function TouchKeyboardProvider({ children }: { children: React.ReactNode 
       // If clicking the keyboard itself, do nothing
       const isKeyboard = target.closest('.touch-keyboard-container');
 
+      // Clicking inside the keyboard (including its own calculator input) must not
+      // change the active target field — keep the real external field active.
+      if (isKeyboard) return;
+
       if (isInput) {
         // If clicking an already focused input, focusin won't fire again.
         // We ensure the keyboard opens/unfolds here.
@@ -245,6 +279,7 @@ export function TouchKeyboardProvider({ children }: { children: React.ReactNode 
           onInput={handleInput}
           onBackspace={handleBackspace}
           onEnter={handleEnter}
+          onClear={handleClear}
           inputElement={activeElement}
         />
       </div>

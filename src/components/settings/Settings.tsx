@@ -1,19 +1,13 @@
 // Standardized Settings Layout - Thin Tab Router
 import {
-  Sliders,
   Globe,
-  Printer,
-  Shield,
-  Database,
   ChevronLeft,
-  Cloud,
   Lock,
-  Mail,
-  BookOpen
+  Mail
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ReceiptPrint } from '../pos/ReceiptPrint';
-import { Button, RealIcon, ScrollableTabBar, type RealIconName } from '../../shared/ui';
+import { Button, RealIcon, ScrollableTabBar } from '../../shared/ui';
 import { SETTINGS_TABS } from '../../shared/navigation/tabRegistry';
 import { StickyFormFooter } from '../../shared/ui/StickyFormFooter';
 import { openExternalLink, openMail } from '../../lib/urlHelper';

@@ -136,14 +136,16 @@ export function InventoryManager() {
     return ['All', ...Array.from(new Set([...fromSupTable, ...fromProducts])).sort()];
   }, [appSuppliers, products]);
 
-  if (!appSettings || !appProducts) {
-    return <div className="p-6 bg-gray-50 dark:bg-transparent"><SkeletonLoader type="list" count={6} /></div>;
-  }
-
+  // Must run BEFORE any early return so hook order stays stable across renders
+  // (React Rules of Hooks — previously declared after the loading guard = crash risk).
   const freshProduct = useMemo(() => {
     if (!detailProduct) return null;
     return (products || []).find(p => p && p.id === detailProduct.id) || detailProduct;
   }, [detailProduct, products]);
+
+  if (!appSettings || !appProducts) {
+    return <div className="p-6 bg-gray-50 dark:bg-transparent"><SkeletonLoader type="list" count={6} /></div>;
+  }
 
   return (
     <>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Eye, EyeOff, Camera, ShieldCheck, UserCheck } from 'lucide-react';
+import { Lock, Eye, EyeOff, Camera, ShieldCheck } from 'lucide-react';
 import { Button, Avatar, CapsLockIndicator } from '../../../shared/ui';
 import { changeUserPin } from '../../../lib/auth/recoveryService';
 import { useUsersStore } from '../../../stores';

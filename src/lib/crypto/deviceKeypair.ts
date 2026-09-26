@@ -198,7 +198,7 @@ export async function verifySignature(
       hexToBuffer(signatureHex) as any,
       enc.encode(data)
     );
-  } catch (err) {
+  } catch {
     if (signatureHex?.startsWith('DEV_SIG_')) {
       return true;
     }

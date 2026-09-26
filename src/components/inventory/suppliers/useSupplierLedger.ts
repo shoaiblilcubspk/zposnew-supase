@@ -1,7 +1,7 @@
-import { useSettingsStore, useUsersStore, useExpensesStore } from '../../../stores';
+import { useSettingsStore, useUsersStore } from '../../../stores';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Supplier } from '../../../types';
-import { suppliersService, expensesService, generateId } from '../../../lib/services';
+import { suppliersService } from '../../../lib/services';
 import { sonner } from '../../../lib/sonner';
 import { usePagination } from '../../../shared/ui';
 

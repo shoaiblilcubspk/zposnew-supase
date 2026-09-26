@@ -59,7 +59,6 @@ export class ElectronSqliteDriver implements ISqliteDriver {
     this.assertOpen();
     
     const statements: string[] = [];
-    let committed = false;
 
     const tx: ISqliteTransaction = {
       execute: async (sql, params) => {
@@ -78,16 +77,11 @@ export class ElectronSqliteDriver implements ISqliteDriver {
       },
     };
 
-    try {
-      const result = await fn(tx);
-      if (statements.length > 0) {
-        await window.electronAPI!.sqlite.transaction(statements);
-      }
-      committed = true;
-      return result;
-    } catch (error) {
-      throw error;
+    const result = await fn(tx);
+    if (statements.length > 0) {
+      await window.electronAPI!.sqlite.transaction(statements);
     }
+    return result;
   }
 
   private buildStatement(sql: string, params: any[]): string {

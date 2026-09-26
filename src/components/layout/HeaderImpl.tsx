@@ -1,16 +1,14 @@
 import { useSettingsStore, useUsersStore } from '../../stores';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  ChevronLeft, ChevronRight, Users
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { AppIcons } from '../../lib/icons';
 import { settingsService } from '../../lib/services';
 import { useApp } from '../../context/SupabaseAppContext';
 import { useAuth } from '../../context/AuthContext';
 import { sonner } from '../../lib/sonner';
 import { can } from '../../lib/permissions';
-import { Button } from '../../shared/ui';
 import { RealIcon } from '../../shared/icons';
 import { MAIN_NAV_ITEMS } from '../../shared/navigation/tabRegistry';
 import { useHorizontalScroll } from '../../hooks/useHorizontalScroll';

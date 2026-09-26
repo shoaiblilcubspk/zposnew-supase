@@ -6,7 +6,6 @@
 import { useSalesStore, useSettingsStore } from '../stores';
 import { localQuery } from '../data';
 import { settingsService } from '../lib/services/settingsService';
-import { generateNextInvoiceNumber, getNextInvoiceNumber, getDeviceId } from '../lib/services';
 
 export function useInvoiceGeneration() {
   return async (): Promise<string> => {

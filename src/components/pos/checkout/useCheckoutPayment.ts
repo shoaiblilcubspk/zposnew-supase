@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import { Sale } from '../../../types';
 import { useProductsStore, useSalesStore, useCartStore, useUsersStore } from '../../../stores';
-import { salesService, productsService, generateId, adjustPaymentBalances, buildSalePaymentMoves } from '../../../lib/services';
+import { salesService, productsService, generateId } from '../../../lib/services';
 import { sonner } from '../../../lib/sonner';
 import { useAuth } from '../../../context/AuthContext';
 import { useInvoiceGeneration } from '../../../hooks/useInvoice';

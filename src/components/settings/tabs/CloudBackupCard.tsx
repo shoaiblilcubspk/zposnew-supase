@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Cloud, Upload, CheckCircle2, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
-import { Card, Button, Badge } from '../../../shared/ui';
+import React, { useState } from 'react';
+import { Cloud, Upload, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { Card, Button } from '../../../shared/ui';
 import { useUsersStore } from '../../../stores';
 import {
   getCloudBackupConfig,

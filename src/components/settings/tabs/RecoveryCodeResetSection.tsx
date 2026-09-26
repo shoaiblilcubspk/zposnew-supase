@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldAlert, RefreshCw, Copy, Check, Lock, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, RefreshCw, Copy, Check, AlertTriangle } from 'lucide-react';
 import { Button, CapsLockIndicator } from '../../../shared/ui';
 import { rotateRecoveryCode } from '../../../lib/auth/recoveryService';
 import { sonner } from '../../../lib/sonner';

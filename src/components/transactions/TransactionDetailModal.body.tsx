@@ -1,14 +1,13 @@
 import { useAppStore, useCustomersStore, useProductsStore, useSalesStore, useSettingsStore, useUsersStore } from '../../stores';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Printer, MessageCircle, RotateCcw, Edit, Trash2, MapPin, UserCheck, Tag } from 'lucide-react';
+import { ChevronLeft, RotateCcw, Edit, UserCheck, Tag } from 'lucide-react';
 import { formatAppDate } from '../../lib/dateUtils';
 import { formatCurrency } from '../../lib/currencies';
 import { Sale } from '../../types';
 import { sonner } from '../../lib/sonner';
-import { getDealCountBreakdown } from '../../lib/utils';
 import { Modal } from '../../shared/ui/Modal';
-import { Badge, Button } from '../../shared/ui';
+import { Badge } from '../../shared/ui';
 import RefundSaleModal from './RefundSaleModal';
 import { SupervisorPinModal } from './SupervisorPinModal';
 import { TransactionItemsTable } from './TransactionItemsTable';

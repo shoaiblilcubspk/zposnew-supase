@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Product } from '../../../types';
 import { InventoryToolbar } from '../InventoryToolbar';
 import { InventoryTable } from '../InventoryTable';
@@ -36,7 +36,6 @@ export function ProductsList({
   setShowBarcodeGenerator, showBarcodeGenerator
 }: Props) {
   const appSettings = useSettingsStore(s => s.settings);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canViewExpiry = isAdmin || Boolean(profile?.canViewExpiry);
 

@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, Delete, User, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Lock, User, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getLockoutRemainingSeconds } from '../../lib/auth/localAuthService';
 import { Button } from '../../shared/ui';
 import { sonner } from '../../lib/sonner';
 import { EmergencyRecoveryModal } from './EmergencyRecoveryModal';
 import { useCapsLock } from '../../hooks/useCapsLock';
-import { CapsLockIndicator } from '../../shared/ui/CapsLockIndicator';
 import { PinKeypad } from './PinKeypad';
 
 export function PinLoginPage() {

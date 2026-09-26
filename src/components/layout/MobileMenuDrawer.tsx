@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronRight } from 'lucide-react';
-import { Button, Avatar, RealIcon } from '../../shared/ui';
+import { Avatar, RealIcon } from '../../shared/ui';
 import { can } from '../../lib/permissions';
 import { executeHardRefresh } from '../../lib/utils/hardRefresh';
 

@@ -1,6 +1,5 @@
 import { X, Info, Package } from 'lucide-react';
 import { ProductThumb } from '../../../shared/ui/ProductThumb';
-import { Button } from '../../../shared/ui';
 import { SharedSearchBar, SharedProductList } from '../../../shared/modules/search-and-list';
 import { formatCurrency } from '../../../lib/currencies';
 import type { Product } from '../../../types';

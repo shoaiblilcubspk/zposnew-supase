@@ -3,7 +3,6 @@ import { Modal } from '../../../shared/ui/Modal';
 import { Button } from '../../../shared/ui/Button';
 import { Lock, Delete, AlertCircle, ShieldCheck } from 'lucide-react';
 import { verifyUserPin } from '../../../lib/auth/localAuthService';
-import { useCapsLock } from '../../../hooks/useCapsLock';
 import { CapsLockIndicator } from '../../../shared/ui/CapsLockIndicator';
 
 interface CheckoutPinVerifyModalProps {
@@ -21,7 +20,6 @@ export function CheckoutPinVerifyModal({
   onAuthorized,
   onCancel,
 }: CheckoutPinVerifyModalProps) {
-  const isCapsLock = useCapsLock();
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);

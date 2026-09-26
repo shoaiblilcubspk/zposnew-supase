@@ -1,7 +1,6 @@
 import { useInventoryStore, useProductsStore, useSettingsStore } from '../../stores';
 import { useState, useMemo } from 'react';
 import { Save, RefreshCw } from 'lucide-react';
-import { Button } from '../../shared/ui';
 import { useAuth } from '../../context/AuthContext';
 import { SharedSearchBar, SharedProductList } from '../../shared/modules/search-and-list';
 import { productsService } from '../../lib/services';
@@ -133,18 +132,7 @@ export function BatchStockInSystem({ onClose, initialProduct }: BatchStockInSyst
               cashierName: 'System',
               createdAt: new Date(),
             };
-            const remoteEntry = {
-              id: histId,
-              product_id: currentProduct.id,
-              change_qty: -qtyToRemove,
-              type: 'adjustment_out',
-              reference_id: `RESET-${Date.now()}`,
-              note: `System: Reset infinite baseline to start tracking`,
-              balance_after: 0,
-              cashier_name: 'System',
-              created_at: new Date().toISOString(),
-            };
-            
+
             const { stockHistoryService } = await import('../../lib/services/stockHistoryService');
             await stockHistoryService.create(localEntry as any);
 

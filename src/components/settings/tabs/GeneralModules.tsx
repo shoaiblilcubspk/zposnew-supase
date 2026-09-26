@@ -13,7 +13,7 @@ import {
   Sparkles,
   Code2,
 } from 'lucide-react';
-import { Button, ToggleSwitch, Select } from '../../../shared/ui';
+import { ToggleSwitch, Select } from '../../../shared/ui';
 import { useSettingsStore } from '../../../stores';
 import type { SettingsTabProps } from './types';
 
@@ -22,7 +22,6 @@ export function GeneralModules({
   setFormData,
   handleChange,
   handleInstantUpdate,
-  t,
   play,
 }: SettingsTabProps) {
   return (

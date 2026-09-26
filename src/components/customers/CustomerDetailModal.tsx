@@ -1,13 +1,12 @@
 import { useCustomersStore, useSalesStore, useSettingsStore } from '../../stores';
 import { useState, useMemo } from 'react';
-import { Phone, CreditCard, ShoppingBag, Receipt, MessageCircle, ChevronRight, User, TrendingUp } from 'lucide-react';
+import { Phone, CreditCard, Receipt, MessageCircle, ChevronRight, User, TrendingUp } from 'lucide-react';
 import { Customer, Sale } from '../../types';
 import { formatCurrency } from '../../lib/currencies';
 import { formatAppDateTime } from '../../lib/dateUtils';
 import { Modal } from '../../shared/ui/Modal';
-import { cn } from '../../lib/utils';
 import { TransactionDetailModal } from '../transactions/TransactionDetailModal';
-import { Badge, Button, EmptyState, Pagination, usePagination } from '../../shared/ui';
+import { Badge, EmptyState, Pagination, usePagination } from '../../shared/ui';
 import { getEffectiveTotal } from '../reports/useReportsData';
 import { CustomerLedgerTab } from './CustomerLedgerTab';
 import { ReceivePaymentModal } from './ReceivePaymentModal';

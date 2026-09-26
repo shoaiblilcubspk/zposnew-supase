@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import {
   Wallet,
-  TrendingUp,
   ArrowRight,
   Clock,
   Activity,

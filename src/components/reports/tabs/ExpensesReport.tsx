@@ -1,5 +1,5 @@
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from 'recharts';
-import { TrendingDown, BarChart3, Banknote, CreditCard, Smartphone, Package, Building2 } from 'lucide-react';
+import { TrendingDown, BarChart3, Banknote, CreditCard, Package, Building2 } from 'lucide-react';
 import { formatCurrency, getCurrencySymbol } from '../../../lib/currencies';
 import { formatAppDate } from '../../../lib/dateUtils';
 import { Expense } from '../../../types';

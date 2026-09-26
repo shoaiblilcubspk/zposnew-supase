@@ -1,4 +1,4 @@
-import { Plus, Users, ChevronLeft } from 'lucide-react';
+import { Plus, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Pagination, RealIcon, ScrollableTabBar } from '../../shared/ui';
 import { SharedSearchBar } from '../../shared/modules/search-and-list';

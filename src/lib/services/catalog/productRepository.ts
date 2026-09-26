@@ -10,7 +10,7 @@
 import { localQuery, localQueryOne, softDeleteRow, atomicWrite, newOperationId, type AtomicOp } from '../../../data';
 import { Product } from '../../../types';
 import { safeRandomUUID } from '../../crypto/uuid';
-import { resolveCategoryId, resolveSupplierId, resolveCategoryOp, resolveSupplierOp } from './catalogResolvers';
+import { resolveCategoryOp, resolveSupplierOp } from './catalogResolvers';
 import { mapSqliteProduct, serializeProductColumns } from './productMapper';
 import { resolveImageRecord, deleteOrphanImage, isImageHash } from '../../media/localImageStore';
 import { buildInventoryLedgerOp, dispatchInventoryTxEvent, type InventoryTxRecord } from '../inventory/inventoryLedgerRepository';

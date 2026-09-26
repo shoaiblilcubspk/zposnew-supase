@@ -17,7 +17,6 @@ import { LoadingView } from './LoadingView';
 import { useAppGlobalEffects } from './useAppGlobalEffects';
 
 export function AppContent() {
-  const appSettings = useSettingsStore(s => s.settings);
   const appLoading = useSettingsStore(s => s.loading);
   const appSyncProgress = useSettingsStore(s => s.syncProgress);
   const appCurrentUser = useUsersStore(s => s.currentUser);
@@ -61,7 +60,6 @@ export function AppContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const isLoggedIn = Boolean(user && appCurrentUser && appCurrentUser.active);
   // P2P mesh removed (Supabase-only cloud-direct). Sync now runs via initDataLayer() at boot.
   useAppGlobalEffects();
 

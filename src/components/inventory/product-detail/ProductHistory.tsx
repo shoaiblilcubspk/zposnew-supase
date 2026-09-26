@@ -1,5 +1,5 @@
 import { History, PackageSearch } from 'lucide-react';
-import { Button, EmptyState, Pagination } from '../../../shared/ui';
+import { EmptyState, Pagination } from '../../../shared/ui';
 import { formatAppTime } from '../../../lib/dateUtils';
 import type { ProductDetailController } from './useProductDetail';
 

@@ -7,10 +7,24 @@ interface UseKeyboardLogicProps {
   onInput: (char: string) => void;
   onBackspace: () => void;
   onEnter: () => void;
+  onClear: () => void;
   inputElement: HTMLInputElement | HTMLTextAreaElement | null;
 }
 
-export function useKeyboardLogic({ isOpen, onInput, onBackspace, onEnter, inputElement }: UseKeyboardLogicProps) {
+// Outward-diagonal sign per corner: dragging a corner AWAY from the keyboard
+// centre grows it, dragging inward shrinks it — natural for all four corners.
+export type ResizeCorner = 'tl' | 'tr' | 'bl' | 'br';
+const RESIZE_SIGN: Record<ResizeCorner, { sx: number; sy: number }> = {
+  tl: { sx: -1, sy: -1 },
+  tr: { sx: 1, sy: -1 },
+  bl: { sx: -1, sy: 1 },
+  br: { sx: 1, sy: 1 },
+};
+const RESIZE_MIN = 0.6;
+const RESIZE_MAX = 1.4;
+const RESIZE_SENSITIVITY = 300; // px of outward drag per 1.0 scale step
+
+export function useKeyboardLogic({ isOpen, onInput, onBackspace, onEnter, onClear, inputElement }: UseKeyboardLogicProps) {
   const [layout, setLayout] = useState<'qwerty' | 'numeric' | 'calculator' | 'symbols'>('qwerty');
   const [isCaps, setIsCaps] = useState(false);
   const { play } = useSoundFeedback();
@@ -36,7 +50,7 @@ export function useKeyboardLogic({ isOpen, onInput, onBackspace, onEnter, inputE
 
   const keyboardRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0, currentX: 0, currentY: 0, initialScale: 1.0 });
+  const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0, currentX: 0, currentY: 0, initialScale: 1.0, corner: 'br' as ResizeCorner });
 
   const {
     calcExpr, calcInputRef, handleCalcClick,
@@ -113,8 +127,13 @@ export function useKeyboardLogic({ isOpen, onInput, onBackspace, onEnter, inputE
           keyboardRef.current.style.transform = `translate3d(calc(-50% + ${clamped.x}px), ${clamped.y}px, 0)`;
         }
       } else if (isResizing) {
+        // Four-corner resize: project the drag onto the corner's outward
+        // diagonal so dragging outward always grows and inward always shrinks.
+        const { sx, sy } = RESIZE_SIGN[dragRef.current.corner];
+        const dx = e.clientX - dragRef.current.startX;
         const dy = e.clientY - dragRef.current.startY;
-        const newScale = Math.max(0.6, Math.min(1.4, dragRef.current.initialScale + (dy / 300)));
+        const outward = sx * dx + sy * dy;
+        const newScale = Math.max(RESIZE_MIN, Math.min(RESIZE_MAX, dragRef.current.initialScale + (outward / RESIZE_SENSITIVITY)));
         setScale(newScale);
         localStorage.setItem('keyboard_scale', String(newScale));
       }
@@ -141,7 +160,7 @@ export function useKeyboardLogic({ isOpen, onInput, onBackspace, onEnter, inputE
     };
   }, [isDragging, isResizing, clampPosition, widthScale]);
 
-  const handlePointerDown = (e: React.PointerEvent, type: 'drag' | 'resize') => {
+  const handlePointerDown = (e: React.PointerEvent, type: 'drag' | 'resize', corner: ResizeCorner = 'br') => {
     dragRef.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -149,7 +168,8 @@ export function useKeyboardLogic({ isOpen, onInput, onBackspace, onEnter, inputE
       initialY: position.y,
       currentX: position.x,
       currentY: position.y,
-      initialScale: scale
+      initialScale: scale,
+      corner
     };
     if (type === 'drag') setIsDragging(true);
     else setIsResizing(true);
@@ -201,9 +221,12 @@ export function useKeyboardLogic({ isOpen, onInput, onBackspace, onEnter, inputE
     } else if (key === 'SPACE') {
       onInput(' ');
       play('keypress');
+    } else if (key === 'CLEAR') {
+      onClear();
+      play('delete');
     } else if (key === 'HIDE') {
       play('keypress');
-    } else if (key === '?123') {
+    } else if (key === '123' || key === '?123') {
       setLayout('numeric');
       play('keypress');
     } else if (key === 'ABC') {

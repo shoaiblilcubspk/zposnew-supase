@@ -6,7 +6,6 @@ import { Package } from 'lucide-react';
 import { CameraScanner } from '../../../shared/ui/CameraScanner';
 import { Product } from '../../../types';
 import { getCurrencySymbol } from '../../../lib/currencies';
-import { settingsService } from '../../../lib/services';
 import { normalizeBarcodeValue } from '../../../utils/barcode';
 import { sonner } from '../../../lib/sonner';
 import { SkeletonLoader } from '../../../shared/ui/SkeletonLoader';

@@ -1,7 +1,6 @@
-import { Check, AlertCircle, FileText, Wallet, PlusCircle, UserCircle, Info } from 'lucide-react';
+import { Check, AlertCircle, FileText, PlusCircle, UserCircle, Info } from 'lucide-react';
 import { formatCurrency } from '../../../lib/currencies';
 import { SearchableSelect, RealIcon, CapsLockIndicator } from '../../../shared/ui';
-import { cn } from '../../../lib/utils';
 import { useCartStore, useSettingsStore } from '../../../stores';
 import { SplitPaymentSection } from './SplitPaymentSection';
 
@@ -84,7 +83,6 @@ export function PaymentForm({
   appCustomers = [],
   appSelectedCustomer,
   handleSelectCustomer,
-  isCreditAllowed,
 }: PaymentFormProps) {
   return (
     <div className="p-4 space-y-3.5 order-1 md:order-2 bg-app">

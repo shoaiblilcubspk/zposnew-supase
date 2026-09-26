@@ -1,4 +1,4 @@
-import { Banknote, CreditCard, Building2, Wallet, TrendingUp, TrendingDown, DollarSign, BarChart2, Receipt, ShoppingCart, Package } from 'lucide-react';
+import { Banknote, CreditCard, Building2, Wallet, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { formatCurrency, getCurrencySymbol } from '../../../lib/currencies';
 import { ExportButton } from '../../../shared/export';
 import { useMemo } from 'react';

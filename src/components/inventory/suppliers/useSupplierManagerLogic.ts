@@ -1,4 +1,4 @@
-import { useInventoryStore, useProductsStore, useSettingsStore } from '../../../stores';
+import { useInventoryStore, useSettingsStore } from '../../../stores';
 import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { Supplier } from '../../../types';
@@ -15,7 +15,6 @@ import {
 
 export function useSupplierManagerLogic() {
   const appSuppliers = useInventoryStore(s => s.suppliers);
-  const appProducts = useProductsStore(s => s.products);
   const appSettings = useSettingsStore(s => s.settings);
 
   const { profile } = useAuth();
@@ -92,7 +91,7 @@ export function useSupplierManagerLogic() {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
+  const handleDelete = async (id: string, _name: string) => {
     if (!isAdmin) {
       sonner.error('Only administrators can delete suppliers.');
       return;

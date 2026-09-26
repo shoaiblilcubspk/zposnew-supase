@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit, Trash2, Gift, Percent } from 'lucide-react';
+import { Edit, Trash2, Gift } from 'lucide-react';
 import { Discount } from '../../types';
 import { Badge, Button, EmptyState } from '../../shared/ui';
 import { formatAppDate } from '../../lib/dateUtils';

@@ -1,9 +1,9 @@
 import { useBarcodeSettings } from './useBarcodeSettings';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { Printer, Minus, Plus, X, Maximize2 } from 'lucide-react';
+import { Printer, X } from 'lucide-react';
 import { Product } from '../../../types';
-import { Button, Badge } from '../../../shared/ui';
+import { Button } from '../../../shared/ui';
 import { BarcodeCard } from './BarcodeCard';
 import { BarcodeSidebar } from './BarcodeSidebar';
 import { BarcodePreviewToolbar } from './BarcodePreviewToolbar';

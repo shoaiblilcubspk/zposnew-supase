@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from '../../../shared/ui';
 import { ToggleSwitch } from '../../../shared/ui/ToggleSwitch';
 import { HelpTooltip } from '../../../shared/ui/HelpTooltip';
 import { Modal } from '../../../shared/ui/Modal';

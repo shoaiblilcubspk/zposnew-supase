@@ -26,7 +26,6 @@ export function CartItemListBody({
   profile,
   currency,
   showDiscount,
-  activePromotions,
   onUpdateQuantity,
   onUpdateBundleQuantity,
   onRemove,

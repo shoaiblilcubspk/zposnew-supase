@@ -1,7 +1,7 @@
 import { useCustomersStore, useExpensesStore, usePaymentsStore, useSalesStore, useSettingsStore, useUiStore, useUsersStore } from '../../stores';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, History } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useApp } from '../../context/SupabaseAppContext';
 import { useAuth } from '../../context/AuthContext';
 import { getTimezone } from '../../lib/dateUtils';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Download, Upload, FileArchive } from 'lucide-react';
+import { Package, Download, Upload } from 'lucide-react';
 import { Card, Button } from '../../../shared/ui';
 import { ProductImportExportModal } from '../../inventory/ProductImportExportModal';
 import { useProductsStore } from '../../../stores';

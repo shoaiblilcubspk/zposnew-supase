@@ -1,7 +1,7 @@
 import React from 'react';
 import { PackageOpen, TrendingDown, Building2, Trash2, Filter, CheckCircle2 } from 'lucide-react';
 import { SearchableSelect } from '../../shared/ui/SearchableSelect';
-import { Button, Badge, ToggleSwitch } from '../../shared/ui';
+import { Button, ToggleSwitch } from '../../shared/ui';
 import { PurchaseOrderForm } from './PurchaseOrderForm';
 import { usePurchaseOrder } from './usePurchaseOrder';
 

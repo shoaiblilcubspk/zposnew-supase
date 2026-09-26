@@ -1,5 +1,4 @@
-import { PurchaseRecord } from '../../../types';
-import { purchaseRecordsService, productsService, generateId } from '../../../lib/services';
+import { purchaseRecordsService, productsService } from '../../../lib/services';
 import { sonner } from '../../../lib/sonner';
 import { useProductsStore, useInventoryStore } from '../../../stores';
 import { DetailCtx } from './detailContext';
@@ -27,7 +26,6 @@ export async function performAdjustment(ctx: DetailCtx) {
     const currentStock = ctx.product.stock ?? 0;
     // Signed new stock (negative allowed per plan PART O — problem is never hidden).
     const newStock = currentStock + qtyChange;
-    const adjustmentId = generateId();
 
     const newRecord = await purchaseRecordsService.create({
       productId: ctx.product.id,

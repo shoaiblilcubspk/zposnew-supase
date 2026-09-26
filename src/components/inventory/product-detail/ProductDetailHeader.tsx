@@ -1,6 +1,6 @@
 import { ArrowLeft, Package, Camera, BadgeInfo, ShieldAlert, Edit3, X } from 'lucide-react';
 import { ProductThumb } from '../../../shared/ui/ProductThumb';
-import { Button, Badge } from '../../../shared/ui';
+import { Button } from '../../../shared/ui';
 import type { ProductDetailController } from './useProductDetail';
 
 export function ProductDetailHeader({ d }: { d: ProductDetailController }) {

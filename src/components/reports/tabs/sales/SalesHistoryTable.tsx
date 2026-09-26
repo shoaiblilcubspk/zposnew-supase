@@ -13,7 +13,7 @@ interface Props {
   users: any[];
 }
 
-export function SalesHistoryTable({ filteredSales, currency, country, users }: Props) {
+export function SalesHistoryTable({ filteredSales, currency, country }: Props) {
   const { page, totalPages, pageItems, goToPage, pageSize, setPageSize } = usePagination(filteredSales, 25);
 
   const statusLabel = (s: any) => {

@@ -14,7 +14,7 @@ import { saveFromPexels } from '../lib/services/mediaService';
 export function PexelsSearchTab({ onPick }: { onPick: (imageValue: string) => void }) {
   const [query, setQuery] = React.useState('');
   const [photos, setPhotos] = React.useState<PexelsPhoto[]>([]);
-  const [page, setPage] = React.useState(1);
+  const [_page, setPage] = React.useState(1);
   const [nextPage, setNextPage] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);

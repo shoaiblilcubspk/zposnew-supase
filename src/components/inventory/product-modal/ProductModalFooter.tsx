@@ -1,5 +1,4 @@
 import { Package } from 'lucide-react';
-import { Button } from '../../../shared/ui';
 import { Product } from '../../../types';
 
 interface ProductModalFooterProps {

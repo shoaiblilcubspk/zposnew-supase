@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { SearchableSelect } from '../../shared/ui/SearchableSelect';
-import { Button, DateRangePicker, Pagination } from '../../shared/ui';
+import { Button, DateRangePicker } from '../../shared/ui';
 import { ExportButton } from '../../shared/export';
 import { getCurrencySymbol } from '../../lib/currencies';
 import { SharedSearchBar } from '../../shared/modules/search-and-list';

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Download, Upload, FileArchive, FileJson, Sheet, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Download, Upload, FileArchive, FileJson, Sheet, CheckCircle2, Loader2 } from 'lucide-react';
 import { Modal, Button } from '../../shared/ui';
 import { exportProductsCatalog, importProductsCatalog } from '../../lib/services/products/productExportImport';
 import { useProductsStore } from '../../stores';

@@ -1,11 +1,9 @@
 import { Printer, LayoutGrid } from 'lucide-react';
 import { SearchableSelect } from '../../../shared/ui/SearchableSelect';
 import type { ReceiptSettingsFormProps } from './ReceiptSettingsForm.types';
-import { useSettingsStore } from '../../../stores';
-import { sonner } from '../../../lib/sonner';
 
 export function ReceiptLayoutTemplateSection(props: ReceiptSettingsFormProps) {
-  const { formData, setFormData, setFormDataDirect, handleChange, handleInstantUpdate, canEditSettings } = props;
+  const { formData, setFormDataDirect, handleInstantUpdate, canEditSettings } = props;
   return (
     <div className="p-4 sm:p-5 bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] shadow-none space-y-4">
       <div className="space-y-1 relative z-30">
