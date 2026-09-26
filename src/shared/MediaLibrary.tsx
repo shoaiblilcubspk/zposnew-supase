@@ -257,7 +257,7 @@ export function MediaLibrary({ isOpen, onClose, onSelect, standalone }: MediaLib
                     alt={asset.name}
                     imgClassName="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <div className="touch-reveal absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                     <MousePointer2 className="h-5 w-5 text-white" />
                     {!asset.isSystem && (
                       <button

@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, ChevronDown, Plus } from 'lucide-react';
+import { ProductThumb } from './ProductThumb';
 
 interface Option {
   id: string;
@@ -138,7 +139,7 @@ export function SearchableSelect({
         {Icon && <Icon className={`h-4 w-4 ${iconColor || 'text-primary dark:text-emerald-400'} shrink-0`} />}
         <span className="flex-1 text-[13.5px] sm:text-[14px] tracking-[-0.01em] truncate text-neutral-900 dark:text-white flex items-center gap-1.5">
           {label ? <span className="text-neutral-700 dark:text-neutral-300 font-bold mr-0.5 text-[13px] sm:text-[13.5px]">{label}:</span> : ''}
-          {selectedOption?.image && <img src={selectedOption.image} alt="" className="w-4.5 h-4.5 rounded object-cover" />}
+          {selectedOption?.image && <span className="w-4.5 h-4.5 rounded overflow-hidden shrink-0 inline-flex"><ProductThumb image={selectedOption.image} alt="" imgClassName="w-full h-full object-cover" /></span>}
           <span className="font-bold text-neutral-900 dark:text-white truncate">
             {selectedOption?.label || value || 'Select...'}
           </span>
@@ -182,7 +183,7 @@ export function SearchableSelect({
                     }`}
                   >
                     {option.image && (
-                      <img src={option.image} alt="" className="w-5 h-5 rounded object-cover shrink-0" />
+                      <span className="w-5 h-5 rounded overflow-hidden shrink-0 inline-flex"><ProductThumb image={option.image} alt="" imgClassName="w-full h-full object-cover" /></span>
                     )}
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <span className="truncate">{option.label}</span>

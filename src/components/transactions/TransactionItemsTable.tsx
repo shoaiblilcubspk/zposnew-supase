@@ -2,6 +2,7 @@ import React from 'react';
 import { Gift, Package, ShoppingBag } from 'lucide-react';
 import { formatCurrency } from '../../lib/currencies';
 import { sonner } from '../../lib/sonner';
+import { ProductThumb } from '../../shared/ui/ProductThumb';
 
 interface Props {
   items: any[];
@@ -115,7 +116,7 @@ export function TransactionItemsTable({
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded overflow-hidden bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08] shrink-0 flex items-center justify-center">
               {bundleImage ? (
-                <img src={bundleImage} alt={b.bundleName} className="w-full h-full object-cover" />
+                <ProductThumb image={bundleImage} alt={b.bundleName} imgClassName="w-full h-full object-cover" fallback={<Package className="h-3 w-3 text-neutral-400" />} />
               ) : (
                 <Package className="h-3 w-3 text-neutral-400" />
               )}
@@ -213,7 +214,7 @@ export function TransactionItemsTable({
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded overflow-hidden bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08] shrink-0 flex items-center justify-center">
               {getItemImage(item) ? (
-                <img src={getItemImage(item)!} alt={item.product?.name || item.name || ''} className="w-full h-full object-cover" />
+                <ProductThumb image={getItemImage(item)!} alt={item.product?.name || item.name || ''} imgClassName="w-full h-full object-cover" fallback={<Package className="h-3 w-3 text-neutral-400" />} />
               ) : (
                 <Package className="h-3 w-3 text-neutral-400" />
               )}

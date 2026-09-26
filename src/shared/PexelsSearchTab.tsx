@@ -94,7 +94,7 @@ export function PexelsSearchTab({ onPick }: { onPick: (imageValue: string) => vo
                   type="button"
                   onClick={() => void use(p)}
                   disabled={usingId === p.id}
-                  className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[12px] font-medium transition-opacity disabled:opacity-100"
+                  className="touch-reveal absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[12px] font-medium transition-opacity disabled:opacity-100"
                 >
                   {usingId === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Use this image'}
                 </button>

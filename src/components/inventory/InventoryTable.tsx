@@ -212,14 +212,14 @@ export function InventoryTable({
                 <Button
                   variant="ghost"
                   onClick={(e) => { e.stopPropagation(); handleSelectProduct(product.id); }}
-                  className="absolute top-1.5 right-1.5 z-20 !min-h-0 !p-0 !bg-transparent"
+                  className="absolute top-1.5 right-1.5 z-20 !h-auto !min-h-0 !p-0 !bg-transparent"
                 >
                   {selectedProductIds.includes(product.id) ? (
                     <div className="bg-primary rounded p-1">
                       <CheckSquare className="h-3.5 w-3.5 text-white" />
                     </div>
                   ) : (
-                    <div className="bg-white/90 dark:bg-black/75 rounded p-1 border border-neutral-200 dark:border-white/20 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                    <div className="bg-white/90 dark:bg-black/75 rounded p-1 border border-neutral-200 dark:border-white/20 transition-opacity">
                       <Square className="h-3.5 w-3.5 text-neutral-400" />
                     </div>
                   )}

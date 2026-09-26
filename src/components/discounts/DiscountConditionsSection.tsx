@@ -150,7 +150,7 @@ export function DiscountConditionsSection({
             </div>
             <button
               onClick={() => removeCondition(index)}
-              className="absolute -top-2 -right-2 p-1 bg-white dark:bg-surface text-rose-500 rounded border border-neutral-200 dark:border-white/[0.08] hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors opacity-0 group-hover:opacity-100"
+              className="touch-reveal absolute -top-2 -right-2 p-1 bg-white dark:bg-surface text-rose-500 rounded border border-neutral-200 dark:border-white/[0.08] hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors opacity-0 group-hover:opacity-100"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>

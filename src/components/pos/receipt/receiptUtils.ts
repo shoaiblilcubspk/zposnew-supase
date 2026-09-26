@@ -67,16 +67,60 @@ export function buildPrintHtml(
 </html>`;
 }
 
+/**
+ * Make the receipt fully local & offline-safe for html2canvas capture.
+ *
+ * The receipt logo can be a remote (http/https) Supabase Storage / Pexels URL. When html2canvas
+ * re-loads such an image during capture it fires a real network request that FAILS offline (or on
+ * CORS-less objects / expired signed URLs) — surfacing as the "network error" and a broken image
+ * in the shared receipt. Here we, inside the cloned document only:
+ *   - try to inline each remote <img> as a data URL (works online / when CORS is present), else
+ *   - drop the <img> entirely so capture never makes a failing request and never emits a broken
+ *     image. The rest of the receipt (barcode/QR are local inline SVG) still renders perfectly.
+ * data: and blob: images are already local and left untouched.
+ */
+async function inlineRemoteImages(root: Document | HTMLElement): Promise<void> {
+  const imgs = Array.from(root.querySelectorAll('img'));
+  await Promise.all(imgs.map(async (img) => {
+    const src = img.getAttribute('src') || '';
+    if (!src || src.startsWith('data:') || src.startsWith('blob:')) return;
+    if (!/^https?:\/\//i.test(src)) return;
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(src, { signal: controller.signal, cache: 'force-cache' });
+      clearTimeout(timeout);
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const blob = await res.blob();
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+      });
+      img.setAttribute('src', dataUrl);
+    } catch {
+      // Offline / CORS / expired URL: remove so capture stays clean and never errors.
+      img.remove();
+    }
+  }));
+}
+
 export async function captureReceiptCanvas(receiptEl: HTMLElement): Promise<HTMLCanvasElement> {
   return html2canvas(receiptEl, {
     scale: 2,
     backgroundColor: '#ffffff',
     useCORS: true,
     logging: false,
+    imageTimeout: 3000,
     width: receiptEl.offsetWidth,
     height: receiptEl.scrollHeight,
     windowHeight: receiptEl.scrollHeight,
-    y: 0, scrollX: 0, scrollY: 0
+    y: 0, scrollX: 0, scrollY: 0,
+    onclone: async (clonedDoc: Document) => {
+      // Runs on the throwaway clone only — the live receipt is untouched.
+      await inlineRemoteImages(clonedDoc);
+    },
   });
 }
 

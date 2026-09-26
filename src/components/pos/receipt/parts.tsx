@@ -24,7 +24,7 @@ export function renderLogo(ctx: ReceiptCtx, style: React.CSSProperties) {
   const { settings } = ctx;
   if (!settings.receiptShowLogo) return null;
   if (settings.storeLogo) {
-    return <img src={settings.storeLogo} alt="" style={{ ...style, objectFit: 'contain' }} />;
+    return <img src={settings.storeLogo} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} style={{ ...style, objectFit: 'contain' }} />;
   }
   return null;
 }

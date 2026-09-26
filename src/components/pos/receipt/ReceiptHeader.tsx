@@ -8,7 +8,7 @@ export function renderHeaderSection(ctx: ReceiptCtx) {
   return (
     <div style={{ textAlign: 'center', margin: '8px 0', position: 'relative', left: `${settings.receiptHeaderOffsetX || 0}mm`, width: '100%', display: 'block' }}>
       {(settings.receiptShowLogo && settings.storeLogo) ? (
-        <img src={settings.storeLogo} alt="" style={{ display: 'block', margin: '0 auto', maxHeight: '80px', maxWidth: '80%', objectFit: 'contain' }} />
+        <img src={settings.storeLogo} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} style={{ display: 'block', margin: '0 auto', maxHeight: '80px', maxWidth: '80%', objectFit: 'contain' }} />
       ) : (
         <div style={{ margin: '0 auto', marginBottom: '8px', width: '100%', textAlign: 'center' }}>
           <QRCodeSVG value={sale.invoiceNumber} size={80} level="M" aria-hidden="true" style={{ margin: '0 auto' }} />

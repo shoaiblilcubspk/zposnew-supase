@@ -82,7 +82,7 @@ export function CustomerSearchDropdown({
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); setViewingCustomer(customer); setShowCustomerSearch(false); }}
-                    className="p-1.5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded transition-colors opacity-0 group-hover:opacity-100 mr-1"
+                    className="touch-reveal p-1.5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded transition-colors opacity-0 group-hover:opacity-100 mr-1"
                     title="View customer profile"
                   >
                     <Eye className="h-3.5 w-3.5" />

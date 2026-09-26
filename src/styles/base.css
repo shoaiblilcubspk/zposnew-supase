@@ -32,6 +32,18 @@
     @apply inline-flex items-center justify-center;
   }
 
+  /* ─── Touch: reveal interactive hover-overlays ───
+     On touch devices there is no hover, so an interactive overlay gated behind
+     `group-hover:opacity-100` steals the FIRST tap to apply synthetic :hover and
+     only fires its click on the SECOND tap (sticky-hover bug). Elements marked
+     `.touch-reveal` stay fully visible on touch so a single tap selects/acts.
+     Pointer devices keep the hover-reveal behaviour unchanged. */
+  @media (hover: none) and (pointer: coarse) {
+    .touch-reveal {
+      opacity: 1 !important;
+    }
+  }
+
 
   /* Prevent text-size adjust on orientation change */
   html {

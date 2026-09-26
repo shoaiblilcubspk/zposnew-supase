@@ -35,20 +35,20 @@ export function useProductsListHandlers({
     }
   };
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedProductIds(filteredProducts.map(p => p.id));
-    } else {
-      setSelectedProductIds([]);
-    }
+  const handleSelectAll = () => {
+    // Click-to-toggle: if everything is already selected, clear; otherwise select all.
+    setSelectedProductIds(prev =>
+      filteredProducts.length > 0 && prev.length === filteredProducts.length
+        ? []
+        : filteredProducts.map(p => p.id)
+    );
   };
 
-  const handleSelectProduct = (id: string, checked: boolean) => {
-    if (checked) {
-      setSelectedProductIds(prev => [...prev, id]);
-    } else {
-      setSelectedProductIds(prev => prev.filter(pid => pid !== id));
-    }
+  const handleSelectProduct = (id: string) => {
+    // Click-to-toggle a single row's membership in the selection set.
+    setSelectedProductIds(prev =>
+      prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
+    );
   };
 
   const handleBulkDelete = async () => {

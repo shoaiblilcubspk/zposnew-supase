@@ -138,14 +138,14 @@ export function MagicalClock() {
       {/* Navigation Arrows - Smaller & Side Pinned */}
       <button 
         onClick={prevWatch}
-        className="absolute left-1 z-40 p-1.5 bg-black/75 border border-white/10 text-white/40 hover:text-white rounded-full transition-all active:scale-75 opacity-0 group-hover:opacity-100"
+        className="touch-reveal absolute left-1 z-40 p-1.5 bg-black/75 border border-white/10 text-white/40 hover:text-white rounded-full transition-all active:scale-75 opacity-0 group-hover:opacity-100"
       >
         <ChevronLeft className="w-3 h-3" />
       </button>
       
       <button 
         onClick={nextWatch}
-        className="absolute right-1 z-40 p-1.5 bg-black/75 border border-white/10 text-white/40 hover:text-white rounded-full transition-all active:scale-75 opacity-0 group-hover:opacity-100"
+        className="touch-reveal absolute right-1 z-40 p-1.5 bg-black/75 border border-white/10 text-white/40 hover:text-white rounded-full transition-all active:scale-75 opacity-0 group-hover:opacity-100"
       >
         <ChevronRight className="w-3 h-3" />
       </button>

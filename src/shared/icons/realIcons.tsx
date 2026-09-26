@@ -34,63 +34,103 @@ import {
 
 /**
  * 🎨 Real 3D / Rich Icons Registry
- * Sourced directly from /public/Icons/ for high-end tactile UI chips, tabs & cards.
- * Single source of truth for all 3D icon assets & corresponding system vector icons.
+ *
+ * Icons are imported as bundled ES-module assets from `src/assets/icons/` so Vite
+ * fingerprints them (content-hashed, cache-busted, guaranteed present in the build).
+ * This replaces the previous fragile `/Icons/...` public string paths which broke on:
+ *   - filenames containing spaces (`%20` not resolving on file:// / WebView), and
+ *   - stale CDN caches serving old/404 responses (AGENTS.md §2.11, §2.12, §4.2).
+ * Never reference `/public/Icons/*` string paths for UI chrome again — always import.
  */
+import cartIcon from '../../assets/icons/cart.webp';
+import salesIcon from '../../assets/icons/sales.webp';
+import expensesIcon from '../../assets/icons/expenses.webp';
+import inventoryIcon from '../../assets/icons/inventory.webp';
+import customersIcon from '../../assets/icons/customers.webp';
+import discountsIcon from '../../assets/icons/discounts.webp';
+import reportsIcon from '../../assets/icons/reports.webp';
+import reportsOverviewIcon from '../../assets/icons/reports-overview.webp';
+import suppliersIcon from '../../assets/icons/suppliers.webp';
+import usersIcon from '../../assets/icons/users.webp';
+import settingsIcon from '../../assets/icons/settings.webp';
+import generalSettingsIcon from '../../assets/icons/general-settings.webp';
+import restoreBackupIcon from '../../assets/icons/restore-and-backup.webp';
+import devicePairIcon from '../../assets/icons/device-pair.webp';
+import dealsIcon from '../../assets/icons/deals.png';
+import mediaIcon from '../../assets/icons/media.webp';
+import productIcon from '../../assets/icons/product.webp';
+import restockInventoryIcon from '../../assets/icons/restock-inventory.webp';
+import categoriesIcon from '../../assets/icons/categories.webp';
+import receiptPrinterIcon from '../../assets/icons/receipt-printer.webp';
+import posMachineIcon from '../../assets/icons/pos-machine.webp';
+import purchaseHistoryIcon from '../../assets/icons/purchase-history.webp';
+import cashIcon from '../../assets/icons/cash.webp';
+import cardIcon from '../../assets/icons/card.webp';
+import bankIcon from '../../assets/icons/bank.webp';
+import splitPaymentIcon from '../../assets/icons/split-payment.webp';
+import profileLockIcon from '../../assets/icons/profile-lock.webp';
+import moonThemeIcon from '../../assets/icons/moon-dark-theme.webp';
+import sunThemeIcon from '../../assets/icons/sun-light-theme.webp';
+import refreshIcon from '../../assets/icons/refresh.webp';
+import exitIcon from '../../assets/icons/exit.webp';
+import accountPrivacyIcon from '../../assets/icons/account-privacy.webp';
+import userGuideIcon from '../../assets/icons/user-guide.webp';
+import moreMenuIcon from '../../assets/icons/more-menu.png';
+
 export const REAL_ICONS = {
-  pos: '/Icons/Cart.webp',
-  cart: '/Icons/Cart.webp',
-  sales: '/Icons/Sales.webp',
-  transactions: '/Icons/Sales.webp',
-  expenses: '/Icons/Expenses.webp',
-  inventory: '/Icons/Inventory.webp',
-  customers: '/Icons/Customers.webp',
-  discounts: '/Icons/Discounts.webp',
-  reports: '/Icons/Reports.webp',
-  reportOverview: encodeURI('/Icons/Reports overview.webp'),
-  reportTab: encodeURI('/Icons/Reports overview.webp'),
-  suppliers: '/Icons/Suppliers.webp',
-  users: '/Icons/Users.webp',
-  salesman: '/Icons/Users.webp',
-  staff: '/Icons/Users.webp',
-  settings: '/Icons/Settings.webp',
-  generalSettings: encodeURI('/Icons/General settings.webp'),
-  database: encodeURI('/Icons/Restore and backup.webp'),
-  backup: encodeURI('/Icons/Restore and backup.webp'),
-  device: encodeURI('/Icons/Device pair.webp'),
-  devicePair: encodeURI('/Icons/Device pair.webp'),
-  deals: '/Icons/Deals.png',
-  bundles: '/Icons/Deals.png',
-  media: '/Icons/Media.webp',
-  product: '/Icons/Product.webp',
-  productRestock: encodeURI('/Icons/Restock inventory.webp'),
-  restock: encodeURI('/Icons/Restock inventory.webp'),
-  categories: '/Icons/Categories.webp',
-  groups: '/Icons/Categories.webp',
-  receipt: encodeURI('/Icons/Recipt&printer.webp'),
-  posMachine: encodeURI('/Icons/Pos machine.webp'),
-  purchases: encodeURI('/Icons/Purchase history.webp'),
-  purchaseHistory: encodeURI('/Icons/Purchase history.webp'),
-  cashWallet: '/Icons/Cash.webp',
-  cash: '/Icons/Cash.webp',
-  cardWallet: '/Icons/Card.webp',
-  card: '/Icons/Card.webp',
-  bankWallet: '/Icons/Bank.webp',
-  bank: '/Icons/Bank.webp',
-  online: '/Icons/Bank.webp',
-  split: encodeURI('/Icons/Split payment.webp'),
-  splitWallet: encodeURI('/Icons/Split payment.webp'),
-  lock: encodeURI('/Icons/Profile Lock.webp'),
-  moon: encodeURI('/Icons/Moon dark theme.webp'),
-  sun: encodeURI('/Icons/Sun light theme.webp'),
-  refresh: '/Icons/Refresh.webp',
-  exit: '/Icons/Exit.webp',
-  logout: '/Icons/Exit.webp',
-  account: encodeURI('/Icons/Account and privacy.webp'),
-  security: encodeURI('/Icons/Account and privacy.webp'),
-  userGuide: encodeURI('/Icons/User guide.webp'),
-  howTo: encodeURI('/Icons/User guide.webp'),
-  more: encodeURI('/Icons/More menu.png'),
+  pos: cartIcon,
+  cart: cartIcon,
+  sales: salesIcon,
+  transactions: salesIcon,
+  expenses: expensesIcon,
+  inventory: inventoryIcon,
+  customers: customersIcon,
+  discounts: discountsIcon,
+  reports: reportsIcon,
+  reportOverview: reportsOverviewIcon,
+  reportTab: reportsOverviewIcon,
+  suppliers: suppliersIcon,
+  users: usersIcon,
+  salesman: usersIcon,
+  staff: usersIcon,
+  settings: settingsIcon,
+  generalSettings: generalSettingsIcon,
+  database: restoreBackupIcon,
+  backup: restoreBackupIcon,
+  device: devicePairIcon,
+  devicePair: devicePairIcon,
+  deals: dealsIcon,
+  bundles: dealsIcon,
+  media: mediaIcon,
+  product: productIcon,
+  productRestock: restockInventoryIcon,
+  restock: restockInventoryIcon,
+  categories: categoriesIcon,
+  groups: categoriesIcon,
+  receipt: receiptPrinterIcon,
+  posMachine: posMachineIcon,
+  purchases: purchaseHistoryIcon,
+  purchaseHistory: purchaseHistoryIcon,
+  cashWallet: cashIcon,
+  cash: cashIcon,
+  cardWallet: cardIcon,
+  card: cardIcon,
+  bankWallet: bankIcon,
+  bank: bankIcon,
+  online: bankIcon,
+  split: splitPaymentIcon,
+  splitWallet: splitPaymentIcon,
+  lock: profileLockIcon,
+  moon: moonThemeIcon,
+  sun: sunThemeIcon,
+  refresh: refreshIcon,
+  exit: exitIcon,
+  logout: exitIcon,
+  account: accountPrivacyIcon,
+  security: accountPrivacyIcon,
+  userGuide: userGuideIcon,
+  howTo: userGuideIcon,
+  more: moreMenuIcon,
 } as const;
 
 export type RealIconName = keyof typeof REAL_ICONS;
@@ -195,7 +235,11 @@ export function RealIcon({
 
   const effectiveMode = mode === 'auto' ? appIconStyle : mode;
 
-  if (effectiveMode === 'system') {
+  const [imgFailed, setImgFailed] = React.useState(false);
+  // Reset the failure flag if the icon name changes to a different asset.
+  React.useEffect(() => { setImgFailed(false); }, [name]);
+
+  const renderSystem = () => {
     const SystemComponent = SYSTEM_ICONS[name] || Package;
     const sysPixel = typeof size === 'number'
       ? Math.round(size * 0.55)
@@ -206,6 +250,11 @@ export function RealIcon({
         className={cn('shrink-0 stroke-[2] transition-transform inline-block', className)}
       />
     );
+  };
+
+  // Explicit system mode, or graceful fallback when the bundled asset failed to load.
+  if (effectiveMode === 'system' || imgFailed) {
+    return renderSystem();
   }
 
   const pixel = typeof size === 'number' ? size : (PIXEL_SIZES[size] || PIXEL_SIZES.md);
@@ -215,6 +264,7 @@ export function RealIcon({
     <img
       src={src}
       alt={alt || name}
+      onError={() => setImgFailed(true)}
       style={{
         width: `${pixel}px`,
         height: `${pixel}px`,

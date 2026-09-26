@@ -30,7 +30,11 @@ function getBarcodeData(value: string, options?: any) {
       displayValue: false,
       margin: 2,
       background: 'transparent',
-      lineColor: 'currentColor',
+      // Concrete black (never `currentColor`): the barcode always sits on a white
+      // container, and html2canvas cannot resolve `currentColor` when it serializes
+      // the inline SVG for capture — that produced the garbled/blank shared receipt
+      // barcode. A concrete colour rasterizes identically on screen and in capture.
+      lineColor: '#000000',
       ...options
     });
 
@@ -137,6 +141,8 @@ export const BarcodePreview = React.memo(
       >
         <svg
           viewBox={barcode.viewBox}
+          width={barcode.width.replace('px', '')}
+          height={barcode.height.replace('px', '')}
           className={`${height !== undefined ? '' : (inline ? 'h-[16px]' : 'h-[32px]')} w-auto text-black`}
           style={svgStyle}
           dangerouslySetInnerHTML={{ __html: barcode.innerHTML }}

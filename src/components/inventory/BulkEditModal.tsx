@@ -8,6 +8,7 @@ import { SearchableSelect } from '../../shared/ui/SearchableSelect';
 import { MediaLibrary } from '../../shared/MediaLibrary';
 import { Modal } from '../../shared/ui/Modal';
 import { Button } from '../../shared/ui';
+import { ProductThumb } from '../../shared/ui/ProductThumb';
 
 interface BulkEditModalProps {
   isOpen: boolean;
@@ -186,7 +187,7 @@ export function BulkEditModal({ isOpen, onClose, selectedIds, categories, suppli
                 <div className="relative h-14 w-14 rounded bg-white dark:bg-surface border border-neutral-300 dark:border-white/[0.12] flex items-center justify-center shadow-none">
                   {updates.image ? (
                     <>
-                      <img src={updates.image} className="h-full w-full object-cover rounded" />
+                      <ProductThumb image={updates.image} imgClassName="h-full w-full object-cover rounded" fallback={<ImageIcon className="h-8 w-8 text-neutral-400" />} />
                       <button
                         type="button"
                         onClick={(e) => {
