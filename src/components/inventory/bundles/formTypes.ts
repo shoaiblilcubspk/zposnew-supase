@@ -7,6 +7,7 @@ interface BundleForm {
   name: string;
   description: string;
   image: string;
+  barcode: string;
   discountValue: number;
   discountType: 'percentage' | 'fixed';
   hideItemPrices: boolean;
@@ -18,6 +19,7 @@ const emptyForm: BundleForm = {
   name: '',
   description: '',
   image: '',
+  barcode: '',
   discountValue: 0,
   discountType: 'percentage',
   overridePrice: 0,

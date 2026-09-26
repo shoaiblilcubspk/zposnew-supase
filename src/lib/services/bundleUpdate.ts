@@ -12,6 +12,7 @@ export async function updateBundle(bundleId: string, data: {
   items?: { productId: string; quantity: number }[];
   overridePrice?: number;
   image?: string;
+  barcode?: string;
 }): Promise<void> {
   const ops: AtomicOp[] = [];
 
@@ -24,6 +25,7 @@ export async function updateBundle(bundleId: string, data: {
   if (data.active !== undefined) patch.active = data.active ? 1 : 0;
   if (data.image !== undefined) patch.image = data.image || null;
   if (data.overridePrice !== undefined) patch.override_price = data.overridePrice || null;
+  if (data.barcode !== undefined) patch.barcode = data.barcode.trim() || null;
   if (Object.keys(patch).length > 0) ops.push({ table: 'bundles', op: 'update', id: bundleId, patch });
 
   if (data.items !== undefined) {

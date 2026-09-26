@@ -285,6 +285,7 @@ create table if not exists public.bundles (
   hide_item_prices  integer not null default 0,
   active            integer not null default 1,
   image             text,
+  barcode           text,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
@@ -1685,3 +1686,114 @@ drop trigger if exists trg_media_assets_updated_at on public.media_assets;
 create trigger trg_media_assets_updated_at
   before insert or update on public.media_assets
   for each row execute function public.set_updated_at();
+
+
+-- ####### SOURCE: supabase/migrations/0024_bundle_barcode.sql #######
+alter table public.bundles add column if not exists barcode text;
+create index if not exists idx_bundles_barcode on public.bundles(barcode);
+
+
+-- ####### SOURCE: supabase/migrations/0025_apply_bundle_sequence_renumber.sql #######
+create table if not exists public.sequence_registry (
+  table_name  text not null,
+  column_name text not null,
+  primary key (table_name, column_name)
+);
+
+insert into public.sequence_registry (table_name, column_name)
+values ('sales', 'invoice_number')
+on conflict do nothing;
+
+create or replace function public.apply_bundle(
+  p_operation_id text,
+  p_action       text,
+  p_rows         jsonb
+) returns jsonb
+language plpgsql
+as $$
+declare
+  v_denied text[] := array['bundle_operations','repair_quarantine','_migrations','sync_pull_cursor','sync_queue','sequence_registry'];
+  v_append_only text[] := array[
+    'inventory_ledger','sale_items','sale_voids','sale_refunds',
+    'payments','customer_ledger','audit_logs',
+    'stock_history','variant_stock_history','price_history','sale_audit_log'
+  ];
+  v_existing jsonb; v_found boolean; v_row jsonb; v_table text; v_op text; v_payload jsonb;
+  v_cols text; v_set text; v_count integer := 0; v_result jsonb;
+  v_seq_col text; v_val text; v_num_txt text; v_prefix text; v_width int;
+  v_maxnum bigint; v_newnum bigint; v_newval text; v_try int;
+  v_renumbered jsonb := '[]'::jsonb;
+begin
+  select true, result into v_found, v_existing from public.bundle_operations where operation_id = p_operation_id;
+  if v_found then return coalesce(v_existing, jsonb_build_object('replayed', true)); end if;
+
+  for v_row in select * from jsonb_array_elements(coalesce(p_rows, '[]'::jsonb)) loop
+    v_table := v_row->>'table'; v_op := v_row->>'op'; v_payload := v_row->'payload';
+
+    if v_table is null or v_table = any(v_denied) or to_regclass('public.' || v_table) is null then
+      raise exception 'apply_bundle: table % not allowed', v_table;
+    end if;
+    if v_payload is null then raise exception 'apply_bundle: null payload for table %', v_table; end if;
+
+    if v_op = 'delete' then
+      execute format('delete from public.%I where id::text = $1', v_table) using (v_payload->>'id');
+    else
+      select string_agg(format('%I', k), ', ') into v_cols from jsonb_object_keys(v_payload) k;
+      if v_cols is null then raise exception 'apply_bundle: empty payload for table %', v_table; end if;
+
+      if v_table = any(v_append_only) then
+        execute format('insert into public.%I (%s) select %s from jsonb_populate_record(null::public.%I, $1) on conflict (operation_id) do nothing', v_table, v_cols, v_cols, v_table) using v_payload;
+      else
+        select column_name into v_seq_col from public.sequence_registry where table_name = v_table limit 1;
+
+        select string_agg(format('%I = excluded.%I', k, k), ', ') into v_set from jsonb_object_keys(v_payload) k where k <> 'id';
+
+        v_try := 0;
+        loop
+          begin
+            if v_set is null then
+              execute format('insert into public.%I (%s) select %s from jsonb_populate_record(null::public.%I, $1) on conflict (id) do nothing', v_table, v_cols, v_cols, v_table) using v_payload;
+            else
+              execute format('insert into public.%I (%s) select %s from jsonb_populate_record(null::public.%I, $1) on conflict (id) do update set %s', v_table, v_cols, v_cols, v_table, v_set) using v_payload;
+            end if;
+            exit;
+          exception when unique_violation then
+            if v_seq_col is null then raise; end if;
+            v_try := v_try + 1;
+            if v_try > 100 then raise exception 'apply_bundle: could not allocate free %.% after 100 tries', v_table, v_seq_col; end if;
+
+            v_val := v_payload->>v_seq_col;
+            if v_val is null then raise; end if;
+
+            v_num_txt := substring(v_val from '(\d+)$');
+            if v_num_txt is null then raise; end if;
+            v_prefix := left(v_val, length(v_val) - length(v_num_txt));
+            v_width := length(v_num_txt);
+
+            execute format(
+              'select coalesce(max((substring(%I from ''(\d+)$''))::bigint), 0) from public.%I where %I like $1',
+              v_seq_col, v_table, v_seq_col
+            ) into v_maxnum using (v_prefix || '%');
+
+            v_newnum := greatest(v_maxnum, v_num_txt::bigint) + 1;
+            v_newval := v_prefix || lpad(v_newnum::text, v_width, '0');
+
+            v_renumbered := v_renumbered || jsonb_build_object(
+              'table', v_table, 'id', v_payload->>'id', 'column', v_seq_col,
+              'old', v_val, 'new', v_newval
+            );
+            v_payload := jsonb_set(v_payload, array[v_seq_col], to_jsonb(v_newval));
+          end;
+        end loop;
+      end if;
+    end if;
+    v_count := v_count + 1;
+  end loop;
+
+  v_result := jsonb_build_object('ok', true, 'action', p_action, 'rows_applied', v_count, 'renumbered', v_renumbered);
+  insert into public.bundle_operations (operation_id, action, result) values (p_operation_id, p_action, v_result) on conflict (operation_id) do nothing;
+  return v_result;
+end;
+$$;
+
+grant execute on function public.apply_bundle(text, text, jsonb) to anon, authenticated;

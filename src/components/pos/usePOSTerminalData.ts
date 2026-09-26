@@ -1,4 +1,4 @@
-import { useCartStore, useProductsStore, useSettingsStore } from '../../stores';
+import { useCartStore, useProductsStore, useSettingsStore, useAppStore } from '../../stores';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { normalizeBarcodeValue } from '../../utils/barcode';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { useHardwareScanner } from '../../hooks/useHardwareScanner';
 import { usePOSKeyboard } from '../../hooks/usePOSKeyboard';
 import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import { useCartActions } from './useCartActions';
+import { addBundleToCart } from '../../lib/services/addBundleToCart';
 
 export function usePOSTerminalData() {
   const _navigate = useNavigate();
@@ -18,6 +19,7 @@ const appProducts = useProductsStore(s => s.products);
 const appActiveSalesTab = useCartStore(s => s.activeSalesTab);
 const _appSelectedCustomer = useCartStore(s => s.selectedCustomer);
   const appSalesTabs = useCartStore(s => s.salesTabs);
+  const appBundles = useAppStore(s => s.bundles);
 
   const { _user } = useAuth();
   const [showCheckout, setShowCheckout] = useState(false);
@@ -141,6 +143,25 @@ const _appSelectedCustomer = useCartStore(s => s.selectedCustomer);
       }
 
       if (!scannedProduct) {
+        // 3. Not a product — try matching a BUNDLE barcode. A single scan adds the whole deal
+        //    (same expansion/discount path as tapping the bundle in the grid).
+        const bundle = (appBundles || []).find((b: any) => {
+          if (!b?.barcode) return false;
+          return b.barcode === term || normalizeBarcodeValue(b.barcode) === normalizedTerm;
+        });
+        if (bundle) {
+          const ok = addBundleToCart({
+            bundle,
+            appProducts,
+            appCart: useCartStore.getState().cart,
+            isReturnMode,
+            currency: appSettings.currency,
+          });
+          if (ok) play('scan');
+          else play('error');
+          return;
+        }
+
         play('error');
         sonner.error(`Not found: ${term}`);
         return;
@@ -158,7 +179,7 @@ const _appSelectedCustomer = useCartStore(s => s.selectedCustomer);
     } catch {
       sonner.error('Scanner error — check connection');
     }
-  }, [appProducts, addToCart, isReturnMode]);
+  }, [appProducts, appBundles, appSettings.currency, addToCart, isReturnMode]);
 
   useHardwareScanner(handleScan);
 

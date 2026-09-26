@@ -1,4 +1,4 @@
-import { Gift, Package, ChevronUp, ChevronDown, ToggleLeft, ToggleRight, Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { Gift, Package, ChevronUp, ChevronDown, ToggleLeft, ToggleRight, Edit, Trash2, MoreHorizontal, Barcode } from 'lucide-react';
 import { ProductThumb } from '../../../shared/ui/ProductThumb';
 import { Button, Badge } from '../../../shared/ui';
 import { formatCurrency } from '../../../lib/currencies';
@@ -13,6 +13,7 @@ interface BundleCardMobileProps {
   onEdit: () => void;
   onToggleActive: () => void;
   onDelete: () => void;
+  onPrintBarcode: () => void;
   actionMenuOpen: boolean;
   menuUpward: boolean;
   onToggleMenu: (bundleId: string, e: React.MouseEvent) => void;
@@ -24,7 +25,7 @@ interface BundleCardMobileProps {
   productImages: { bi: any; product: any }[];
 }
 
-export function BundleCardMobile({ bundle, appSettings, isExpandedLocal, canManage, onToggleExpand, onEdit, onToggleActive, onDelete, actionMenuOpen, menuUpward, onToggleMenu, onCloseMenu, itemCount, discAmt, totalPrice, finalAmt, productImages }: BundleCardMobileProps) {
+export function BundleCardMobile({ bundle, appSettings, isExpandedLocal, canManage, onToggleExpand, onEdit, onToggleActive, onDelete, onPrintBarcode, actionMenuOpen, menuUpward, onToggleMenu, onCloseMenu, itemCount, discAmt, totalPrice, finalAmt, productImages }: BundleCardMobileProps) {
   return (
     <div className="sm:hidden p-4 space-y-1.5">
       <div className="flex items-center gap-3">
@@ -69,6 +70,15 @@ export function BundleCardMobile({ bundle, appSettings, isExpandedLocal, canMana
                   >
                     <Edit className="h-3.5 w-3.5" />
                     {"Edit"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => { onPrintBarcode(); onCloseMenu(); }}
+                    className="w-full !justify-start !min-h-0 !px-2.5 !py-1.5 !rounded !bg-transparent hover:!bg-neutral-100 dark:hover:!bg-white/5 !text-[12px] !font-medium !text-neutral-700 dark:!text-neutral-300"
+                  >
+                    <Barcode className="h-3.5 w-3.5" />
+                    {"Print Barcode"}
                   </Button>
                   <Button
                     type="button"

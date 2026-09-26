@@ -13,6 +13,7 @@ interface BundleCardProps {
   onEdit: () => void;
   onToggleActive: () => void;
   onDelete: () => void;
+  onPrintBarcode: () => void;
   actionMenuOpen: boolean;
   menuUpward: boolean;
   onToggleMenu: (bundleId: string, e: React.MouseEvent) => void;
@@ -29,6 +30,7 @@ export function BundleCard({
   onEdit,
   onToggleActive,
   onDelete,
+  onPrintBarcode,
   actionMenuOpen,
   menuUpward,
   onToggleMenu,
@@ -67,6 +69,7 @@ export function BundleCard({
         onEdit={onEdit}
         onToggleActive={onToggleActive}
         onDelete={onDelete}
+        onPrintBarcode={onPrintBarcode}
         itemCount={itemCount}
         discAmt={discAmt}
         totalPrice={totalPrice}
@@ -82,6 +85,7 @@ export function BundleCard({
         onEdit={onEdit}
         onToggleActive={onToggleActive}
         onDelete={onDelete}
+        onPrintBarcode={onPrintBarcode}
         actionMenuOpen={actionMenuOpen}
         menuUpward={menuUpward}
         onToggleMenu={onToggleMenu}

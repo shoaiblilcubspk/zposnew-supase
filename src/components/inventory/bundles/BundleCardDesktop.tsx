@@ -1,4 +1,4 @@
-import { Gift, ChevronUp, ChevronDown, ToggleLeft, ToggleRight, Edit, Trash2 } from 'lucide-react';
+import { Gift, ChevronUp, ChevronDown, ToggleLeft, ToggleRight, Edit, Trash2, Barcode } from 'lucide-react';
 import { Button, Badge } from '../../../shared/ui';
 import { formatCurrency } from '../../../lib/currencies';
 import type { Bundle } from '../../../types';
@@ -12,13 +12,14 @@ interface BundleCardDesktopProps {
   onEdit: () => void;
   onToggleActive: () => void;
   onDelete: () => void;
+  onPrintBarcode: () => void;
   itemCount: number;
   discAmt: number;
   totalPrice: number;
   finalAmt: number;
 }
 
-export function BundleCardDesktop({ bundle, appSettings, isExpandedLocal, canManage, onToggleExpand, onEdit, onToggleActive, onDelete, itemCount, discAmt, totalPrice, finalAmt }: BundleCardDesktopProps) {
+export function BundleCardDesktop({ bundle, appSettings, isExpandedLocal, canManage, onToggleExpand, onEdit, onToggleActive, onDelete, onPrintBarcode, itemCount, discAmt, totalPrice, finalAmt }: BundleCardDesktopProps) {
   return (
     <div className="hidden sm:flex items-center gap-3 p-3">
       <div className="h-8 w-8 rounded flex items-center justify-center shrink-0 bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/[0.08]">
@@ -73,6 +74,15 @@ export function BundleCardDesktop({ bundle, appSettings, isExpandedLocal, canMan
               onClick={onEdit}
               className="!h-7 !w-7 !p-0 text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
               icon={<Edit className="h-3.5 w-3.5" />}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onPrintBarcode}
+              title={"Print barcode label"}
+              className="!h-7 !w-7 !p-0 text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              icon={<Barcode className="h-3.5 w-3.5" />}
             />
             <Button
               type="button"

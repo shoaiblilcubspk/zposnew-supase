@@ -17,6 +17,40 @@ import {
   getPending, markSynced, markError, markFailed, pruneSynced, countPending, type SyncQueueRow,
 } from './syncQueue';
 import { APPEND_ONLY_TABLES, type SyncedTable } from './localSchema';
+import { runExclusiveTransaction } from './localDb';
+
+/** One server-assigned renumber (see apply_bundle sequence-renumber, migration 0025). */
+export interface RenumberEntry {
+  table: string;
+  id: string;
+  column: string;
+  old: string;
+  new: string;
+}
+
+/**
+ * Apply server-authoritative sequence renumbering to the local mirror. When two offline
+ * devices picked the same optimistic number (e.g. invoice INV-1016), apply_bundle re-allocates
+ * a free number server-side and returns it here; we silently patch the local row so this device
+ * converges — no duplicate, no error, no data loss (AGENTS.md §1.7 cross-device safety).
+ */
+async function applyRenumbers(renumbered: RenumberEntry[]): Promise<void> {
+  const valid = (renumbered || []).filter(r => r && r.table && r.id && r.column && typeof r.new === 'string');
+  if (valid.length === 0) return;
+
+  await runExclusiveTransaction(async (tx) => {
+    for (const r of valid) {
+      // table/column come from the server registry (not user input); id/new are bound params.
+      await tx.execute(`UPDATE ${r.table} SET ${r.column} = ? WHERE id = ?`, [r.new, r.id]);
+    }
+  });
+
+  // Zero-refresh reactivity (§2.10): let stores/receipts patch the in-memory record.
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('sequence-renumbered', { detail: valid }));
+    window.dispatchEvent(new CustomEvent('sales-updated'));
+  }
+}
 
 const BASE_INTERVAL_MS = 5_000;
 const MAX_BACKOFF_MS = 5 * 60_000;
@@ -58,7 +92,7 @@ function isOnline(): boolean {
   return typeof navigator === 'undefined' ? true : navigator.onLine;
 }
 
-async function pushRow(row: SyncQueueRow): Promise<void> {
+async function pushRow(row: SyncQueueRow): Promise<{ renumbered?: RenumberEntry[] } | void> {
   const supabase = getSupabase();
   const payload = JSON.parse(row.payload) as Record<string, any>;
 
@@ -72,13 +106,14 @@ async function pushRow(row: SyncQueueRow): Promise<void> {
   // apply_bundle applies every row or none, and a replay (same operation_id) returns the
   // original stored result — so a retry can never duplicate or half-write.
   if (row.operation_type === 'bundle') {
-    const { error } = await supabase.rpc('apply_bundle', {
+    const { data, error } = await supabase.rpc('apply_bundle', {
       p_operation_id: row.operation_id,
       p_action: (payload.action as string) ?? row.table_name,
       p_rows: payload.rows ?? [],
     });
     if (error) throw toSyncError(error);
-    return;
+    const renumbered = (data && (data as any).renumbered) as RenumberEntry[] | undefined;
+    return { renumbered: Array.isArray(renumbered) ? renumbered : undefined };
   }
 
   // Legacy per-row entries (enqueued before the bundle write path shipped). Kept for
@@ -125,8 +160,11 @@ export async function flushQueue(): Promise<{ synced: number; failed: number; pe
       if (row.status === 'error' && Date.now() < dueAt) continue;
 
       try {
-        await pushRow(row);
+        const res = await pushRow(row);
         await markSynced(row.operation_id);
+        if (res && res.renumbered && res.renumbered.length > 0) {
+          await applyRenumbers(res.renumbered);
+        }
         synced++;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

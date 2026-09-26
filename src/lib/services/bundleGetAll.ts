@@ -12,6 +12,7 @@ function mapBundleRow(row: any, items: any[]): Bundle {
     hideItemPrices: Boolean(row.hide_item_prices),
     overridePrice: row.override_price != null ? Number(row.override_price) : undefined,
     image: row.image ?? undefined,
+    barcode: row.barcode ?? undefined,
     items: items
       .filter((bi) => bi.bundle_id === row.id)
       .map((bi: any): BundleItem => ({

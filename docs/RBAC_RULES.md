@@ -1180,3 +1180,27 @@ After any credit-related change, verify:
 - [ ] Financial report shows correct Credit wallet amount on all devices after sync
 - [ ] Sales filter: "Credit" option visible when `enable_credit_sales` = ON, matching across devices
 - [ ] No duplicate credit sale/repayment row created if sync retries (verify via `operation_id`)
+## Cross-Device Sequence Numbers (ALL domains — invoice, PO, voucher, etc.)
+
+> AGENTS.md §1.7.7 is the binding contract. Applies to EVERY auto-numbered domain, not just sales.
+
+Rule: an auto-generated sequence number (invoice number, purchase-order number, expense/voucher
+number, or any future counter) is **decided by the server, never trusted from the client as
+final**. Devices generate an optimistic number offline (so the UI is never blocked), but the
+authoritative, collision-proof number is assigned by `apply_bundle` at commit time.
+
+- Every cross-device sequence column is registered in `sequence_registry(table_name, column_name)`.
+  Adding a new auto-numbered domain = INSERT one row there — no per-module numbering code.
+- On a `unique_violation` of a registered column, `apply_bundle` re-allocates the next free value
+  (max+1, prefix/pad preserved) in the SAME transaction and returns it in `result.renumbered`.
+  The sync worker patches the local row + in-memory store (zero-refresh, §2.10).
+- A `duplicate key` / 23505 on a sequence column must NEVER surface to the user or park as a
+  permanent Failed bundle. Retry on an already-failed bundle renumbers and completes.
+
+### Sync Verification Checklist (sequence numbers)
+- [ ] Two devices offline both create a record (sale/PO/expense) → both sync with DISTINCT
+      server-assigned numbers, no error, no duplicate, no data loss.
+- [ ] Retry on an already-failed `duplicate key` bundle succeeds by renumbering automatically.
+- [ ] After sync, all devices show the SAME final number for that record.
+- [ ] A new auto-numbered domain is added ONLY via a `sequence_registry` row (guard:
+      `tests/sequenceRenumber.test.mjs`), never a device-local-only numbering scheme.

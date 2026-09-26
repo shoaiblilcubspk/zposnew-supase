@@ -17,6 +17,7 @@ export interface Bundle {
   overridePrice?: number;
   items?: BundleItem[];
   image?: string;
+  barcode?: string;
   createdAt: Date;
   updatedAt: Date;
 }

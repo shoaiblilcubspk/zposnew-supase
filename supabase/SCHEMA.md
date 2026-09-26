@@ -50,7 +50,8 @@
   in Storage bucket `product-images`).
 - **discounts**: name, description, type, value, conditions, min_amount, max_discount,
   valid_from/to/days, active, is_auto_apply.
-- **bundles** / **bundle_items**: bundle deals with per-item quantities.
+- **bundles** / **bundle_items**: bundle deals with per-item quantities. `bundles.barcode`
+  (migration 0024) makes a whole deal scannable/printable like a product.
 
 ### Phase 3 — Inventory (0003) — APPEND-ONLY
 - **inventory_ledger**: product_id, variant_id, type (`IN|OUT|AUDIT|DAMAGE`), signed quantity,
@@ -144,6 +145,22 @@
   source, image_hash, pexels_id, photographer(+url), page_url, alt, avg_color, width/height, and
   src_* URLs. The link + credit are permanent; the local blob is a disposable cache. Synced;
   deduped by pexels_id. Used by the Media picker's "Search Pexels" tab.
+
+### Bundle barcode (0024)
+- **bundles.barcode** (+ `idx_bundles_barcode`): a bundle/deal can carry its own scannable
+  barcode so one scan adds the whole deal to the cart (same expansion as tapping it), and a
+  bundle label can be printed from Inventory → Barcode. Non-unique (product/bundle spaces may
+  overlap; scan resolves product first, then bundle). Auto-generated on create if left blank.
+
+### Server-authoritative sequence numbers (0025) — AGENTS.md §1.7.7
+- **sequence_registry** (`table_name`, `column_name`): the generic registry of cross-device
+  sequence columns. Seeded with `('sales','invoice_number')`; a new auto-numbered domain adds
+  one row (no code). **apply_bundle (0025)** now tries the client's optimistic number first and,
+  on a `unique_violation` of a registered column, re-allocates the next free value (max+1,
+  prefix/pad preserved) in the SAME transaction, retries, and returns any change in
+  `result.renumbered = [{table,id,column,old,new}]`. The sync worker patches the local row +
+  store — so two offline devices that guessed the same invoice number both sync with distinct
+  final numbers, zero error, zero data loss, and no permanent Failed bundle.
 
 ### Repair safety net (0015)
 - **repair_quarantine**: `id`, `table_name`, `row_id`, `payload` (jsonb), `reason`, `created_at`.

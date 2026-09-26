@@ -78,6 +78,26 @@ export function useAppGlobalEffects() {
     }
   }, []);
 
+  // Cross-device sequence renumber (§1.7): when apply_bundle re-allocated a colliding number
+  // (e.g. invoice), the local row is already patched by syncWorker — mirror it into the in-memory
+  // sales store so the UI/receipt shows the final number with zero refresh (§2.10).
+  useEffect(() => {
+    const handleRenumber = async (e: Event) => {
+      const detail = (e as CustomEvent).detail as Array<{ table: string; id: string; column: string; new: string }> | undefined;
+      if (!Array.isArray(detail) || detail.length === 0) return;
+      const saleRenumbers = detail.filter(r => r.table === 'sales' && r.column === 'invoice_number');
+      if (saleRenumbers.length === 0) return;
+      const { useSalesStore } = await import('../stores');
+      const state = useSalesStore.getState();
+      for (const r of saleRenumbers) {
+        const existing = state.sales.find(s => s.id === r.id);
+        if (existing) state.updateSale({ ...existing, invoiceNumber: r.new });
+      }
+    };
+    window.addEventListener('sequence-renumbered', handleRenumber);
+    return () => window.removeEventListener('sequence-renumbered', handleRenumber);
+  }, []);
+
   useEffect(() => {
     const handleWheel = (_e: WheelEvent) => {
       if (document.activeElement?.getAttribute('type') === 'number') {

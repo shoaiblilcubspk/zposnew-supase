@@ -15,6 +15,7 @@ import { BundleGrid } from './BundleGrid';
 import { getGridClasses } from './gridClasses';
 import { useGridSearchFocus } from './useGridSearchFocus';
 import { filterProducts, findProductByBarcode } from './filterGridProducts';
+import { addBundleToCart } from '../../../lib/services/addBundleToCart';
 
 interface ProductGridProps {
   onAddToCart: (product: Product, weight?: number) => void;
@@ -248,7 +249,23 @@ export function ProductGrid({ onAddToCart, onOpenDrafts, onAddTab: _onAddTab, is
               onAddToCart(product);
               setSearchTerm('');
             } else {
-              sonner.error(`Barcode not found: ${term}`);
+              // Not a product — try a BUNDLE barcode so scanning adds the whole deal.
+              const bundle = (appBundles || []).find((b: any) => {
+                if (!b?.barcode) return false;
+                return b.barcode === term || normalizeBarcodeValue(b.barcode) === normalizedCode;
+              });
+              if (bundle) {
+                addBundleToCart({
+                  bundle,
+                  appProducts,
+                  appCart: useCartStore.getState().cart,
+                  isReturnMode,
+                  currency: getCurrencySymbol(appSettings.currency),
+                });
+                setSearchTerm('');
+              } else {
+                sonner.error(`Barcode not found: ${term}`);
+              }
             }
           }}
           onClose={() => setShowScanner(false)}

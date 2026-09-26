@@ -131,7 +131,7 @@ export const LOCAL_SCHEMA_STATEMENTS: string[] = [
     id TEXT PRIMARY KEY, operation_id TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', discount_value REAL NOT NULL DEFAULT 0,
     discount_type TEXT NOT NULL DEFAULT 'percentage', override_price REAL, hide_item_prices INTEGER NOT NULL DEFAULT 0,
-    active INTEGER NOT NULL DEFAULT 1, image TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    active INTEGER NOT NULL DEFAULT 1, image TEXT, barcode TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
   );`,
   `CREATE TABLE IF NOT EXISTS bundle_items (
     id TEXT PRIMARY KEY, operation_id TEXT NOT NULL UNIQUE,
@@ -365,6 +365,7 @@ export const LOCAL_SCHEMA_MIGRATIONS: string[] = [
   `ALTER TABLE purchase_records ADD COLUMN deleted_at TEXT`,
   `ALTER TABLE bundle_items ADD COLUMN deleted_at TEXT`,
   `ALTER TABLE staff_users ADD COLUMN permissions TEXT NOT NULL DEFAULT '{}'`,
+  `ALTER TABLE bundles ADD COLUMN barcode TEXT`,
 ];
 
 /** All synced table names (used by the pull side of the sync engine). */

@@ -6,6 +6,7 @@ import { formatCurrency, getCurrencySymbol } from '../../../lib/currencies';
 import { CartItem } from '../../../types';
 import { cn } from '../../../lib/utils';
 import { CartItemDiscountInput } from './CartItemDiscountInput';
+import { computeLineDiscount } from '../../../lib/lineDiscount';
 import { getExpiryStatus } from '../../../utils/expiryUtils';
 import { ProductThumb } from '../../../shared/ui/ProductThumb';
 
@@ -60,13 +61,15 @@ export function CartItemCard({
     if (!isNaN(newPrice) && newPrice >= 0) {
       const toppingsTotal = (item.toppings || []).reduce((sum: number, t: any) => sum + t.price, 0);
       const updatedProduct = { ...item.product, price: newPrice };
-      const quantityTotal = (newPrice + toppingsTotal) * item.quantity;
-      const calculatedDiscount = item.discountValue && item.discountValue > 0
-        ? (item.discountType === 'percentage' ? (quantityTotal * item.discountValue) / 100 : item.discountValue)
-        : 0;
+      const { discount: calculatedDiscount, subtotal } = computeLineDiscount(
+        newPrice + toppingsTotal,
+        item.quantity,
+        item.discountValue || 0,
+        item.discountType || 'percentage'
+      );
       useCartStore.getState().updateCartItem({
         index,
-        item: { ...item, product: updatedProduct, discount: calculatedDiscount, subtotal: quantityTotal - calculatedDiscount },
+        item: { ...item, product: updatedProduct, discount: calculatedDiscount, subtotal },
       });
     }
     setIsEditingPrice(false);

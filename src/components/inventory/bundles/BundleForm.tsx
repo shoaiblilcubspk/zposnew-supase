@@ -21,6 +21,7 @@ function buildFormFromBundle(bundle: Bundle): BundleForm {
     name: bundle.name || '',
     description: bundle.description || '',
     image: bundle.image || '',
+    barcode: bundle.barcode || '',
     discountValue: bundle.discountValue || 0,
     discountType: bundle.discountType || 'percentage',
     overridePrice: bundle.overridePrice || 0,

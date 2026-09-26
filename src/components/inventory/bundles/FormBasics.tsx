@@ -1,5 +1,7 @@
 import { Package, Tag, Percent, DollarSign, X } from 'lucide-react';
 import { Button } from '../../../shared/ui';
+import { ProductThumb } from '../../../shared/ui/ProductThumb';
+import { generateBarcodeValue } from '../../../utils/barcode';
 import type { BundleForm } from './formTypes';
 
 interface FormBasicsProps {
@@ -30,7 +32,7 @@ export function FormBasics({ form, setForm, currencySymbol, bundleTotal, onOpenM
             <div className="relative w-20 h-20 rounded-md bg-neutral-100 dark:bg-surface border border-neutral-200 dark:border-white/[0.08] flex items-center justify-center shrink-0">
               {form.image ? (
                 <>
-                  <img src={form.image} alt="Deal" className="w-full h-full object-cover rounded-md" />
+                  <ProductThumb image={form.image} alt="Deal" imgClassName="w-full h-full object-cover rounded-md" fallback={<Package className="h-6 w-6 text-neutral-400" />} />
                   <button
                     type="button"
                     onClick={() => setForm(p => ({ ...p, image: '' }))}
@@ -64,6 +66,26 @@ export function FormBasics({ form, setForm, currencySymbol, bundleTotal, onOpenM
             placeholder={"Brief description of the bundle"}
             className="input w-full text-sm"
           />
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">{"Barcode"} ({"scan adds the whole deal"})</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={form.barcode}
+              onChange={e => setForm(p => ({ ...p, barcode: e.target.value.trim() }))}
+              placeholder={"Auto-generated on save if left empty"}
+              className="input flex-1 text-sm font-mono"
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setForm(p => ({ ...p, barcode: generateBarcodeValue(p.name || 'Bundle') }))}
+            >
+              Generate
+            </Button>
+          </div>
+          <span className="text-[9px] text-gray-400">Printable from Inventory → Barcode labels.</span>
         </div>
       </div>
 

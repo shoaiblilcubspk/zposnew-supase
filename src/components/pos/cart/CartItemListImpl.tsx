@@ -2,6 +2,7 @@ import { useCartStore, useAppStore, useProductsStore, useSettingsStore } from '.
 import { useAuth } from '../../../context/AuthContext';
 import { sonner } from '../../../lib/sonner';
 import { Bundle } from '../../../types';
+import { computeLineDiscount } from '../../../lib/lineDiscount';
 import { CartItemListBody } from './CartItemListBody';
 
 interface CartItemListProps {
@@ -24,25 +25,20 @@ export function CartItemList({ activePromotions }: CartItemListProps) {
     const toppingsTotal = (item.toppings || []).reduce((sum: number, t: any) => sum + t.price, 0);
     const effectivePrice = price + toppingsTotal;
 
-    let updatedDiscount = item.discount || 0;
-    if (item.discountValue && item.discountValue > 0) {
-      if (item.discountType === 'percentage') {
-        updatedDiscount = (effectivePrice * newQuantity * item.discountValue) / 100;
-      } else {
-        updatedDiscount = Math.sign(newQuantity) * item.discountValue;
-      }
-    }
-    if (newQuantity === 0) {
-      updatedDiscount = 0;
-    }
+    const { discount, subtotal } = computeLineDiscount(
+      effectivePrice,
+      newQuantity,
+      item.discountValue || 0,
+      item.discountType || 'percentage'
+    );
 
     useCartStore.getState().updateCartItem({
         index,
         item: {
           ...item,
           quantity: newQuantity,
-          discount: updatedDiscount,
-          subtotal: effectivePrice * newQuantity - updatedDiscount,
+          discount,
+          subtotal,
         },
       },);
   };
@@ -123,10 +119,12 @@ export function CartItemList({ activePromotions }: CartItemListProps) {
     const price = item.product.price;
     const toppingsTotal = (item.toppings || []).reduce((sum: number, t: any) => sum + t.price, 0);
     const effectivePrice = price + toppingsTotal;
-    const discountAmount =
-      discountType === 'percentage'
-        ? (effectivePrice * item.quantity * discount) / 100
-        : Math.sign(item.quantity) * discount;
+    const { discount: discountAmount, subtotal } = computeLineDiscount(
+      effectivePrice,
+      item.quantity,
+      discount,
+      discountType
+    );
     useCartStore.getState().updateCartItem({
         index,
         item: {
@@ -134,7 +132,7 @@ export function CartItemList({ activePromotions }: CartItemListProps) {
           discount: discountAmount,
           discountValue: discount,
           discountType,
-          subtotal: effectivePrice * item.quantity - discountAmount,
+          subtotal,
         },
       },);
   };

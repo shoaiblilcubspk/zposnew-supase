@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import { useCartCalculations } from '../../hooks/useCartCalculations';
 import { getExpiryStatus } from '../../utils/expiryUtils';
+import { computeLineDiscount } from '../../lib/lineDiscount';
 
 export function useCartActions() {
   const appCart = useCartStore(s => s.cart);
@@ -97,23 +98,18 @@ export function useCartActions() {
       const effectivePrice = existingItem.product.price;
       const toppingsTotal = (existingItem.toppings || []).reduce((sum: number, t: any) => sum + t.price, 0);
       const priceWithToppings = effectivePrice + toppingsTotal;
-      let updatedDiscount = existingItem.discount || 0;
-      
-      if (existingItem.discountValue && existingItem.discountValue > 0) {
-        if (existingItem.discountType === 'percentage') {
-          updatedDiscount = (priceWithToppings * newQuantity * existingItem.discountValue) / 100;
-        } else {
-          updatedDiscount = Math.sign(newQuantity) * existingItem.discountValue;
-        }
-      }
-      if (newQuantity === 0) {
-        updatedDiscount = 0;
-      }
+
+      const { discount: updatedDiscount, subtotal } = computeLineDiscount(
+        priceWithToppings,
+        newQuantity,
+        existingItem.discountValue || 0,
+        existingItem.discountType || 'percentage'
+      );
       const updatedItem = {
         ...existingItem,
         quantity: newQuantity,
         discount: updatedDiscount,
-        subtotal: priceWithToppings * newQuantity - updatedDiscount
+        subtotal
       };
       useCartStore.getState().updateCartItem({ index: existingItemIndex, item: updatedItem });
     } else {

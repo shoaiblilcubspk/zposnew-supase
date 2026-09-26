@@ -284,6 +284,34 @@ use the `atomicWrite` single-op path and need **no** RPC unless they touch 2+ ta
   interval / manual Sync now (seconds, not instant). Ship realtime as a proper migration
   (publication) + generic subscription in the same clone-ready manner.
 
+### 1.7.7 Server-authoritative sequence numbers (PERMANENT — every auto-numbered domain)
+> Learned from a real bug: two offline devices both minted invoice `INV-1016`; the second push
+> failed forever with `duplicate key ... sales_invoice_number_key` and parked as a Failed bundle.
+> Client-guessed sequence numbers **will** collide across devices. The number is decided by the
+> **server**, never trusted from the client as final.
+
+1. **One generic mechanism, not per-domain code.** Every cross-device sequence column (invoice
+   number today; future: purchase-order number, expense/voucher number, any auto-number) is
+   listed in the `sequence_registry` table (`table_name`, `column_name`). Adding a new
+   auto-numbered domain = **INSERT one row** into `sequence_registry` — no new code, no per-module
+   numbering logic.
+2. **Optimistic locally, authoritative on commit.** The device still generates a number offline
+   so the UI is never blocked. But `apply_bundle` tries the client value first and, on a
+   `unique_violation` of a registered sequence column, **re-allocates the next free value
+   server-side** (max+1, prefix/pad preserved) inside the SAME transaction, and retries — so a
+   bundle never fails on a sequence collision and never leaves partial cloud rows.
+3. **Silent renumber, zero data loss, zero user error.** The RPC returns any change in
+   `result.renumbered = [{table,id,column,old,new}]`; the sync worker patches the local row and
+   the in-memory store (zero-refresh, §2.10). A `duplicate key`/23505 on a sequence column must
+   **never** surface to the user or park as a permanent Failed bundle — it is resolved
+   automatically (Retry on an already-failed bundle renumbers and completes).
+4. **Idempotency unchanged.** `operation_id` still dedupes retries of the SAME action; only the
+   number is replaced, the same logical record completes exactly once.
+5. **Clone-ready + guarded.** Ships as a numbered migration + `MASTER_SCHEMA.sql` + `SCHEMA.md`,
+   with a guard test (`tests/sequenceRenumber.test.mjs`) that fails the build if the
+   `sequence_registry` + `unique_violation` renumber mechanism is removed. Never hardcode a
+   device-local-only numbering scheme for a synced sequence.
+
 ---
 
 ## 2. Fundamental Architectural Rules (Non-Negotiable)

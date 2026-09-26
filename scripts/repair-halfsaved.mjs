@@ -204,6 +204,30 @@ async function main() {
     }
   }
 
+  // ── 7. Sequence-number collisions across ALL registered domains (§1.7) ──────────
+  // Every cross-device sequence column lives in sequence_registry (sales.invoice_number today,
+  // future domains add a row). apply_bundle renumbers on collision server-side, so the cloud
+  // should have ZERO duplicates — this detector proves it and catches any legacy dupes that
+  // predate the fix. Report-only (a real dup needs a human decision on which record renumbers).
+  const { data: seqRegistry, error: seqErr } = await sb.from('sequence_registry').select('table_name, column_name');
+  if (!seqErr && Array.isArray(seqRegistry)) {
+    for (const { table_name, column_name } of seqRegistry) {
+      const rows = await fetchAll(table_name, `id, ${column_name}`).catch(() => []);
+      const seen = new Map();
+      for (const r of rows) {
+        const v = r[column_name];
+        if (v == null) continue;
+        if (!seen.has(v)) seen.set(v, []);
+        seen.get(v).push(r.id);
+      }
+      const dupes = [...seen.entries()].filter(([, ids]) => ids.length > 1);
+      log(`${table_name}.${column_name} duplicate sequence values (should be 0 — apply_bundle renumbers on collision)`,
+        dupes.length, dupes.slice(0, 5).map(([v, ids]) => `${v}×${ids.length}`).join(', '));
+    }
+  } else {
+    log('sequence_registry not found (run migrations 0025+) — sequence-collision check skipped', 0);
+  }
+
   const totalIssues = report.reduce((a, r) => a + r.count, 0);
   console.log('\n────────────────────────────────────────');
   console.log(`Total issues found: ${totalIssues}`);

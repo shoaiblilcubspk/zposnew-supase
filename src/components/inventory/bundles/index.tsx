@@ -1,14 +1,42 @@
 import { useAppStore, useProductsStore, useSettingsStore } from '../../../stores';
 import { useState } from 'react';
-import { Plus, Gift } from 'lucide-react';
+import { Plus, Gift, X } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
-import { Bundle } from '../../../types';
+import { Bundle, Product } from '../../../types';
 import { sonner } from '../../../lib/sonner';
 import { can } from '../../../lib/permissions';
 import { bundlesService } from '../../../lib/services';
+import { generateBarcodeValue } from '../../../utils/barcode';
 import { Button, EmptyState } from '../../../shared/ui';
+import { BarcodeGenerator, clearPersistedBarcodeState } from '../barcode';
 import { BundleForm } from './BundleForm';
 import { BundleCard } from './BundleCard';
+
+/** Final customer price of a bundle (override price wins, else discount-from-base). */
+function bundleFinalPrice(bundle: Bundle, products: Product[]): number {
+  const total = (bundle.items || []).reduce((sum, bi) => {
+    const p = products.find(pr => pr.id === bi.productId);
+    return sum + (p ? p.price * bi.quantity : 0);
+  }, 0);
+  if (typeof bundle.overridePrice === 'number' && bundle.overridePrice > 0) return bundle.overridePrice;
+  const disc = bundle.discountType === 'percentage'
+    ? (total * bundle.discountValue) / 100
+    : Math.min(bundle.discountValue, total);
+  return Math.max(0, total - disc);
+}
+
+/** Build a Product-shaped record so a bundle can go through the shared Barcode Print Engine. */
+function bundleToBarcodeProduct(bundle: Bundle, products: Product[]): Product {
+  const barcode = bundle.barcode || generateBarcodeValue(bundle.name || 'Bundle');
+  return {
+    id: bundle.id,
+    name: bundle.name,
+    barcode,
+    barcodeValue: barcode,
+    price: bundleFinalPrice(bundle, products),
+    category: 'Bundle',
+  } as Product;
+}
 
 export function BundleManager() {
   const appSettings = useSettingsStore(s => s.settings);
@@ -24,8 +52,14 @@ export function BundleManager() {
   const [expandedBundle, setExpandedBundle] = useState<string | null>(null);
   const [actionMenuBundleId, setActionMenuBundleId] = useState<string | null>(null);
   const [menuUpward, setMenuUpward] = useState(false);
+  const [printBundle, setPrintBundle] = useState<Bundle | null>(null);
 
   const bundles = appBundles || [];
+
+  const openPrintBarcode = (bundle: Bundle) => {
+    clearPersistedBarcodeState();
+    setPrintBundle(bundle);
+  };
 
   const openCreate = () => {
     setEditingBundle(null);
@@ -136,6 +170,7 @@ export function BundleManager() {
                   onEdit={() => openEdit(bundle)}
                   onToggleActive={() => handleToggleActive(bundle)}
                   onDelete={() => handleDelete(bundle)}
+                  onPrintBarcode={() => openPrintBarcode(bundle)}
                   actionMenuOpen={actionMenuBundleId === bundle.id}
                   menuUpward={menuUpward}
                   onToggleMenu={(bundleId, e) => {
@@ -151,6 +186,26 @@ export function BundleManager() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ─── BUNDLE BARCODE PRINT (shared Barcode Print Engine) ─── */}
+      {printBundle && (
+        <div className="fixed inset-0 z-[200] bg-black/40 flex items-center justify-center p-2 sm:p-6">
+          <div className="relative w-full max-w-6xl h-[90vh] bg-white dark:bg-surface rounded-md border border-neutral-200 dark:border-white/[0.08] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-200 dark:border-white/[0.08]">
+              <h3 className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
+                {"Print Barcode"} — {printBundle.name}
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => setPrintBundle(null)} icon={<X className="h-4 w-4" />} />
+            </div>
+            <div className="flex-1 min-h-0">
+              <BarcodeGenerator
+                products={[bundleToBarcodeProduct(printBundle, appProducts)]}
+                onClose={() => { clearPersistedBarcodeState(); setPrintBundle(null); }}
+              />
+            </div>
+          </div>
         </div>
       )}
     </>
